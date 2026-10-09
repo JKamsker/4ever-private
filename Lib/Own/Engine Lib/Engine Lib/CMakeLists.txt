@@ -38,11 +38,29 @@ set(EngineLib_SOURCES
     TModuleProtector.cpp
     TNICEventSink.cpp
     TProfile.cpp
+    TRenderD3D9.cpp
     TShow.cpp
 )
 
+# The bgfx backend of the render layer. It is its own library because bx needs C++20 and a
+# conforming preprocessor, while the engine keeps the compiler's default standard.
+add_library(TRenderBGFX STATIC TRenderBGFX.cpp)
+target_compile_features(TRenderBGFX PRIVATE cxx_std_20)
+target_compile_definitions(TRenderBGFX PRIVATE WIN32 NDEBUG _WINDOWS)
+target_compile_options(TRenderBGFX PRIVATE /Zc:__cplusplus /Zc:preprocessor)
+target_include_directories(TRenderBGFX PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(TRenderBGFX
+    PUBLIC
+        tclient_dxsdk
+    PRIVATE
+        tclient_options
+        bgfx
+        bimg_decode
+        bx
+)
+
 add_library(EngineLib STATIC ${EngineLib_SOURCES})
-target_compile_definitions(EngineLib PRIVATE WIN32 NDEBUG _WINDOWS)
+target_compile_definitions(EngineLib PRIVATE WIN32 NDEBUG _WINDOWS TCLIENT_BGFX)
 target_compile_options(EngineLib PRIVATE /GS-)
 target_include_directories(EngineLib
     PUBLIC
@@ -62,4 +80,5 @@ target_link_libraries(EngineLib
         zlibstatic
     PRIVATE
         tclient_options
+        TRenderBGFX
 )

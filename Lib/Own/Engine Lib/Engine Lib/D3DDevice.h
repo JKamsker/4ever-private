@@ -96,6 +96,7 @@ typedef struct tagGAMEOPTION
 	BYTE m_bWindowedMode;
 	BYTE m_bUseSHADER;
 	BYTE m_bAniso;					// anisotropic texture filtering on world surfaces
+	BYTE m_bBGFX;					// draw with the bgfx backend of the render layer (Settings/Renderer)
 
 	TEXTURE_DETAIL_LEVEL m_nTextureDetail;
 
@@ -110,6 +111,7 @@ typedef struct tagGAMEOPTION
 		m_bWindowedMode = TRUE;
 		m_bUseSHADER = TRUE;
 		m_bAniso = TRUE;
+		m_bBGFX = FALSE;
 
 		m_nTextureDetail = TEXTURE_DETAIL_COUNT;
 	}

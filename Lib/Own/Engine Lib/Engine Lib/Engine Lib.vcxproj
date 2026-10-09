@@ -402,6 +402,7 @@
     <ClCompile Include="TModuleProtector.cpp" />
     <ClCompile Include="TNICEventSink.cpp" />
     <ClCompile Include="TProfile.cpp" />
+    <ClCompile Include="TRenderD3D9.cpp" />
     <ClCompile Include="TShow.cpp" />
   </ItemGroup>
   <ItemGroup>

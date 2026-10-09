@@ -100,6 +100,12 @@ void CTachyonApp::LoadStdProfileSettings()
 	else
 		m_pTachyonWnd->m_Device.m_option.m_bUseSHADER = strValue == _T("TRUE");
 
+	// D3D9 or BGFX: the backend of the render layer.
+	m_pTachyonWnd->m_Device.m_option.m_bBGFX = GetProfileString(
+		_T("Settings"),
+		_T("Renderer"),
+		_T("D3D9")).CompareNoCase(_T("BGFX")) == 0;
+
 	dwValue = GetProfileInt(
 		_T("Settings"),
 		_T("SwapEffect"), 0);

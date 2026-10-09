@@ -13,6 +13,28 @@ include(cmake/TClientCommon.cmake)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
+# bgfx, bx and bimg for the bgfx render backend (Lib/3rdParty/bgfx.cmake/VERSION.txt).
+# Only the libraries: the shader compiler is built on demand with TCLIENT_BUILD_SHADERC.
+option(TCLIENT_BUILD_SHADERC "Also build bgfx's shaderc, to recompile the render shaders" OFF)
+set(BGFX_BUILD_TOOLS ${TCLIENT_BUILD_SHADERC} CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(BGFX_INSTALL OFF CACHE BOOL "" FORCE)
+set(BGFX_CUSTOM_TARGETS OFF CACHE BOOL "" FORCE)
+set(BGFX_CONFIG_VIDEO OFF CACHE BOOL "" FORCE)
+# The engine calls the render layer from its main thread and its loader thread itself.
+set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
+add_subdirectory("${TCLIENT_LIB_3RD}/bgfx.cmake" bgfx EXCLUDE_FROM_ALL)
+# bimg's ASTC encoder uses _mm_popcnt_u64 when clang defines __POPCNT__; it does not exist in
+# 32-bit code.
+target_compile_definitions(bimg PRIVATE ASTCENC_POPCNT=0)
+# renderer_webgpu.cpp narrows 64-bit sizes to size_t, an error for clang in 32-bit code.
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(bgfx PRIVATE -Wno-c++11-narrowing)
+endif()
+
 add_subdirectory("${TCLIENT_LIB_OWN}/TCML/TCML" TCML)
 add_subdirectory("${TCLIENT_LIB_OWN}/Engine Lib/Engine Lib" EngineLib)
 add_subdirectory("${TCLIENT_LIB_OWN}/TComp/TComp" TComp)

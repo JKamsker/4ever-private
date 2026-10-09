@@ -459,17 +459,32 @@ BOOL CD3DDevice::InitDevices( CWnd *pWnd)
 	dwBehavior = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 #endif
 
-	LPDIRECT3DDEVICE9 pD3D9 = NULL;
-	hr = m_pD3D->CreateDevice(
-		iAdapter,
-		devType,
-		TSAFE_HWND(pWnd),
-		dwBehavior,
-		&m_vPRESENT,
-		&pD3D9);
+#ifndef TCLIENT_BGFX
+	m_option.m_bBGFX = FALSE;
+#endif
 
-	if(SUCCEEDED(hr))
-		m_pDevice = new CTRenderDevice(pD3D9);
+	if(m_option.m_bBGFX)
+	{
+		// bgfx draws with the fixed-function emulation of the render layer: the
+		// engine's D3D9 shaders stay off. m_pD3D still lists the display modes.
+		m_option.m_bUseSHADER = FALSE;
+		m_pDevice = CreateRenderDeviceBGFX( TSAFE_HWND(pWnd), &m_vPRESENT, &m_vCAPS);
+		hr = m_pDevice ? D3D_OK : E_FAIL;
+	}
+	else
+	{
+		LPDIRECT3DDEVICE9 pD3D9 = NULL;
+		hr = m_pD3D->CreateDevice(
+			iAdapter,
+			devType,
+			TSAFE_HWND(pWnd),
+			dwBehavior,
+			&m_vPRESENT,
+			&pD3D9);
+
+		if(SUCCEEDED(hr))
+			m_pDevice = CreateRenderDeviceD3D9(pD3D9);
+	}
 
 	if(FAILED(hr))
 	{

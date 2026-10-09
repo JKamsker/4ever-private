@@ -74,6 +74,7 @@ static const TConfigDefaultStr s_DefaultStrs[] =
 	// [Settings]
 	{ _T("Settings"), _T("WindowedMode"),  _T("FALSE") },
 	{ _T("Settings"), _T("UseShader"),     _T("TRUE")  },
+	{ _T("Settings"), _T("Renderer"),      _T("D3D9")  },  // D3D9 or BGFX
 	{ _T("Settings"), _T("OBJRange"),      _T("1.0")   },
 	{ _T("Settings"), _T("GroupMonNamesNear"),  _T("20.0") },
 	{ _T("Settings"), _T("GroupMonNamesRatio"), _T("0.5")  },

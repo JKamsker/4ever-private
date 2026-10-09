@@ -123,6 +123,9 @@
     <ClCompile Include="TNICEventSink.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TRenderD3D9.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="TProfile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
