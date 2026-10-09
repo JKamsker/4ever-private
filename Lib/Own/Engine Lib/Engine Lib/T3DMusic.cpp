@@ -96,6 +96,10 @@ BYTE CT3DMusic::Play()
 	ma_sound_set_looping( m_pSOUND, m_bLOOP ? MA_TRUE : MA_FALSE);
 	ResetVolume();
 
+	// Stopped one audio pass after its end; ma_sound_start ignores it until then.
+	if(ma_sound_at_end(m_pSOUND))
+		ma_sound_stop(m_pSOUND);
+
 	if( ma_sound_start(m_pSOUND) != MA_SUCCESS )
 	{
 		Unlock();
@@ -178,7 +182,7 @@ DWORD CT3DMusic::GetPos()
 BYTE CT3DMusic::IsPlay()
 {
 	// The music reached its end: the next Play() starts from the beginning.
-	if( m_bSTATE == MMS_PLAY && !ma_sound_is_playing(m_pSOUND) )
+	if( m_bSTATE == MMS_PLAY && (!ma_sound_is_playing(m_pSOUND) || ma_sound_at_end(m_pSOUND)) )
 	{
 		m_bSTATE = MMS_OPEN;
 		m_dwSEEK = 0;

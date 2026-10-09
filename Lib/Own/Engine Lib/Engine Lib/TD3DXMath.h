@@ -7,6 +7,7 @@
 // Only what the client uses is here.
 #define __D3DX9MATH_H__
 
+#include <d3d9.h>
 #include <math.h>
 #include <string.h>
 

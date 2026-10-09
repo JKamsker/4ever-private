@@ -251,6 +251,11 @@ BYTE CD3DSound::Play( int nIndex)
 	ResetVolume(nIndex);
 
 	// A sound that reached its end starts again from the beginning, like a DirectSound buffer.
+	// The audio thread stops it one pass after its end, and until then ma_sound_start ignores
+	// it, so stop it here first.
+	if(ma_sound_at_end(m_vBUF[nIndex]))
+		ma_sound_stop(m_vBUF[nIndex]);
+
 	return ma_sound_start(m_vBUF[nIndex]) == MA_SUCCESS ? TRUE : FALSE;
 }
 
@@ -289,7 +294,7 @@ BYTE CD3DSound::IsPlay( int nIndex)
 
 BYTE CD3DSound::IsPlay( ma_sound *pSOUND)
 {
-	return ma_sound_is_playing(pSOUND) ? TRUE : FALSE;
+	return ma_sound_is_playing(pSOUND) && !ma_sound_at_end(pSOUND) ? TRUE : FALSE;
 }
 
 void CD3DSound::Unlock( int nIndex)
