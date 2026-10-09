@@ -1,8 +1,8 @@
 #include "StdAfx.h"
 
-void CT3DTexture::SaveImageFile(LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat, LPDIRECT3DTEXTURE9 pTEX)
+void CT3DTexture::SaveImageFile(LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat, LPTTEXTURE pTEX)
 {
-	//	LPDIRECT3DTEXTURE9 pTEX = GetTEX();
+	//	LPTTEXTURE pTEX = GetTEX();
 	D3DXSaveTextureToFile(
 		strFileName,
 		destFormat,
@@ -21,10 +21,10 @@ CT3DTexture::~CT3DTexture()
 	ReleaseDATA();
 }
 
-LPDIRECT3DTEXTURE9 CT3DTexture::GetTEX()
+LPTTEXTURE CT3DTexture::GetTEX()
 {
 	if( !m_pTDATA || m_bEnabled )
-		return (LPDIRECT3DTEXTURE9) m_pTDATA;
+		return (LPTTEXTURE) m_pTDATA;
 
 	LPTTEXLOADBUF pBUF = (LPTTEXLOADBUF) m_pTDATA;
 	if(!pBUF->m_pDATA)
@@ -42,7 +42,7 @@ LPDIRECT3DTEXTURE9 CT3DTexture::GetTEX()
 		uncompress( pDATA, &pBUF->m_dwSIZE, pBUF->m_pDATA, pBUF->m_dwDATA);
 	}
 
-	LPDIRECT3DTEXTURE9 pTEX = NULL;
+	LPTTEXTURE pTEX = NULL;
 	D3DXIMAGE_INFO vIMG;
 
 	switch(pBUF->m_bFormat)
@@ -131,7 +131,7 @@ void CT3DTexture::ReleaseDATA()
 			delete pBUF;
 		}
 		else
-			((LPDIRECT3DTEXTURE9) m_pTDATA)->Release();
+			((LPTTEXTURE) m_pTDATA)->Release();
 
 	m_bEnabled = FALSE;
 	m_pTDATA = NULL;
@@ -151,7 +151,7 @@ CT3DVertex::~CT3DVertex()
 	ReleaseDATA();
 }
 
-LPDIRECT3DVERTEXBUFFER9 CT3DVertex::GetVB()
+LPTVERTEXBUFFER CT3DVertex::GetVB()
 {
 	if(!m_pTDATA)
 		return NULL;
@@ -177,14 +177,14 @@ LPDIRECT3DVERTEXBUFFER9 CT3DVertex::GetVB()
 		delete pBUF;
 	}
 
-	return (LPDIRECT3DVERTEXBUFFER9) m_pTDATA;
+	return (LPTVERTEXBUFFER) m_pTDATA;
 }
 
 BYTE CT3DVertex::CreateVB( DWORD dwSIZE,
 						   DWORD dwUSE,
 						   DWORD dwFVF)
 {
-	LPDIRECT3DVERTEXBUFFER9 pVB = NULL;
+	LPTVERTEXBUFFER pVB = NULL;
 
 	HRESULT hr = CTachyonRes::m_pDEVICE->m_pDevice->CreateVertexBuffer(
 		dwSIZE,
@@ -210,7 +210,7 @@ BYTE CT3DVertex::UpdateT3DVB( LPBYTE pDATA,
 	if( !m_bEnabled || !m_pTDATA )
 		return FALSE;
 
-	LPDIRECT3DVERTEXBUFFER9 pVB = (LPDIRECT3DVERTEXBUFFER9) m_pTDATA;
+	LPTVERTEXBUFFER pVB = (LPTVERTEXBUFFER) m_pTDATA;
 	LPVOID pBUF = NULL;
 
 	HRESULT hr = pVB->Lock( dwPOS, dwSIZE, &pBUF, 0);
@@ -267,7 +267,7 @@ void CT3DVertex::ReleaseDATA()
 			delete pBUF;
 		}
 		else
-			((LPDIRECT3DVERTEXBUFFER9) m_pTDATA)->Release();
+			((LPTVERTEXBUFFER) m_pTDATA)->Release();
 
 	while(!m_vTDATA.empty())
 	{
@@ -293,7 +293,7 @@ CT3DIndex::~CT3DIndex()
 	ReleaseDATA();
 }
 
-LPDIRECT3DINDEXBUFFER9 CT3DIndex::GetIB()
+LPTINDEXBUFFER CT3DIndex::GetIB()
 {
 	if(!m_pTDATA)
 		return NULL;
@@ -319,14 +319,14 @@ LPDIRECT3DINDEXBUFFER9 CT3DIndex::GetIB()
 		delete pBUF;
 	}
 
-	return (LPDIRECT3DINDEXBUFFER9) m_pTDATA;
+	return (LPTINDEXBUFFER) m_pTDATA;
 }
 
 BYTE CT3DIndex::CreateIB( DWORD dwSIZE,
 						  DWORD dwUSE,
 						  D3DFORMAT nFORMAT)
 {
-	LPDIRECT3DINDEXBUFFER9 pIB = NULL;
+	LPTINDEXBUFFER pIB = NULL;
 
 	HRESULT hr = CTachyonRes::m_pDEVICE->m_pDevice->CreateIndexBuffer(
 		dwSIZE,
@@ -352,7 +352,7 @@ BYTE CT3DIndex::UpdateT3DIB( LPBYTE pDATA,
 	if( !m_bEnabled || !m_pTDATA )
 		return FALSE;
 
-	LPDIRECT3DINDEXBUFFER9 pIB = (LPDIRECT3DINDEXBUFFER9) m_pTDATA;
+	LPTINDEXBUFFER pIB = (LPTINDEXBUFFER) m_pTDATA;
 	LPVOID pBUF = NULL;
 
 	HRESULT hr = pIB->Lock( dwPOS, dwSIZE, &pBUF, 0);
@@ -409,7 +409,7 @@ void CT3DIndex::ReleaseDATA()
 			delete pBUF;
 		}
 		else
-			((LPDIRECT3DINDEXBUFFER9) m_pTDATA)->Release();
+			((LPTINDEXBUFFER) m_pTDATA)->Release();
 
 	while(!m_vTDATA.empty())
 	{

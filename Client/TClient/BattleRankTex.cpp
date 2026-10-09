@@ -16,7 +16,7 @@ CBattleRankTex::~CBattleRankTex()
 	Reset();
 }
 
-LPDIRECT3DTEXTURE9 CBattleRankTex::GetTexture(BYTE bRank)
+LPTTEXTURE CBattleRankTex::GetTexture(BYTE bRank)
 {
 	MAPRANKTEX::iterator finder = m_mapRANK.find(bRank);
 	if (finder != m_mapRANK.end())
@@ -38,9 +38,9 @@ LPDIRECT3DTEXTURE9 CBattleRankTex::GetTexture(BYTE bRank)
 		return NULL;
 
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
-	LPDIRECT3DTEXTURE9 pRNDTEX;
+	LPTTEXTURE pRNDTEX;
 	HRESULT hResult;
 
 	if (bRank < 35)
@@ -69,7 +69,7 @@ LPDIRECT3DTEXTURE9 CBattleRankTex::GetTexture(BYTE bRank)
 	if( FAILED(hResult) )
 		return NULL;
 
-	LPDIRECT3DSURFACE9 pBACKUPBUF;
+	LPTSURFACE pBACKUPBUF;
 	hResult = pDevice->GetRenderTarget(0, &pBACKUPBUF);
 	if( FAILED(hResult) )
 	{
@@ -77,7 +77,7 @@ LPDIRECT3DTEXTURE9 CBattleRankTex::GetTexture(BYTE bRank)
 		return NULL;
 	}
 
-	LPDIRECT3DSURFACE9 pRNDBUF;
+	LPTSURFACE pRNDBUF;
 	hResult = pRNDTEX->GetSurfaceLevel( 0, &pRNDBUF);
 	if( FAILED(hResult) )
 	{

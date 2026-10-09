@@ -186,7 +186,7 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 		}
 	}
 
-	m_pTEX = new LPDIRECT3DTEXTURE9[m_nPartCount];
+	m_pTEX = new LPTTEXTURE[m_nPartCount];
 	m_pHEIGHT = new WORD[m_nPartCount];
 	m_pWIDTH = new WORD[m_nPartCount];
 

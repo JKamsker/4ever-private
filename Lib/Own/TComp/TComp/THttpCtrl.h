@@ -11,7 +11,7 @@ public:
 	virtual ~THttpCtrl();
 
 public:
-	static LPDIRECT3DTEXTURE9 m_pTIMG;
+	static LPTTEXTURE m_pTIMG;
 	static CSize m_vTBUFSIZE;
 
 public:

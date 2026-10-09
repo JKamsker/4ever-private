@@ -27,7 +27,7 @@ public:
 
 public:
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual void Render(
@@ -114,7 +114,7 @@ public:
 		FLOAT fDistMAX);
 
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual void Render(
@@ -143,7 +143,7 @@ public:
 	static void ReleaseNoHost();
 
 	static void CalcBUF(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	static void RenderBUF(

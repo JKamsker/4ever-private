@@ -25,7 +25,7 @@ BOOL CTClientCustomCloak::OnDeviceReset(BOOL bRelease)
 	else // Restore
 	{
 		CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-		LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+		LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 		pDevice->BeginScene();
 
 		MAPTCUSTOMCLOAKTEX::iterator it, end;
@@ -149,7 +149,7 @@ LPTEXTURESET CTClientCustomCloak::GetMantleTexture(
 	if(wID == 0)
 		return NULL;
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
 	MAPTCUSTOMCLOAKTEX::iterator it = m_mapTCUSTOMCLOAKTEX.find( wID );
 	if( it != m_mapTCUSTOMCLOAKTEX.end() )
@@ -188,7 +188,7 @@ LPTEXTURESET CTClientCustomCloak::GetMantleTexture(
 			}
 			catch (...)
 			{
-				LPDIRECT3DTEXTURE9 pTex;
+				LPTTEXTURE pTex;
 
 
 

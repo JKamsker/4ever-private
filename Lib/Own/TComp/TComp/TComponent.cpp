@@ -32,7 +32,7 @@ TComponent::TextLine::~TextLine()
 		m_pVB->Release();
 }
 
-void TComponent::TextLine::MakeLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor )
+void TComponent::TextLine::MakeLine( LPTRENDERDEVICE pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor )
 {
 	if( m_nStartX != StartX ||
 		m_nStartY != StartY ||
@@ -81,7 +81,7 @@ void TComponent::TextLine::MakeLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT 
 	}
 }
 
-void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength)
+void TComponent::TextLine::MakeDotLine( LPTRENDERDEVICE pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength)
 {
 	if( m_nStartX != StartX ||
 		m_nStartY != StartY ||
@@ -184,7 +184,7 @@ void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, I
 	}
 }
 
-void TComponent::TextLine::Draw( LPDIRECT3DDEVICE9 pDevice )
+void TComponent::TextLine::Draw( LPTRENDERDEVICE pDevice )
 {
 	if( m_pVB )
 	{
@@ -209,7 +209,7 @@ void TComponent::TextLine::Draw( LPDIRECT3DDEVICE9 pDevice )
 	}
 }
 
-void TComponent::TextLine::_CreateVB( LPDIRECT3DDEVICE9 pDevice, INT nCount )
+void TComponent::TextLine::_CreateVB( LPTRENDERDEVICE pDevice, INT nCount )
 {
 	if( m_pVB )
 		m_pVB->Release();

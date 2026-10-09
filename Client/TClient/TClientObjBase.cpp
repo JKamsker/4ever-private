@@ -6192,7 +6192,7 @@ BYTE CTClientObjBase::ForecastHeight(CTClientMAP *pTMAP,
 	return bResult;
 }
 
-void CTClientObjBase::CalcTick(LPDIRECT3DDEVICE9 pDevice,
+void CTClientObjBase::CalcTick(LPTRENDERDEVICE pDevice,
 	DWORD dwTick)
 {
 	CTachyonObject::CalcTick(
@@ -6234,7 +6234,7 @@ void CTClientObjBase::CalcTick(LPDIRECT3DDEVICE9 pDevice,
 	}
 }
 
-void CTClientObjBase::CalcSUBTick(LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTClientObjBase::CalcSUBTick(LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	LPANI pANI = m_vTSUBACT.m_pANI;
 
@@ -7253,7 +7253,7 @@ BYTE CTClientObjBase::CheckSkill(LPTSKILL pTSKILL)
 		CheckTransMode(pTSKILL) ? TRUE : FALSE;
 }
 
-void CTClientObjBase::ActivateTALK(LPDIRECT3DDEVICE9 pDevice,
+void CTClientObjBase::ActivateTALK(LPTRENDERDEVICE pDevice,
 	CString strTALK,
 	DWORD dwCOLOR)
 {

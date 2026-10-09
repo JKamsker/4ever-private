@@ -45,7 +45,7 @@ CD3DCamera::~CD3DCamera()
 {
 }
 
-BOOL CD3DCamera::InitOrthoCamera( LPDIRECT3DDEVICE9 pDevice,
+BOOL CD3DCamera::InitOrthoCamera( LPTRENDERDEVICE pDevice,
 								  FLOAT fNearPlane,
 								  FLOAT fFarPlane,
 								  FLOAT fWidth,
@@ -79,7 +79,7 @@ BOOL CD3DCamera::InitOrthoCamera( LPDIRECT3DDEVICE9 pDevice,
 	return TRUE;
 }
 
-BOOL CD3DCamera::InitCamera( LPDIRECT3DDEVICE9 pDevice,
+BOOL CD3DCamera::InitCamera( LPTRENDERDEVICE pDevice,
 							 FLOAT fNearPlane,
 							 FLOAT fFarPlane,
 							 FLOAT fFovV,

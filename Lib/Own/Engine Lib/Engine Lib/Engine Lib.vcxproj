@@ -432,6 +432,7 @@
     <ClInclude Include="TachyonRes.h" />
     <ClInclude Include="TachyonInput.h" />
     <ClInclude Include="TD3DXMath.h" />
+    <ClInclude Include="TRenderDevice.h" />
     <ClInclude Include="TachyonSession.h" />
     <ClInclude Include="TachyonSFX.h" />
     <ClInclude Include="TachyonSlashSFX.h" />

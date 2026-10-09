@@ -5,8 +5,8 @@
 #include "TPotionPannel.h"
 #endif
 
-LPDIRECT3DTEXTURE9 CTMinimapDlg::m_pTMINIMAP = NULL;
-LPDIRECT3DTEXTURE9 CTMinimapDlg::m_pTMASK = NULL;
+LPTTEXTURE CTMinimapDlg::m_pTMINIMAP = NULL;
+LPTTEXTURE CTMinimapDlg::m_pTMASK = NULL;
 
 
 CTMinimapDlg::CTMinimapDlg( TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc)

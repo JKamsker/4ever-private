@@ -916,7 +916,7 @@ HRESULT CTMainUI::Render( DWORD dwTickCount)
 
 			if( m_pNOTIFYMAIL )
 			{
-				LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+				LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 
 				pDevice->SetTextureStageState( 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
 

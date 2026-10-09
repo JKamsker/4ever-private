@@ -2714,7 +2714,7 @@ typedef map< DWORD, LPTEXTURESET>	                    MAPCUSTOMTEX, *LPMAPCUSTOM
 
 typedef map< BYTE, WORD>								MAPPREMIUMSKILL, *LPMAPPREMIUMSKILL;
 typedef map< DWORD, LPBRTPLAYER>						MAPBRTPLAYER, *LPMAPBRTPLAYER;
-typedef map<CTClientCustomCloak, LPDIRECT3DTEXTURE9>	MAPCUSTOMCLOAKTEX;
+typedef map<CTClientCustomCloak, LPTTEXTURE>	MAPCUSTOMCLOAKTEX;
 
 ///////////////////////////////////////////////////////////////////////////
 // TClient vector type
@@ -3606,7 +3606,7 @@ struct tagTRESOLUTIONMODE
 
 struct tagTSCRCAPTURE_PARAM
 {
-	LPDIRECT3DSURFACE9 m_pIMAGE;
+	LPTSURFACE m_pIMAGE;
 	CString m_strFileName;
 
 	tagTSCRCAPTURE_PARAM()

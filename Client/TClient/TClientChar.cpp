@@ -552,7 +552,7 @@ void CTClientChar::OnDIE(CD3DDevice *pDevice, CTachyonRes *pRES)
 	CTClientMoveObj::OnDIE(pDevice, pRES);
 }
 
-void CTClientChar::ActivateTALK(LPDIRECT3DDEVICE9 pDevice, CString strTALK, DWORD dwCOLOR)
+void CTClientChar::ActivateTALK(LPTRENDERDEVICE pDevice, CString strTALK, DWORD dwCOLOR)
 {
 	if( m_pRidingPet )
 		m_pRidingPet->ActivateTALK(pDevice, strTALK, dwCOLOR);

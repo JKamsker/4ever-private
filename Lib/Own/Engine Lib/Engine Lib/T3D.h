@@ -19,6 +19,7 @@
 #include <d3d9.h>
 #include <TD3DXMath.h>
 #include <d3dx9.h>
+#include <TRenderDevice.h>
 
 
 #pragma warning( disable : 4786 4530 4018 4995)
@@ -372,11 +373,11 @@ struct ma_sound;
 
 typedef vector<ma_sound *>											VTSOUND, *LPVTSOUND;
 
-typedef vector<LPDIRECT3DVERTEXBUFFER9>								VECTORVB, *LPVECTORVB;
-typedef vector<LPDIRECT3DINDEXBUFFER9>								VECTORIB, *LPVECTORIB;
+typedef vector<LPTVERTEXBUFFER>								VECTORVB, *LPVECTORVB;
+typedef vector<LPTINDEXBUFFER>								VECTORIB, *LPVECTORIB;
 
-typedef vector<LPDIRECT3DSURFACE9>									VECTORSURFACE, *LPVECTORSURFACE;
-typedef vector<LPDIRECT3DTEXTURE9>									VECTORTEXTURE, *LPVECTORTEXTURE;
+typedef vector<LPTSURFACE>									VECTORSURFACE, *LPVECTORSURFACE;
+typedef vector<LPTTEXTURE>									VECTORTEXTURE, *LPVECTORTEXTURE;
 typedef vector<LPTEXTURESET *>										VECTORTEXSET, *LPVECTORTEXSET;
 typedef vector<LPTEXTURESET>										VECTORTEXTURESET, *LPVECTORTEXTURESET;
 typedef vector<LPANIDATA>											VECTORANIDATA, *LPVECTORANIDATA;
@@ -1709,7 +1710,7 @@ public:
 		m_vTexture.clear();
 	}
 
-	LPDIRECT3DTEXTURE9 GetTexture()
+	LPTTEXTURE GetTexture()
 	{
 		int nCount = INT(m_vTexture.size());
 		int nIndex = m_dwTotalTick ? (m_dwCurTick * nCount / m_dwTotalTick) : 0;

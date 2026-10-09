@@ -8,9 +8,9 @@ public:
 	BYTE m_bEnabled;
 
 public:
-	LPDIRECT3DTEXTURE9 GetTEX();
+	LPTTEXTURE GetTEX();
 
-	void SaveImageFile(LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat, LPDIRECT3DTEXTURE9 pTEX);
+	void SaveImageFile(LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat, LPTTEXTURE pTEX);
 
 	void LoadT3DTEX(
 		LPBYTE pDATA,
@@ -34,7 +34,7 @@ public:
 	BYTE m_bEnabled;
 
 public:
-	LPDIRECT3DVERTEXBUFFER9 GetVB();
+	LPTVERTEXBUFFER GetVB();
 
 	void LoadT3DVBDATA(
 		LPBYTE pDATA,
@@ -73,7 +73,7 @@ public:
 	BYTE m_bEnabled;
 
 public:
-	LPDIRECT3DINDEXBUFFER9 GetIB();
+	LPTINDEXBUFFER GetIB();
 
 	void LoadT3DIBDATA(
 		LPBYTE pDATA,

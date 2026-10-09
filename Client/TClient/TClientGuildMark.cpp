@@ -98,7 +98,7 @@ BOOL CTClientGuildMark::OnDeviceReset( BOOL bRelease )
 	else // Restore
 	{
 		CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-		LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+		LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 		pDevice->BeginScene();
 
 		MAPTMANTLETEXTURE::iterator it, end;
@@ -133,7 +133,7 @@ BOOL CTClientGuildMark::OnDeviceReset( BOOL bRelease )
 	return TRUE;
 }
 
-LPDIRECT3DTEXTURE9 CTClientGuildMark::MCreateTexture(const CTClientGuildMark& r)
+LPTTEXTURE CTClientGuildMark::MCreateTexture(const CTClientGuildMark& r)
 {
 	if( m_dwLEFTTICK == 0 ||
 		r.GetFront() >= m_vFRONTIMG.size() ||
@@ -145,10 +145,10 @@ LPDIRECT3DTEXTURE9 CTClientGuildMark::MCreateTexture(const CTClientGuildMark& r)
 	DWORD dwStartTick = ::timeGetTime();
 
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
 	HRESULT hResult;
-	LPDIRECT3DTEXTURE9 pRNDTEX;
+	LPTTEXTURE pRNDTEX;
 
 	hResult = D3DXCreateTexture(
 				pDevice,
@@ -164,7 +164,7 @@ LPDIRECT3DTEXTURE9 CTClientGuildMark::MCreateTexture(const CTClientGuildMark& r)
 		return NULL;
 	}
 
-	LPDIRECT3DSURFACE9 pBACKUPBUF;
+	LPTSURFACE pBACKUPBUF;
 	hResult = pDevice->GetRenderTarget(0, &pBACKUPBUF);
 	if( FAILED(hResult) )
 	{
@@ -172,7 +172,7 @@ LPDIRECT3DTEXTURE9 CTClientGuildMark::MCreateTexture(const CTClientGuildMark& r)
 		return NULL;
 	}
 
-	LPDIRECT3DSURFACE9 pRNDBUF;
+	LPTSURFACE pRNDBUF;
 	hResult = pRNDTEX->GetSurfaceLevel( 0, &pRNDBUF);
 	if( FAILED(hResult) )
 	{
@@ -322,7 +322,7 @@ void CTClientGuildMark::MRelease()
 	m_mapTEXTURE.clear();
 }
 // ====================================================================
-LPDIRECT3DTEXTURE9 CTClientGuildMark::MGetTexture(const CTClientGuildMark& r)
+LPTTEXTURE CTClientGuildMark::MGetTexture(const CTClientGuildMark& r)
 {
 	MAPGMARKTEXTURE::iterator finder = m_mapTEXTURE.find(r);
 	if( finder != m_mapTEXTURE.end() )
@@ -379,7 +379,7 @@ CTClientGuildMark& CTClientGuildMark::operator = ( const CTClientGuildMark& r)
 	return *this;
 }
 // ====================================================================
-LPDIRECT3DTEXTURE9 CTClientGuildMark::GetTexture()
+LPTTEXTURE CTClientGuildMark::GetTexture()
 {
 	return MGetTexture(*this);
 }
@@ -523,7 +523,7 @@ LPTEXTURESET CTClientGuildMark::GetMantleTexture(
 	BOOL bDeviceReset )
 {
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
 	if( !bDeviceReset )
 	{
@@ -542,7 +542,7 @@ LPTEXTURESET CTClientGuildMark::GetMantleTexture(
 	if( k.m_bFront >= pCoordInfo->m_vUV3.size() || k.m_bBack >= pCoordInfo->m_vUV1.size() || k.m_bBack >= pCoordInfo->m_vUV2.size() )
 		return NULL;
 
-	LPDIRECT3DTEXTURE9 pRNDTEX2;
+	LPTTEXTURE pRNDTEX2;
 	HRESULT hResult = D3DXCreateTexture(
 		pDevice,
 		MANTLE_FINAL_SIZE, MANTLE_FINAL_SIZE,
@@ -555,8 +555,8 @@ LPTEXTURESET CTClientGuildMark::GetMantleTexture(
 	if( FAILED(hResult) )
 		return NULL;
 
-	LPDIRECT3DSURFACE9 pBACKUPBUF;
-	LPDIRECT3DSURFACE9 pRNDBUF2;
+	LPTSURFACE pBACKUPBUF;
+	LPTSURFACE pRNDBUF2;
 	hResult = pDevice->GetRenderTarget(0, &pBACKUPBUF);
 	if( FAILED(hResult) )
 	{

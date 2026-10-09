@@ -1240,7 +1240,7 @@ void CTClientGame::CalcSCENE( DWORD dwTick)
 void CTClientGame::LoadCustomTextures(DWORD dwID, const CString strPath)
 {
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+	LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 
 	INT nIndex = dwID - 1;
 	INT nTest = dwID - 1;
@@ -1279,7 +1279,7 @@ LPTEXTURESET CTClientGame::ImagesToTextures(DWORD dwID, BOOL bResetDevice, CD3DD
 	size_t nIdx = dwID - 1;
 
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
 	if( !bResetDevice )
 	{
@@ -1288,7 +1288,7 @@ LPTEXTURESET CTClientGame::ImagesToTextures(DWORD dwID, BOOL bResetDevice, CD3DD
 			return it->second;
 	}
 
-	LPDIRECT3DTEXTURE9 pRNDTEX;
+	LPTTEXTURE pRNDTEX;
 	HRESULT hResult;
 
 	hResult = D3DXCreateTexture(
@@ -1303,7 +1303,7 @@ LPTEXTURESET CTClientGame::ImagesToTextures(DWORD dwID, BOOL bResetDevice, CD3DD
 	if( FAILED(hResult) )
 		return NULL;
 
-	LPDIRECT3DSURFACE9 pBACKUPBUF;
+	LPTSURFACE pBACKUPBUF;
 	hResult = pDevice->GetRenderTarget(0, &pBACKUPBUF);
 	if( FAILED(hResult) )
 	{
@@ -1311,7 +1311,7 @@ LPTEXTURESET CTClientGame::ImagesToTextures(DWORD dwID, BOOL bResetDevice, CD3DD
 		return NULL;
 	}
 
-	LPDIRECT3DSURFACE9 pRNDBUF;
+	LPTSURFACE pRNDBUF;
 	hResult = pRNDTEX->GetSurfaceLevel( 0, &pRNDBUF);
 	if( FAILED(hResult) )
 	{
@@ -3076,7 +3076,7 @@ BYTE CTClientGame::HitTestObjName( CTClientObjBase *pTOBJ, const CPoint& pt)
 
 BYTE CTClientGame::RenderTRANK( CTClientObjBase *pTOBJ, const D3DXVECTOR3 &vPROJ, FLOAT fBaseHeight, FLOAT fRight)
 {
-	LPDIRECT3DTEXTURE9 pTEX = NULL;
+	LPTTEXTURE pTEX = NULL;
 	if( pTOBJ->m_bType != OT_PC )
 		return FALSE;
 
@@ -3154,7 +3154,7 @@ BYTE CTClientGame::RenderTRANK( CTClientObjBase *pTOBJ, const D3DXVECTOR3 &vPROJ
 }
 BYTE CTClientGame::RenderTICON( CTClientObjBase *pTOBJ, const D3DXVECTOR3 &vPROJ, FLOAT fBaseHeight, FLOAT fLEFT)
 {
-	LPDIRECT3DTEXTURE9 pTEX = NULL;
+	LPTTEXTURE pTEX = NULL;
 
 	switch(pTOBJ->m_bType)
 	{
@@ -3271,7 +3271,7 @@ BYTE CTClientGame::RenderTCAMP( CTClientObjBase *pTOBJ, const D3DXVECTOR3 &vPROJ
 
 BYTE CTClientGame::RenderTSOULMATE( CTClientObjBase *pTOBJ, const D3DXVECTOR3 &vPROJ, FLOAT fBaseHeight, FLOAT fRIGHT)
 {
-	LPDIRECT3DTEXTURE9 pTEX = NULL;
+	LPTTEXTURE pTEX = NULL;
 
 	if( pTOBJ->m_bType == OT_PC && pTOBJ->m_dwID == m_dwSoulID && !m_dwSoulRegion )
 		pTEX = m_pTSOULMATE->GetTexture();

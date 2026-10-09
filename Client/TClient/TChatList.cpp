@@ -588,7 +588,7 @@ HRESULT CTChatList::Render( DWORD dwTickCount )
 {
 	if( !m_bHideBackground && m_bVisible )
 	{
-		LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+		LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 
 		pDevice->SetTextureStageState( 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 		pDevice->SetRenderState( D3DRS_TEXTUREFACTOR, 0x81000000 );
@@ -1202,7 +1202,7 @@ HRESULT CTChatList::Render( DWORD dwTickCount )
 {
 	if( !m_bHideBackground && m_bVisible )
 	{
-		LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+		LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 
 		pDevice->SetTextureStageState( 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
 		pDevice->SetRenderState( D3DRS_TEXTUREFACTOR, 0x81000000 );

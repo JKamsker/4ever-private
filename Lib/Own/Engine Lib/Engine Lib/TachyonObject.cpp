@@ -33,7 +33,7 @@ namespace
 
 	// Gather up to 3 directional + 3 point enabled lights from the fixed-function
 	// light state and upload them where the skinned vertex shader reads them.
-	void UploadSkinLights(LPDIRECT3DDEVICE9 pDev)
+	void UploadSkinLights(LPTRENDERDEVICE pDev)
 	{
 		struct Lights
 		{
@@ -1061,7 +1061,7 @@ void CTachyonObject::CalcFrame( BOOL bUpdate)
 		m_vPosition = m_vScale * m_vWorld;
 }
 
-void CTachyonObject::CalcTick( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTachyonObject::CalcTick( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	LPANI pANI = GetCurANI();
 
@@ -1345,7 +1345,7 @@ void CTachyonObject::ApplyTexture( CD3DDevice *pDevice,
 		pTEX->m_pTEX[nSTG]->m_dwCurTick = m_dwTexTick;
 		pTEX->m_pTEX[nSTG]->m_dwCurTick %= pTEX->m_pTEX[nSTG]->m_dwTotalTick;
 
-		LPDIRECT3DTEXTURE9 pTexture = pTEX->m_pTEX[nSTG]->GetTexture();
+		LPTTEXTURE pTexture = pTEX->m_pTEX[nSTG]->GetTexture();
 		UVKEY vKey = pTEX->m_pTEX[nSTG]->GetUV();
 		FLOAT fMIP = pTEX->m_pTEX[nSTG]->m_fMipBias + m_fMipFactor;
 
@@ -1479,7 +1479,7 @@ void CTachyonObject::RenderSILHOUETTE( CD3DDevice *pDevice, CD3DCamera *pCamera,
 	// ----- GPU skinning per-object setup for the silhouette (bones filled once;
 	//        framePacket/view is uploaded per outline pass below) -----
 	BOOL bObjGPUSkin = FALSE;
-	LPDIRECT3DTEXTURE9 pBonesTex = NULL;
+	LPTTEXTURE pBonesTex = NULL;
 	if( pDevice->m_bGPUSkinReady && pANI && pANI->m_pANI )
 	{
 		LPANIDATA pDATA = pANI->m_pANI->GetAniData();
@@ -1766,7 +1766,7 @@ void CTachyonObject::Render(CD3DDevice *pDevice, CD3DCamera *pCamera, BYTE bNoBl
 	// bones texture and upload the skinned shader's per-object constants, so skinned
 	// meshes can be transformed on the GPU instead of CPU software vertex processing.
 	BOOL bObjGPUSkin = FALSE;
-	LPDIRECT3DTEXTURE9 pBonesTex = NULL;
+	LPTTEXTURE pBonesTex = NULL;
 	if( pDevice->m_bGPUSkinReady && pANI && pANI->m_pANI )
 	{
 		LPANIDATA pDATA = pANI->m_pANI->GetAniData();

@@ -131,7 +131,7 @@ protected:
 	void ApplyGammaRamp();	// build + set the fullscreen gamma ramp from the color controls
 
 public:
-	LPDIRECT3DTEXTURE9 LoadTexture(
+	LPTTEXTURE LoadTexture(
 		LPBYTE pResData,
 		UINT nLength,
 		UINT nMipLevels);
@@ -162,7 +162,7 @@ public:
 	// Anisotropic filtering (Item 1). m_dwWorldAniso is 0 when off/unsupported, else the
 	// MaxAnisotropy to use; m_WorldMinFilter is ANISOTROPIC when enabled else LINEAR. World
 	// render paths read m_WorldMinFilter for their MINFILTER sampler state. Statics so the
-	// LPDIRECT3DDEVICE9-only paths (e.g. water) can reach them without a CD3DDevice handle.
+	// LPTRENDERDEVICE-only paths (e.g. water) can reach them without a CD3DDevice handle.
 	static DWORD m_dwWorldAniso;
 	static D3DTEXTUREFILTERTYPE m_WorldMinFilter;
 
@@ -176,7 +176,7 @@ public:
 	static FLOAT m_fGamma;
 	static DWORD ScaleAmbient( DWORD dwAmbient);	// scale the RGB of an ambient color by m_fAmbientScale
 
-	LPDIRECT3DDEVICE9 m_pDevice;
+	LPTRENDERDEVICE m_pDevice;
 	LPDIRECT3D9 m_pD3D;
 
 	LPDIRECT3DVERTEXSHADER9 m_pVertexShader[VS_COUNT];
@@ -190,7 +190,7 @@ public:
 	static const int BONES_RING = 64;	// cycle bones textures per object to avoid per-frame lock stalls
 	LPDIRECT3DVERTEXSHADER9 m_pSkinnedVS;
 	LPDIRECT3DVERTEXDECLARATION9 m_pSkinnedDECL;
-	LPDIRECT3DTEXTURE9 m_pBonesTexture[BONES_RING];
+	LPTTEXTURE m_pBonesTexture[BONES_RING];
 	DWORD m_dwBonesIndex;
 	BYTE m_bGPUSkinReady;
 
@@ -210,21 +210,21 @@ public:
 	ULONGLONG m_lVIDEOMEM;
 	ULONGLONG m_lSYSMEM;
 
-	LPDIRECT3DVERTEXBUFFER9 m_pBACKVB;
-	LPDIRECT3DTEXTURE9 m_pGRAYTEX;
-	LPDIRECT3DTEXTURE9 m_pGLOWTEX;
-	LPDIRECT3DTEXTURE9 m_pBACKTEX;
-	LPDIRECT3DTEXTURE9 m_pBACKTEX2;
-	LPDIRECT3DSURFACE9 m_pGRAYBUF;
-	LPDIRECT3DSURFACE9 m_pGLOWBUF;
-	LPDIRECT3DSURFACE9 m_pBACKBUF;
-	LPDIRECT3DSURFACE9 m_pBACKBUF2;
-	LPDIRECT3DSURFACE9 m_pRTARGET;
-	LPDIRECT3DSURFACE9 m_pZBUF;
+	LPTVERTEXBUFFER m_pBACKVB;
+	LPTTEXTURE m_pGRAYTEX;
+	LPTTEXTURE m_pGLOWTEX;
+	LPTTEXTURE m_pBACKTEX;
+	LPTTEXTURE m_pBACKTEX2;
+	LPTSURFACE m_pGRAYBUF;
+	LPTSURFACE m_pGLOWBUF;
+	LPTSURFACE m_pBACKBUF;
+	LPTSURFACE m_pBACKBUF2;
+	LPTSURFACE m_pRTARGET;
+	LPTSURFACE m_pZBUF;
 
 protected:
-	LPDIRECT3DVERTEXBUFFER9 m_pEraserVB;
-	LPDIRECT3DINDEXBUFFER9 m_pEraserIB;
+	LPTVERTEXBUFFER m_pEraserVB;
+	LPTINDEXBUFFER m_pEraserIB;
 
 	CWnd* m_pMainWnd;
 

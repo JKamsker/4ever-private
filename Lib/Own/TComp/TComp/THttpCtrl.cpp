@@ -5,7 +5,7 @@
 
 #define BUF_SIZE 1024
 
-LPDIRECT3DTEXTURE9 THttpCtrl::m_pTIMG = NULL;
+LPTTEXTURE THttpCtrl::m_pTIMG = NULL;
 CSize THttpCtrl::m_vTBUFSIZE( 0, 0);
 BYTE THttpCtrl::m_bRedrawHTTP = FALSE;
 CWnd THttpCtrl::m_vHTTP;
@@ -427,7 +427,7 @@ HRESULT THttpCtrl::Render( DWORD dwTickCount)
 	if(!CTachyonRes::m_pDEVICE)
 		return E_FAIL;
 
-	LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+	LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 	DWORD dwCaret = GetCaretBlinkTime();
 
 	m_dwTick += dwTickCount;

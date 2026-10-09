@@ -3,10 +3,10 @@
 class CBattleRankTex
 {
 public:
-	typedef std::map<BYTE, LPDIRECT3DTEXTURE9>	MAPRANKTEX;
+	typedef std::map<BYTE, LPTTEXTURE>	MAPRANKTEX;
 public:
 	static void Reset();
-	LPDIRECT3DTEXTURE9 GetTexture(BYTE bRank);
+	LPTTEXTURE GetTexture(BYTE bRank);
 private:
 	TImageList* m_pBattleRankList;
 	static MAPRANKTEX m_mapRANK;

@@ -14,7 +14,7 @@ protected:
 
 	CTClientPet*		m_pDisplayPet;
 	CD3DDevice*			m_pCDevice;
-	LPDIRECT3DDEVICE9	m_pDxDevice;
+	LPTRENDERDEVICE	m_pDxDevice;
 	CD3DCamera			m_vCamera;
 
 	CD3DLight m_vLights[TLIGHT_COUNT];

@@ -4033,9 +4033,9 @@ BYTE CTClientWnd::AddTCUSTOMCLOAKTEX(WORD wID)
 		return FALSE;
 
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
-	LPDIRECT3DDEVICE9 pDevice = pMainWnd->m_Device.m_pDevice;
+	LPTRENDERDEVICE pDevice = pMainWnd->m_Device.m_pDevice;
 
-	LPDIRECT3DTEXTURE9 pTex;
+	LPTTEXTURE pTex;
 
 	D3DXCreateTextureFromFile(pDevice,strPath,&pTex);		
 

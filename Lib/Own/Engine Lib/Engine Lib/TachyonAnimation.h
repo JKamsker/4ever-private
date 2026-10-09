@@ -50,13 +50,13 @@ public:
 		FLOAT fBlendTime);
 
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPTPIVOT pPivot,
 		D3DXMATRIX& vWorld,
 		FLOAT fTimeValue);
 
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		int nIndex);
 
 	void Lock( LPVECTORSTRING pFILE);

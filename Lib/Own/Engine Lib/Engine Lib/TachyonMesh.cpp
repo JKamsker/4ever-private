@@ -72,18 +72,18 @@ void CTachyonMesh::ReleaseGlobalVB()
 	m_mapVB.clear();
 }
 
-void CTachyonMesh::BeginGlobalDraw( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonMesh::BeginGlobalDraw( LPTRENDERDEVICE pDevice)
 {
 	m_dwCurrentVB = 0xFFFFFFFF;
 	m_bCurSWVP = 0xFF;	// resync the SW-VP cache each frame (also covers a prior device reset)
 }
 
-void CTachyonMesh::EndGlobalDraw( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonMesh::EndGlobalDraw( LPTRENDERDEVICE pDevice)
 {
 	ApplySWVP(pDevice, FALSE);
 }
 
-void CTachyonMesh::ApplySWVP( LPDIRECT3DDEVICE9 pDevice, BYTE bSoftware)
+void CTachyonMesh::ApplySWVP( LPTRENDERDEVICE pDevice, BYTE bSoftware)
 {
 	bSoftware = bSoftware ? TRUE : FALSE;
 
@@ -122,7 +122,7 @@ LPINDEXEDMESH CTachyonMesh::GetGlobalVB()
 		m_bVBID);
 }
 
-BOOL CTachyonMesh::LoadMesh( LPDIRECT3DDEVICE9 pDevice, LPBYTE pData)
+BOOL CTachyonMesh::LoadMesh( LPTRENDERDEVICE pDevice, LPBYTE pData)
 {
 	int nTMFVersion = 0;
 
@@ -368,7 +368,7 @@ void CTachyonMesh::Release()
 		for( int i=0; i<m_dwMeshCount; i++)
 			while(!m_pIB[i].empty())
 			{
-				LPDIRECT3DINDEXBUFFER9 pIB = m_pIB[i].back();
+				LPTINDEXBUFFER pIB = m_pIB[i].back();
 				if(pIB)
 					pIB->Release();
 				m_pIB[i].pop_back();
@@ -418,7 +418,7 @@ void CTachyonMesh::Release()
 	m_vDist.clear();
 }
 
-void CTachyonMesh::LoadToGlobalVB( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonMesh::LoadToGlobalVB( LPTRENDERDEVICE pDevice)
 {
 	LPINDEXEDMESH pMESH = GetGlobalVB();
 
@@ -469,7 +469,7 @@ void CTachyonMesh::LoadToGlobalVB( LPDIRECT3DDEVICE9 pDevice)
 				}
 }
 
-void CTachyonMesh::Restore( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonMesh::Restore( LPTRENDERDEVICE pDevice)
 {
 	if(m_pVB)
 	{
@@ -500,7 +500,7 @@ void CTachyonMesh::Restore( LPDIRECT3DDEVICE9 pDevice)
 	{
 		while(!m_pIB[i].empty())
 		{
-			LPDIRECT3DINDEXBUFFER9 pIB = m_pIB[i].back();
+			LPTINDEXBUFFER pIB = m_pIB[i].back();
 			if(pIB)
 				pIB->Release();
 			m_pIB[i].pop_back();
@@ -508,7 +508,7 @@ void CTachyonMesh::Restore( LPDIRECT3DDEVICE9 pDevice)
 
 		for( int j=0; j<INT(m_pMESH[i].size()); j++)
 		{
-			LPDIRECT3DINDEXBUFFER9 pIB = NULL;
+			LPTINDEXBUFFER pIB = NULL;
 			m_pMESH[i][j]->m_dwCount = 0;
 
 			for( int k=0; k<INT(m_pMESH[i][j]->m_vIB.size()); k++)
@@ -582,7 +582,7 @@ void CTachyonMesh::ReleaseDATA( BYTE bReleaseVB)
 	}
 }
 
-void CTachyonMesh::Lock( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonMesh::Lock( LPTRENDERDEVICE pDevice,
 						 LPVECTORSTRING pFILE)
 {
 	if(!m_dwREF)
@@ -668,7 +668,7 @@ void CTachyonMesh::Unlock()
 	}
 }
 
-void CTachyonMesh::Render( LPDIRECT3DDEVICE9 pDevice, int nLevel)
+void CTachyonMesh::Render( LPTRENDERDEVICE pDevice, int nLevel)
 {
 	pDevice->SetRenderState( D3DRS_VERTEXBLEND, m_dwNodeCount ? D3DVBF_3WEIGHTS : D3DVBF_DISABLE);
 	pDevice->SetFVF(m_dwNodeCount ? T3DFVF_WMESHVERTEX : T3DFVF_MESHVERTEX);
@@ -687,7 +687,7 @@ void CTachyonMesh::Render( LPDIRECT3DDEVICE9 pDevice, int nLevel)
 	pDevice->SetRenderState( D3DRS_VERTEXBLEND, D3DVBF_DISABLE);
 }
 
-void CTachyonMesh::Render( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonMesh::Render( LPTRENDERDEVICE pDevice,
 						   DWORD dwIndex,
 						   int nLevel)
 {
@@ -703,8 +703,8 @@ void CTachyonMesh::Render( LPDIRECT3DDEVICE9 pDevice,
 			{
 				LPINDEXEDMESH pMESH = GetGlobalVB();
 
-				LPDIRECT3DVERTEXBUFFER9 pVB = pMESH->m_vT3DVB.GetVB();
-				LPDIRECT3DINDEXBUFFER9 pIB = pMESH->m_vT3DIB.GetIB();
+				LPTVERTEXBUFFER pVB = pMESH->m_vT3DVB.GetVB();
+				LPTINDEXBUFFER pIB = pMESH->m_vT3DIB.GetIB();
 
 				if( !pVB || !pIB )
 					return;

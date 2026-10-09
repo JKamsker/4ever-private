@@ -552,7 +552,7 @@ void CTachyonAnimation::Unlock()
 	}
 }
 
-void CTachyonAnimation::Render( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonAnimation::Render( LPTRENDERDEVICE pDevice,
 							    LPTPIVOT pPivot,
 								D3DXMATRIX& vWorld,
 								FLOAT fTimeValue)
@@ -606,7 +606,7 @@ void CTachyonAnimation::Render( LPDIRECT3DDEVICE9 pDevice,
 		}
 }
 
-void CTachyonAnimation::Render( LPDIRECT3DDEVICE9 pDevice, int nIndex)
+void CTachyonAnimation::Render( LPTRENDERDEVICE pDevice, int nIndex)
 {
 	pDevice->SetStreamSource( 0, m_pVB[nIndex].m_vVB.GetVB(), 0, sizeof(MESHVERTEX));
 	pDevice->DrawPrimitive( D3DPT_TRIANGLELIST, 0, m_pVB[nIndex].m_dwCount);

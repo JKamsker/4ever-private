@@ -256,8 +256,8 @@ struct tagTCORPS
 class CTRSCSDlg : public CTClientUIBase
 {
 public:
-	static LPDIRECT3DTEXTURE9 m_pTBACK;
-	static LPDIRECT3DTEXTURE9 m_pTRSCS;
+	static LPTTEXTURE m_pTBACK;
+	static LPTTEXTURE m_pTRSCS;
 	static LPTEXTURESET m_pTARROW;
 	static LPTEXTURESET m_pTMASK;
 
@@ -381,8 +381,8 @@ public:
 class CTRSCSDlg : public CTClientUIBase
 {
 public:
-	static LPDIRECT3DTEXTURE9 m_pTBACK;
-	static LPDIRECT3DTEXTURE9 m_pTRSCS;
+	static LPTTEXTURE m_pTBACK;
+	static LPTTEXTURE m_pTRSCS;
 	static LPTEXTURESET m_pTARROW;
 	static LPTEXTURESET m_pTMASK;
 

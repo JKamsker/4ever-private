@@ -22,12 +22,12 @@ public:
 	static BYTE m_gZWriteable;
 
 public:
-	static void BeginGlobalDraw( LPDIRECT3DDEVICE9 pDevice);
-	static void EndGlobalDraw( LPDIRECT3DDEVICE9 pDevice);
+	static void BeginGlobalDraw( LPTRENDERDEVICE pDevice);
+	static void EndGlobalDraw( LPTRENDERDEVICE pDevice);
 	// Sets the device software-vertex-processing mode only when it actually
 	// changes, collapsing the per-draw SW<->HW toggle storm that tanks FPS on
 	// modern D3D9 drivers (each real switch forces a full pipeline flush).
-	static void ApplySWVP( LPDIRECT3DDEVICE9 pDevice, BYTE bSoftware);
+	static void ApplySWVP( LPTRENDERDEVICE pDevice, BYTE bSoftware);
 	static void SetGlobalZState( BOOL bZEnable, BOOL bZWriteable );
 	static void ReleaseGlobalVB();
 	static void InitGlobalVB();
@@ -46,11 +46,11 @@ public:
 		LPWORD pMESH,
 		DWORD dwCount);
 
-	void LoadToGlobalVB( LPDIRECT3DDEVICE9 pDevice);
-	void Restore( LPDIRECT3DDEVICE9 pDevice);
+	void LoadToGlobalVB( LPTRENDERDEVICE pDevice);
+	void Restore( LPTRENDERDEVICE pDevice);
 
 	void Lock(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPVECTORSTRING pFILE);
 
 	void ReleaseDATA( BYTE bReleaseVB);
@@ -58,16 +58,16 @@ public:
 	void Unlock();
 
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		int nLevel = -1);
 
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwIndex,
 		int nLevel);
 
 	BOOL LoadMesh(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPBYTE pData);
 
 	int GetLevel( FLOAT fDist);
@@ -78,7 +78,7 @@ public:
 		int nLevel);
 
 public:
-	LPDIRECT3DVERTEXBUFFER9 m_pVB;
+	LPTVERTEXBUFFER m_pVB;
 	LPVECTORIB m_pIB;
 
 	LPVECTORIBINDEXINFO m_pMESHIB;

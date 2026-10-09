@@ -35,13 +35,13 @@ protected:
 
 public:
 	static LPT3DDATA CreateDXT(
-		LPDIRECT3DDEVICE9 pDevice,
-		LPDIRECT3DSURFACE9 pImage,
+		LPTRENDERDEVICE pDevice,
+		LPTSURFACE pImage,
 		BYTE bDXT);
 
 	static LPT3DDATA CreateDXT(
-		LPDIRECT3DDEVICE9 pDevice,
-		LPDIRECT3DTEXTURE9 pTexture,
+		LPTRENDERDEVICE pDevice,
+		LPTTEXTURE pTexture,
 		BYTE bDXT);
 
 	static DWORD m_dwScreenX;
@@ -64,19 +64,19 @@ public:
 	void SetScaleX(float fScale);
 	void SetScaleY(float fScale);
 
-	LPT3DDATA BuildImageData( LPDIRECT3DDEVICE9 pDevice, BYTE bFormat=NON_COMP );
-	LPDIRECT3DSURFACE9 CreateOffscreenPlainSurface( LPDIRECT3DDEVICE9 pDevice);
+	LPT3DDATA BuildImageData( LPTRENDERDEVICE pDevice, BYTE bFormat=NON_COMP );
+	LPTSURFACE CreateOffscreenPlainSurface( LPTRENDERDEVICE pDevice);
 
 	BOOL GetMask( int nPosX, int nPosY);
 	BOOL IsEnable();
 
 	BYTE LoadImageFile(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPBYTE pResData,
 		UINT nLength);
 
 	void SaveImageFile(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPCSTR strFileName, 
 		D3DXIMAGE_FILEFORMAT destFormat);
 
@@ -90,7 +90,7 @@ public:
 
 	void Release();
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwColor,
 		int nPosX,
 		int nPosY,

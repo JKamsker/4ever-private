@@ -211,7 +211,7 @@ BOOL CSFX::IsDead()
 	return m_dwLife == 0;
 }
 
-void CSFX::CalcTick( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CSFX::CalcTick( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	m_fTime += CTMath::GetTimeValue(dwTick + m_dwERRTime);
 	m_dwTexTick += dwTick;
@@ -867,7 +867,7 @@ void CTachyonSFX::ClearDead()
 	}
 }
 
-void CTachyonSFX::CalcTick( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTachyonSFX::CalcTick( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	if( m_dwInitTick != INVALID_INIT_TICK )
 	{
@@ -1467,7 +1467,7 @@ void CTachyonSFX::Release( DWORD dwID)
 		ReleaseCommon();
 }
 
-void CTachyonSFX::CalcBUF( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTachyonSFX::CalcBUF( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	MAPTSFX::iterator it = m_mapINST.begin();
 

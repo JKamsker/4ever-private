@@ -198,7 +198,7 @@ BYTE CTClientGate::IsActiveTGate()
 		(m_pTGATE->m_bDeleteOnOpen && m_bAction == m_pTGATE->m_bOpenID) ? FALSE : TRUE;
 }
 
-void CTClientGate::CalcTick( LPDIRECT3DDEVICE9 pDevice,
+void CTClientGate::CalcTick( LPTRENDERDEVICE pDevice,
 							 DWORD dwTick)
 {
 	if(m_bResetGATE)

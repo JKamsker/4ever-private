@@ -3,8 +3,8 @@
 class CTClientCustomCloakTexture
 {
 public:
-	LPDIRECT3DTEXTURE9 m_pSYMBOL;
-	LPDIRECT3DTEXTURE9 m_pMANTLE;
+	LPTTEXTURE m_pSYMBOL;
+	LPTTEXTURE m_pMANTLE;
 
 	CTClientCustomCloakTexture()
 		: m_pSYMBOL(NULL), m_pMANTLE(NULL) {}

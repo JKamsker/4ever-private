@@ -15,7 +15,7 @@ CD3DFont CTachyonRes::m_vTEXT;
 CFont CTachyonRes::m_vFONT;
 
 BOOL CTachyonRes::m_bUseNullTex = FALSE;
-LPDIRECT3DTEXTURE9 CTachyonRes::m_pNULLTEX = NULL;
+LPTTEXTURE CTachyonRes::m_pNULLTEX = NULL;
 
 CTachyonRes::CTachyonRes()
 {
@@ -894,7 +894,7 @@ void CTachyonRes::LoadTEX( CString strGroupID)
 
 		if(!m_bUseNullTex)
 			for( it = pTRESDATA[i].begin(); it != pTRESDATA[i].end(); it++)
-				((LPDIRECT3DTEXTURE9) (*it).second)->Release();
+				((LPTTEXTURE) (*it).second)->Release();
 		pTRESDATA[i].clear();
 
 		for( it = pTRES[i].begin(); it != pTRES[i].end(); it++)

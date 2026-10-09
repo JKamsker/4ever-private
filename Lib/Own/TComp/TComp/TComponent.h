@@ -21,7 +21,7 @@ class TComponent
 public:
 	struct TextLine
 	{
-		LPDIRECT3DVERTEXBUFFER9 m_pVB;
+		LPTVERTEXBUFFER m_pVB;
 		INT m_nVertexCount;
 		INT m_nStartX, m_nStartY;
 		INT m_nEndX, m_nEndY;
@@ -30,12 +30,12 @@ public:
 
 		TextLine();
 		~TextLine();
-		void MakeLine( LPDIRECT3DDEVICE9, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor );
-		void MakeDotLine( LPDIRECT3DDEVICE9, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength);
-		void Draw( LPDIRECT3DDEVICE9 );
+		void MakeLine( LPTRENDERDEVICE, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor );
+		void MakeDotLine( LPTRENDERDEVICE, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength);
+		void Draw( LPTRENDERDEVICE );
 
 	private:
-		void _CreateVB( LPDIRECT3DDEVICE9 pDevice, INT nCount ); 
+		void _CreateVB( LPTRENDERDEVICE pDevice, INT nCount ); 
 	};
 
 	struct TextSetting

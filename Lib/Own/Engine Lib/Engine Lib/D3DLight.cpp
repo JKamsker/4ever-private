@@ -9,7 +9,7 @@
 // Construction/Destruction
 //////////////////////////////////////////////////////////////////////
 
-LPDIRECT3DDEVICE9 CD3DLight::m_pDevice = NULL;
+LPTRENDERDEVICE CD3DLight::m_pDevice = NULL;
 QUEUEDWORD CD3DLight::m_queueFreeLight;
 MAPDWORD CD3DLight::m_mapUsedLight;
 
@@ -37,7 +37,7 @@ void CD3DLight::Release()
 	ReleaseLightIndex(m_dwIndex);
 }
 
-void CD3DLight::SetDevice( LPDIRECT3DDEVICE9 pDevice)
+void CD3DLight::SetDevice( LPTRENDERDEVICE pDevice)
 {
 	m_pDevice = pDevice;
 }

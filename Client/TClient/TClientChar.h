@@ -166,7 +166,7 @@ public:
 		CTachyonRes *pRES);
 
 	virtual void ActivateTALK(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString strTALK,
 		DWORD dwCOLOR);
 

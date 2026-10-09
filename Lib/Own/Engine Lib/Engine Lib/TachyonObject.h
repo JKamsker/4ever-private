@@ -154,7 +154,7 @@ public:
 		DWORD dwMesh);
 
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual void Render(

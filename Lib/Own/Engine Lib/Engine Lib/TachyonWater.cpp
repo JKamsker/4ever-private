@@ -95,7 +95,7 @@ void CTachyonWater::Release()
 	m_mapUSED.clear();
 }
 
-void CTachyonWater::Init( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonWater::Init( LPTRENDERDEVICE pDevice,
 						  LPTEXTURESET pSPEC,
 						  FLOAT fLENGTH,
 						  FLOAT fSCALE,
@@ -142,7 +142,7 @@ void CTachyonWater::Init( LPDIRECT3DDEVICE9 pDevice,
 		&m_pVB, NULL);
 	m_mapUSED.clear();
 
-	LPDIRECT3DSURFACE9 pIMG = NULL;
+	LPTSURFACE pIMG = NULL;
 	D3DSURFACE_DESC desc;
 	UVKEY vKEY = m_pSPEC->GetUV();
 
@@ -163,7 +163,7 @@ void CTachyonWater::Init( LPDIRECT3DDEVICE9 pDevice,
 	{
 		LPBYTE pDATA = m_pDATA + INT(i) * INT(m_wSTEP) * INT(m_wSTEP);
 
-		LPDIRECT3DSURFACE9 pTEX = NULL;
+		LPTSURFACE pTEX = NULL;
 		D3DLOCKED_RECT lr;
 
 		m_pSPEC->m_vTexture[i]->GetSurfaceLevel( 0, &pTEX);
@@ -432,7 +432,7 @@ void CTachyonWater::BuildBlock( VECTORBLOCK& vBlock, CD3DCamera *pCamera)
 	}
 }
 
-void CTachyonWater::ResetVB( LPDIRECT3DDEVICE9 pDevice, VECTORBLOCK& vBlock)
+void CTachyonWater::ResetVB( LPTRENDERDEVICE pDevice, VECTORBLOCK& vBlock)
 {
 	static int nActiveIndex[4] = { 1, 5, 7, 3};
 
@@ -535,7 +535,7 @@ void CTachyonWater::ResetVB( LPDIRECT3DDEVICE9 pDevice, VECTORBLOCK& vBlock)
 	m_pVB->Unlock();
 }
 
-void CTachyonWater::ResetREF( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonWater::ResetREF( LPTRENDERDEVICE pDevice,
 							  D3DXVECTOR3 vPOS)
 {
 	LPD3DXVECTOR3 pBUF = NULL;
@@ -572,7 +572,7 @@ void CTachyonWater::ResetREF( LPDIRECT3DDEVICE9 pDevice,
 	m_pREF->Unlock();
 }
 
-void CTachyonWater::Render( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonWater::Render( LPTRENDERDEVICE pDevice)
 {
 	D3DMATERIAL9 vMaterial;
 
@@ -613,7 +613,7 @@ void CTachyonWater::Render( LPDIRECT3DDEVICE9 pDevice)
 	pDevice->SetMaterial(&vMaterial);
 }
 
-void CTachyonWater::RenderREF( LPDIRECT3DDEVICE9 pDevice)
+void CTachyonWater::RenderREF( LPTRENDERDEVICE pDevice)
 {
 	pDevice->SetSamplerState( 0, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
 	pDevice->SetSamplerState( 0, D3DSAMP_MINFILTER, CD3DDevice::m_WorldMinFilter);

@@ -459,13 +459,17 @@ BOOL CD3DDevice::InitDevices( CWnd *pWnd)
 	dwBehavior = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 #endif
 
+	LPDIRECT3DDEVICE9 pD3D9 = NULL;
 	hr = m_pD3D->CreateDevice(
 		iAdapter,
 		devType,
 		TSAFE_HWND(pWnd),
 		dwBehavior,
 		&m_vPRESENT,
-		&m_pDevice);
+		&pD3D9);
+
+	if(SUCCEEDED(hr))
+		m_pDevice = new CTRenderDevice(pD3D9);
 
 	if(FAILED(hr))
 	{
@@ -798,11 +802,11 @@ void CD3DDevice::ReleaseDevice()
 	ZeroMemory( &m_vCAPS, sizeof(D3DCAPS9));
 }
 
-LPDIRECT3DTEXTURE9 CD3DDevice::LoadTexture( LPBYTE pResData,
+LPTTEXTURE CD3DDevice::LoadTexture( LPBYTE pResData,
 										    UINT nLength,
 											UINT nMipLevels)
 {
-	LPDIRECT3DTEXTURE9 pResult = NULL;
+	LPTTEXTURE pResult = NULL;
 
 	if( !pResData || nLength <= 0 )
 		return pResult;
