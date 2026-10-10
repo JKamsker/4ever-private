@@ -14,9 +14,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
 # bgfx, bx and bimg for the bgfx render backend (Lib/3rdParty/bgfx.cmake/VERSION.txt).
-# Only the libraries: the shader compiler is built on demand with TCLIENT_BUILD_SHADERC.
-option(TCLIENT_BUILD_SHADERC "Also build bgfx's shaderc, to recompile the render shaders" OFF)
-set(BGFX_BUILD_TOOLS ${TCLIENT_BUILD_SHADERC} CACHE BOOL "" FORCE)
+# Only the libraries: the shader compiler is a separate 64-bit build (build-shaderc.ps1).
+set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_BIN2C OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_TEXTURE OFF CACHE BOOL "" FORCE)
