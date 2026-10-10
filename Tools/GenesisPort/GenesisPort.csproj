@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- 4Genesis/ is the TCE1-decrypted mirror of 4Genesis-installer/ and uses our formats, so the ClassicPort
+       catalogs/parsers and the OfficialPort costume helpers are shared as-is. -->
+  <ItemGroup>
+    <Compile Include="..\ClassicPort\Res.cs" Link="Shared\Res.cs" />
+    <Compile Include="..\ClassicPort\TexConv.cs" Link="Shared\TexConv.cs" />
+    <Compile Include="..\ClassicPort\Tcd.cs" Link="Shared\Tcd.cs" />
+    <Compile Include="..\ClassicPort\Items.cs" Link="Shared\Items.cs" />
+    <Compile Include="..\OfficialPort\CostumePort.cs" Link="Shared\CostumePort.cs" />
+    <Compile Include="..\OfficialPort\ObjCloth.cs" Link="Shared\ObjCloth.cs" />
+  </ItemGroup>
+
+</Project>
