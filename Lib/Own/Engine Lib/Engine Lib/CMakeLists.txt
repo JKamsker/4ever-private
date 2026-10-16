@@ -57,6 +57,7 @@ target_link_libraries(TRenderBGFX
         bgfx
         bimg_decode
         bx
+        gdiplus
 )
 
 add_library(EngineLib STATIC ${EngineLib_SOURCES})

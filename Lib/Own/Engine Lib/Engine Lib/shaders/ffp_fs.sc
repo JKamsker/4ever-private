@@ -95,15 +95,18 @@ vec4 sampleStage( int nStage, vec4 vCoord01, vec4 vCoord23)
 	vec4 vBound = u_tPS[3];
 	vec4 vBias = u_tPS[4];
 
-	// D3D9 samples a stage without a texture as opaque black.
-	if( nStage == 0 )
-		return vBound.x > 0.5 ? texture2DBias( s_tex0, vCoord01.xy, vBias.x) : vec4( 0.0, 0.0, 0.0, 1.0);
-	if( nStage == 1 )
-		return vBound.y > 0.5 ? texture2DBias( s_tex1, vCoord01.zw, vBias.y) : vec4( 0.0, 0.0, 0.0, 1.0);
-	if( nStage == 2 )
-		return vBound.z > 0.5 ? texture2DBias( s_tex2, vCoord23.xy, vBias.z) : vec4( 0.0, 0.0, 0.0, 1.0);
+	// D3D9's fixed pipeline reads a stage without a texture as opaque white: effects
+	// use MODULATE2X with D3DTA_TEXTURE on an empty stage 1 to double their color.
+	vec4 vWhite = vec4( 1.0, 1.0, 1.0, 1.0);
 
-	return vBound.w > 0.5 ? texture2DBias( s_tex3, vCoord23.zw, vBias.w) : vec4( 0.0, 0.0, 0.0, 1.0);
+	if( nStage == 0 )
+		return vBound.x > 0.5 ? texture2DBias( s_tex0, vCoord01.xy, vBias.x) : vWhite;
+	if( nStage == 1 )
+		return vBound.y > 0.5 ? texture2DBias( s_tex1, vCoord01.zw, vBias.y) : vWhite;
+	if( nStage == 2 )
+		return vBound.z > 0.5 ? texture2DBias( s_tex2, vCoord23.xy, vBias.z) : vWhite;
+
+	return vBound.w > 0.5 ? texture2DBias( s_tex3, vCoord23.zw, vBias.w) : vWhite;
 }
 
 void main()

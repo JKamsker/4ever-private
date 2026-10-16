@@ -10,8 +10,8 @@
 // the thread that draws: the loader thread fills resources in memory, and
 // releases from any thread queue their bgfx handles until the next Present.
 //
-// Not done yet: rendering into render target textures (those draws are
-// skipped), reading render targets back, saving images.
+// Render targets live on the GPU only: the back buffer is read back through
+// bgfx screenshots, and images are saved with GDI+ (bmp, jpg, png).
 
 #define NOMINMAX
 #include <windows.h>
@@ -24,9 +24,20 @@
 #include <bimg/decode.h>
 #include <bx/allocator.h>
 
+#include <algorithm>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <vector>
+
+// GDI+ needs min and max, which NOMINMAX takes away.
+namespace Gdiplus
+{
+	using std::min;
+	using std::max;
+}
+#include <objidl.h>
+#include <gdiplus.h>
 
 #include "TRenderShaders.h"
 
@@ -38,6 +49,7 @@ namespace
 	DWORD g_dwGeneration = 0;
 
 	inline UINT TMax( UINT a, UINT b) { return a > b ? a : b; }
+	inline FLOAT TMaxF( FLOAT a, FLOAT b) { return a > b ? a : b; }
 	inline UINT TMin( UINT a, UINT b) { return a < b ? a : b; }
 
 	inline FLOAT DWToFloat( DWORD dwValue) { FLOAT fValue; memcpy( &fValue, &dwValue, sizeof(FLOAT)); return fValue; }
@@ -270,6 +282,54 @@ namespace
 	}
 
 	// Box filter of a B, G, R, A level into the next one.
+	// BC1/2/3 blocks of one color each: the average of the block's B, G, R, A pixels.
+	void EncodeSolidBlocks( bimg::TextureFormat::Enum nFormat, const BYTE *pBGRA, UINT nWidth, UINT nHeight, std::vector<BYTE>& vOUT)
+	{
+		UINT nBlocksX = (nWidth + 3) / 4;
+		UINT nBlocksY = (nHeight + 3) / 4;
+		UINT nBlockSize = nFormat == bimg::TextureFormat::BC1 ? 8 : 16;
+
+		vOUT.assign( nBlocksX * nBlocksY * nBlockSize, 0);
+
+		for( UINT by=0; by<nBlocksY; by++)
+			for( UINT bx=0; bx<nBlocksX; bx++)
+			{
+				UINT vSUM[4] = { 0, 0, 0, 0};
+				UINT nCount = 0;
+
+				for( UINT y=by*4; y<TMin( by * 4 + 4, nHeight); y++)
+					for( UINT x=bx*4; x<TMin( bx * 4 + 4, nWidth); x++)
+					{
+						for( UINT c=0; c<4; c++)
+							vSUM[c] += pBGRA[(y * nWidth + x) * 4 + c];
+						nCount++;
+					}
+
+				BYTE vAVG[4];
+				for( UINT c=0; c<4; c++)
+					vAVG[c] = BYTE(nCount ? (vSUM[c] + nCount / 2) / nCount : 0);
+
+				BYTE *pBlock = &vOUT[(by * nBlocksX + bx) * nBlockSize];
+				WORD wColor = WORD((vAVG[0] >> 3) | ((vAVG[1] >> 2) << 5) | ((vAVG[2] >> 3) << 11));
+				BYTE *pColor = pBlock + (nBlockSize - 8);
+
+				// Equal end points: index 0 is the color (index 3 is transparent black in BC1).
+				memcpy( pColor, &wColor, 2);
+				memcpy( pColor + 2, &wColor, 2);
+
+				if( nFormat == bimg::TextureFormat::BC1 && vAVG[3] < 0x80 )
+					memset( pColor + 4, 0xFF, 4);
+
+				if( nFormat == bimg::TextureFormat::BC2 )
+					memset( pBlock, (vAVG[3] >> 4) * 0x11, 8);
+				else if( nFormat == bimg::TextureFormat::BC3 )
+				{
+					pBlock[0] = vAVG[3];
+					pBlock[1] = vAVG[3];
+				}
+			}
+	}
+
 	void Downsample( const BYTE *pSrc, UINT nWidth, UINT nHeight, BYTE *pDest)
 	{
 		UINT nDestW = TMax( 1U, nWidth / 2);
@@ -305,6 +365,7 @@ namespace
 		std::vector<bgfx::TextureHandle> m_vTEXTURE;
 		std::vector<bgfx::VertexBufferHandle> m_vVB;
 		std::vector<bgfx::IndexBufferHandle> m_vIB;
+		std::vector<bgfx::FrameBufferHandle> m_vFB;
 	};
 
 	TPENDING& Pending()
@@ -327,6 +388,10 @@ namespace
 		TPENDING& vPENDING = Pending();
 		std::lock_guard<std::mutex> lock(vPENDING.m_mutex);
 
+		// Frame buffers first: they reference textures.
+		for( size_t i=0; i<vPENDING.m_vFB.size(); i++)
+			bgfx::destroy(vPENDING.m_vFB[i]);
+
 		for( size_t i=0; i<vPENDING.m_vTEXTURE.size(); i++)
 			bgfx::destroy(vPENDING.m_vTEXTURE[i]);
 
@@ -339,6 +404,7 @@ namespace
 		vPENDING.m_vTEXTURE.clear();
 		vPENDING.m_vVB.clear();
 		vPENDING.m_vIB.clear();
+		vPENDING.m_vFB.clear();
 	}
 
 
@@ -349,7 +415,7 @@ namespace
 	public:
 		CTTextureBGFX( UINT nWidth, UINT nHeight, UINT nLevels, DWORD dwUsage, D3DFORMAT nFormat, D3DPOOL nPool)
 			: m_nRef(1), m_nWidth(nWidth), m_nHeight(nHeight), m_dwUsage(dwUsage), m_nFormat(nFormat), m_nPool(nPool),
-			m_hTexture(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_bDirty(TRUE), m_nUpload(0)
+			m_hTexture(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_bDirty(TRUE), m_nUpload(0), m_pDEPTH(NULL)
 		{
 			UINT nMax = GetLevelCount( nWidth, nHeight);
 
@@ -359,10 +425,9 @@ namespace
 			m_vSURFACE.resize( m_nLevels, (CTSurfaceBGFX *) NULL);
 		}
 
-		~CTTextureBGFX()
-		{
-			DeferDestroy( Pending().m_vTEXTURE, m_hTexture, m_dwGeneration);
-		}
+		~CTTextureBGFX();
+
+		BOOL IsTarget() { return (m_dwUsage & D3DUSAGE_RENDERTARGET) ? TRUE : FALSE; }
 
 		ULONG AddRef() override { return InterlockedIncrement(&m_nRef); }
 
@@ -446,6 +511,9 @@ namespace
 		// The bgfx texture, uploaded first if the data changed.
 		bgfx::TextureHandle GetHandle()
 		{
+			if(IsTarget())
+				return GetTargetHandle();
+
 			if( !m_bDirty && bgfx::isValid(m_hTexture) && m_dwGeneration == g_dwGeneration )
 				return m_hTexture;
 
@@ -458,7 +526,54 @@ namespace
 			return m_hTexture;
 		}
 
+		// The frame buffer drawing into level 0 of a render target texture, with a depth
+		// buffer or none.
+		bgfx::FrameBufferHandle GetFrameBuffer( CTSurfaceBGFX *pDepth);
+
 	private:
+		// A render target lives on the GPU. Memory written by the engine (a copy into the
+		// render target) is uploaded over it.
+		bgfx::TextureHandle GetTargetHandle()
+		{
+			if( m_dwGeneration != g_dwGeneration )
+			{
+				m_hTexture = BGFX_INVALID_HANDLE;
+				m_mapFB.clear();
+			}
+
+			if(!bgfx::isValid(m_hTexture))
+			{
+				m_hTexture = bgfx::createTexture2D( uint16_t(m_nWidth), uint16_t(m_nHeight), false, 1, bgfx::TextureFormat::BGRA8, BGFX_TEXTURE_RT | BGFX_TEXTURE_BLIT_DST, NULL);
+				m_nHandleFormat = bgfx::TextureFormat::BGRA8;
+				m_dwGeneration = g_dwGeneration;
+				m_nUpload++;
+			}
+
+			if( m_bDirty && m_vWRITTEN[0] )
+			{
+				std::vector<BYTE>& vLEVEL = GetLevel(0);
+				std::vector<BYTE> vBGRA( m_nWidth * m_nHeight * 4);
+
+				if(DecodeToBGRA( m_nFormat, &vLEVEL[0], GetPitch( m_nFormat, m_nWidth), m_nWidth, m_nHeight, &vBGRA[0]))
+					bgfx::updateTexture2D( m_hTexture, 0, 0, 0, 0, uint16_t(m_nWidth), uint16_t(m_nHeight), bgfx::copy( &vBGRA[0], uint32_t(vBGRA.size())));
+
+				m_vWRITTEN[0] = FALSE;
+			}
+			m_bDirty = FALSE;
+
+			return m_hTexture;
+		}
+
+		void ClearFrameBuffers()
+		{
+			std::map< UINT64, bgfx::FrameBufferHandle>::iterator it;
+
+			for( it = m_mapFB.begin(); it != m_mapFB.end(); it++)
+				DeferDestroy( Pending().m_vFB, (*it).second, m_dwGeneration);
+
+			m_mapFB.clear();
+		}
+
 		void Upload()
 		{
 			if( m_nFormat == D3DFMT_A32B32G32R32F || m_nFormat == D3DFMT_A16B16G16R16F || m_nFormat == D3DFMT_R32F )
@@ -468,25 +583,55 @@ namespace
 			BOOL bMips = m_nLevels > 1;
 			BOOL bBlock = IsBlockFormat(m_nFormat);
 
-			// DXT stays compressed when every level of a full chain (or the only level) is there;
-			// anything else becomes B, G, R, A with the missing levels filtered from the ones above.
+			// DXT stays compressed when its levels are all there. bgfx wants a full chain: the
+			// small levels a file does not hold (the game's DDS files keep 5) are filtered
+			// from the last one and written as blocks of one color each. Anything else becomes
+			// B, G, R, A with the missing levels filtered from the ones above.
 			if(bBlock)
 			{
-				BOOL bComplete = !bMips || m_nLevels == nFull;
+				BOOL bComplete = TRUE;
 
-				for( UINT i=0; i<m_nLevels && bComplete; i++)
-					if( !m_vWRITTEN[i] && i > 0 )
+				for( UINT i=1; i<m_nLevels && bComplete; i++)
+					if(!m_vWRITTEN[i])
 						bComplete = FALSE;
 
 				if(bComplete)
 				{
-					CreateHandle( GetBlockFormat(m_nFormat) == bimg::TextureFormat::BC1 ? bgfx::TextureFormat::BC1 :
-						GetBlockFormat(m_nFormat) == bimg::TextureFormat::BC2 ? bgfx::TextureFormat::BC2 : bgfx::TextureFormat::BC3, bMips);
+					bimg::TextureFormat::Enum nBlock = GetBlockFormat(m_nFormat);
+					std::vector<BYTE> vPREV;
+					std::vector<BYTE> vCUR;
+					std::vector<BYTE> vBLOCKS;
+
+					CreateHandle( nBlock == bimg::TextureFormat::BC1 ? bgfx::TextureFormat::BC1 :
+						nBlock == bimg::TextureFormat::BC2 ? bgfx::TextureFormat::BC2 : bgfx::TextureFormat::BC3, bMips);
 
 					for( UINT i=0; i<(bMips ? nFull : 1); i++)
 					{
-						std::vector<BYTE>& vLEVEL = GetLevel(i);
-						bgfx::updateTexture2D( m_hTexture, 0, uint8_t(i), 0, 0, uint16_t(GetWidth(i)), uint16_t(GetHeight(i)), bgfx::copy( &vLEVEL[0], uint32_t(vLEVEL.size())));
+						UINT nWidth = GetWidth(i);
+						UINT nHeight = GetHeight(i);
+
+						if( i < m_nLevels )
+						{
+							std::vector<BYTE>& vLEVEL = GetLevel(i);
+							bgfx::updateTexture2D( m_hTexture, 0, uint8_t(i), 0, 0, uint16_t(nWidth), uint16_t(nHeight), bgfx::copy( &vLEVEL[0], uint32_t(vLEVEL.size())));
+
+							if( i + 1 == m_nLevels && bMips && m_nLevels < nFull )
+							{
+								vPREV.resize( nWidth * nHeight * 4);
+
+								if(!DecodeToBGRA( m_nFormat, &vLEVEL[0], GetPitch( m_nFormat, nWidth), nWidth, nHeight, &vPREV[0]))
+									memset( &vPREV[0], 0, vPREV.size());
+							}
+
+							continue;
+						}
+
+						vCUR.resize( nWidth * nHeight * 4);
+						Downsample( &vPREV[0], GetWidth(i - 1), GetHeight(i - 1), &vCUR[0]);
+						EncodeSolidBlocks( nBlock, &vCUR[0], nWidth, nHeight, vBLOCKS);
+
+						bgfx::updateTexture2D( m_hTexture, 0, uint8_t(i), 0, 0, uint16_t(nWidth), uint16_t(nHeight), bgfx::copy( &vBLOCKS[0], uint32_t(vBLOCKS.size())));
+						vPREV.swap(vCUR);
 					}
 
 					return;
@@ -553,6 +698,11 @@ namespace
 		DWORD m_dwGeneration;
 		BOOL m_bDirty;
 		UINT m_nUpload;
+
+		// Frame buffers of a render target, by depth buffer (0: none), and the depth
+		// buffer used in place of one of another size.
+		std::map< UINT64, bgfx::FrameBufferHandle> m_mapFB;
+		CTSurfaceBGFX *m_pDEPTH;
 	};
 
 	// A level of a texture, or a standalone surface (back buffer, depth buffer,
@@ -561,14 +711,14 @@ namespace
 	{
 	public:
 		CTSurfaceBGFX( CTTextureBGFX *pTexture, UINT nLevel)
-			: m_nRef(1), m_pTexture(pTexture), m_nLevel(nLevel)
+			: m_nRef(1), m_pTexture(pTexture), m_nLevel(nLevel), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_hREADY(NULL)
 		{
 			pTexture->AddRef();
 			pTexture->GetLevelDesc( nLevel, &m_vDESC);
 		}
 
 		CTSurfaceBGFX( UINT nWidth, UINT nHeight, D3DFORMAT nFormat, DWORD dwUsage, D3DPOOL nPool)
-			: m_nRef(1), m_pTexture(NULL), m_nLevel(0)
+			: m_nRef(1), m_pTexture(NULL), m_nLevel(0), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_hREADY(NULL)
 		{
 			ZeroMemory( &m_vDESC, sizeof(D3DSURFACE_DESC));
 			m_vDESC.Format = nFormat;
@@ -577,6 +727,57 @@ namespace
 			m_vDESC.Pool = nPool;
 			m_vDESC.Width = nWidth;
 			m_vDESC.Height = nHeight;
+		}
+
+		~CTSurfaceBGFX()
+		{
+			DeferDestroy( Pending().m_vTEXTURE, m_hDepth, m_dwGeneration);
+
+			if(m_hREADY)
+				CloseHandle(m_hREADY);
+		}
+
+		// A read back into this surface is coming: readers wait for it (see WaitReady).
+		void BeginReadBack()
+		{
+			if(!m_hREADY)
+				m_hREADY = CreateEvent( NULL, TRUE, FALSE, NULL);
+			else
+				ResetEvent(m_hREADY);
+		}
+
+		void EndReadBack()
+		{
+			if(m_hREADY)
+				SetEvent(m_hREADY);
+		}
+
+		// Read backs end when bgfx renders the frame, so only another thread can wait for them.
+		void WaitReady()
+		{
+			if(m_hREADY)
+				WaitForSingleObject( m_hREADY, 3000);
+		}
+
+		static DWORD NewSerial()
+		{
+			static LONG s_nSerial = 0;
+			return DWORD(InterlockedIncrement(&s_nSerial));
+		}
+
+		// The GPU depth buffer of a depth stencil surface.
+		bgfx::TextureHandle GetDepthHandle()
+		{
+			if( m_dwGeneration != g_dwGeneration )
+				m_hDepth = BGFX_INVALID_HANDLE;
+
+			if(!bgfx::isValid(m_hDepth))
+			{
+				m_hDepth = bgfx::createTexture2D( uint16_t(m_vDESC.Width), uint16_t(m_vDESC.Height), false, 1, bgfx::TextureFormat::D24S8, BGFX_TEXTURE_RT_WRITE_ONLY, NULL);
+				m_dwGeneration = g_dwGeneration;
+			}
+
+			return m_hDepth;
 		}
 
 		// The texture keeps the surface of each level (one object per level), so the
@@ -679,10 +880,196 @@ namespace
 		LONG m_nRef;
 		CTTextureBGFX *m_pTexture;
 		UINT m_nLevel;
+		DWORD m_dwSerial;
 
 		D3DSURFACE_DESC m_vDESC;
 		std::vector<BYTE> m_vDATA;
+
+		bgfx::TextureHandle m_hDepth;
+		DWORD m_dwGeneration;
+		HANDLE m_hREADY;
 	};
+
+	// bgfx's callbacks: errors, and the screenshots that read the back buffer back.
+	class CTCallbackBGFX : public bgfx::CallbackI
+	{
+	public:
+		void fatal( const char *pFilePath, uint16_t nLine, bgfx::Fatal::Enum nCode, const char *pText) override
+		{
+			OutputDebugStringA(pText);
+			OutputDebugStringA("\n");
+
+			if( nCode != bgfx::Fatal::DebugCheck )
+				abort();
+		}
+
+		void traceVargs( const char *pFilePath, uint16_t nLine, const char *pFormat, va_list vArgs) override
+		{
+			char vTEXT[1024];
+
+			vsnprintf_s( vTEXT, sizeof(vTEXT), _TRUNCATE, pFormat, vArgs);
+			OutputDebugStringA(vTEXT);
+		}
+
+		void profilerBegin( const char *pName, uint32_t dwColor, const char *pFilePath, uint16_t nLine) override {}
+		void profilerBeginLiteral( const char *pName, uint32_t dwColor, const char *pFilePath, uint16_t nLine) override {}
+		void profilerEnd() override {}
+
+		uint32_t cacheReadSize( uint64_t qwID) override { return 0; }
+		bool cacheRead( uint64_t qwID, void *pData, uint32_t nSize) override { return false; }
+		void cacheWrite( uint64_t qwID, const void *pData, uint32_t nSize) override {}
+
+		void captureBegin( uint32_t nWidth, uint32_t nHeight, uint32_t nPitch, bgfx::TextureFormat::Enum nFormat, bool bFlipY) override {}
+		void captureEnd() override {}
+		void captureFrame( const void *pData, uint32_t nSize) override {}
+
+		// A surface waiting for the next screenshot.
+		void PushReadBack( CTSurfaceBGFX *pDEST)
+		{
+			std::lock_guard<std::mutex> lock(m_mutex);
+
+			pDEST->AddRef();
+			pDEST->BeginReadBack();
+			m_vREADBACK.push_back(pDEST);
+		}
+
+		// The back buffer, B G R A: it goes to every waiting surface.
+		void screenShot( const char *pFilePath, uint32_t nWidth, uint32_t nHeight, uint32_t nPitch, bgfx::TextureFormat::Enum nFormat, const void *pData, uint32_t nSize, bool bFlipY) override
+		{
+			std::deque<CTSurfaceBGFX *> vREADBACK;
+			{
+				std::lock_guard<std::mutex> lock(m_mutex);
+				vREADBACK.swap(m_vREADBACK);
+			}
+
+			for( size_t i=0; i<vREADBACK.size(); i++)
+			{
+				CTSurfaceBGFX *pDEST = vREADBACK[i];
+				UINT nWidth2 = TMin( nWidth, pDEST->m_vDESC.Width);
+				UINT nHeight2 = TMin( nHeight, pDEST->m_vDESC.Height);
+				UINT nDestPitch;
+				BYTE *pBits = pDEST->GetBits(&nDestPitch);
+
+				for( UINT y=0; y<nHeight2; y++)
+				{
+					const BYTE *pRow = (const BYTE *) pData + (bFlipY ? nHeight - 1 - y : y) * nPitch;
+					EncodeFromBGRA( pDEST->m_vDESC.Format, pRow, nWidth2, 1, pBits + y * nDestPitch, nDestPitch);
+				}
+
+				pDEST->Touch();
+				pDEST->EndReadBack();
+				pDEST->Release();
+			}
+		}
+
+	private:
+		std::mutex m_mutex;
+		std::deque<CTSurfaceBGFX *> m_vREADBACK;
+	};
+
+	CTCallbackBGFX& Callback()
+	{
+		static CTCallbackBGFX *pCALLBACK = new CTCallbackBGFX();
+		return *pCALLBACK;
+	}
+
+	// Saves B G R A pixels with GDI+ (bmp, jpg, png).
+	HRESULT SaveBGRA( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT nFormat, const BYTE *pBGRA, UINT nWidth, UINT nHeight)
+	{
+		const WCHAR *pMIME = NULL;
+
+		switch(nFormat)
+		{
+		case D3DXIFF_BMP	: pMIME = L"image/bmp"; break;
+		case D3DXIFF_JPG	: pMIME = L"image/jpeg"; break;
+		case D3DXIFF_PNG	: pMIME = L"image/png"; break;
+		default				: return D3DERR_NOTAVAILABLE;
+		}
+
+		Gdiplus::GdiplusStartupInput vINPUT;
+		ULONG_PTR dwToken = 0;
+
+		if( Gdiplus::GdiplusStartup( &dwToken, &vINPUT, NULL) != Gdiplus::Ok )
+			return E_FAIL;
+
+		HRESULT hr = E_FAIL;
+		{
+			UINT nCount = 0;
+			UINT nSize = 0;
+			CLSID vCLSID;
+			BOOL bFound = FALSE;
+
+			Gdiplus::GetImageEncodersSize( &nCount, &nSize);
+			std::vector<BYTE> vBUF(nSize);
+			Gdiplus::ImageCodecInfo *pCODEC = (Gdiplus::ImageCodecInfo *) (nSize ? &vBUF[0] : NULL);
+
+			if( pCODEC && Gdiplus::GetImageEncoders( nCount, nSize, pCODEC) == Gdiplus::Ok )
+				for( UINT i=0; i<nCount && !bFound; i++)
+					if(!wcscmp( pCODEC[i].MimeType, pMIME))
+					{
+						vCLSID = pCODEC[i].Clsid;
+						bFound = TRUE;
+					}
+
+			WCHAR vFILE[MAX_PATH];
+			if( bFound && MultiByteToWideChar( CP_ACP, 0, pDestFile, -1, vFILE, MAX_PATH) )
+			{
+				Gdiplus::Bitmap vBITMAP( INT(nWidth), INT(nHeight), INT(nWidth * 4), PixelFormat32bppARGB, (BYTE *) pBGRA);
+
+				if( vBITMAP.Save( vFILE, &vCLSID, NULL) == Gdiplus::Ok )
+					hr = D3D_OK;
+			}
+		}
+
+		Gdiplus::GdiplusShutdown(dwToken);
+		return hr;
+	}
+
+	bgfx::FrameBufferHandle CTTextureBGFX::GetFrameBuffer( CTSurfaceBGFX *pDepth)
+	{
+		bgfx::TextureHandle hColor = GetTargetHandle();
+
+		// A depth buffer of another size (the back buffer's) gets one of the render
+		// target's size, kept by the render target.
+		BOOL bFit = pDepth && pDepth->m_vDESC.Width == m_nWidth && pDepth->m_vDESC.Height == m_nHeight;
+		UINT64 qwKey = pDepth ? (bFit ? UINT64(pDepth->m_dwSerial) : ~UINT64(0)) : 0;
+
+		std::map< UINT64, bgfx::FrameBufferHandle>::iterator finder = m_mapFB.find(qwKey);
+		if( finder != m_mapFB.end() )
+			return (*finder).second;
+
+		bgfx::TextureHandle vHANDLE[2] = { hColor, BGFX_INVALID_HANDLE };
+		uint8_t nCount = 1;
+
+		if(pDepth)
+		{
+			if(bFit)
+				vHANDLE[1] = pDepth->GetDepthHandle();
+			else
+			{
+				if(!m_pDEPTH)
+					m_pDEPTH = new CTSurfaceBGFX( m_nWidth, m_nHeight, D3DFMT_D24S8, D3DUSAGE_DEPTHSTENCIL, D3DPOOL_DEFAULT);
+
+				vHANDLE[1] = m_pDEPTH->GetDepthHandle();
+			}
+
+			nCount = 2;
+		}
+
+		bgfx::FrameBufferHandle hFB = bgfx::createFrameBuffer( nCount, vHANDLE, false);
+		m_mapFB[qwKey] = hFB;
+
+		return hFB;
+	}
+
+	CTTextureBGFX::~CTTextureBGFX()
+	{
+		ClearFrameBuffers();
+		DeferDestroy( Pending().m_vTEXTURE, m_hTexture, m_dwGeneration);
+
+		if(m_pDEPTH)
+			m_pDEPTH->Release();
+	}
 
 	HRESULT CTTextureBGFX::GetSurfaceLevel( UINT Level, CTSurface **ppSurface)
 	{
@@ -1252,6 +1639,7 @@ namespace
 			vINIT.swapChain.width = vPresent.BackBufferWidth;
 			vINIT.swapChain.height = vPresent.BackBufferHeight;
 			vINIT.reset = GetResetFlags(vPresent);
+			vINIT.callback = &Callback();
 			vINIT.limits.maxTransientVbSize = 64 << 20;
 			vINIT.limits.maxTransientIbSize = 16 << 20;
 			m_vSWAPCHAIN = vINIT.swapChain;
@@ -1336,7 +1724,7 @@ namespace
 		HRESULT Present( const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion) override
 		{
 			bgfx::dbgTextClear();
-			bgfx::dbgTextPrintf( 1, 1, 0x0f, "bgfx %s - 3c-2 | views %u draws %u skipped %u",
+			bgfx::dbgTextPrintf( 1, 1, 0x0f, "bgfx %s - 3c-5 | views %u draws %u skipped %u",
 				bgfx::getRendererName(bgfx::getRendererType()), m_nView + 1, m_nDraws, m_nSkipped);
 
 			// View 0 is the first one of the frame: make sure the back buffer is cleared even
@@ -1350,6 +1738,24 @@ namespace
 			m_nDraws = 0;
 			m_nSkipped = 0;
 			UpdateDump();
+
+			{
+				char vPATH[MAX_PATH];
+				char vFILE[MAX_PATH];
+
+				GetTempPathA( MAX_PATH, vPATH);
+				sprintf_s( vFILE, "%stclient-bgfx-highlight.flag", vPATH);
+				FILE *pFLAG = NULL;
+
+				m_nHighlight = 0;
+				if( !fopen_s( &pFLAG, vFILE, "r") && pFLAG )
+				{
+					if( fscanf_s( pFLAG, "%d", &m_nHighlight) != 1 )
+						m_nHighlight = 1;
+					fclose(pFLAG);
+				}
+				m_bHighlight = m_nHighlight > 0;
+			}
 
 			return D3D_OK;
 		}
@@ -1418,7 +1824,21 @@ namespace
 			return D3D_OK;
 		}
 
-		HRESULT GetRenderTargetData( LPTSURFACE pRenderTarget, LPTSURFACE pDestSurface) override { return D3D_OK; }
+		// Only the back buffer is read back (screenshots): the surface is filled when bgfx
+		// renders the frame, and saving it waits for that.
+		HRESULT GetRenderTargetData( LPTSURFACE pRenderTarget, LPTSURFACE pDestSurface) override
+		{
+			if( !pRenderTarget || !pDestSurface )
+				return D3DERR_INVALIDCALL;
+
+			if( pRenderTarget != m_pBACKBUF )
+				return D3DERR_NOTAVAILABLE;
+
+			Callback().PushReadBack((CTSurfaceBGFX *) pDestSurface);
+			bgfx::requestScreenShot( BGFX_INVALID_HANDLE, "TClient");
+
+			return D3D_OK;
+		}
 
 		HRESULT SetRenderTarget( DWORD RenderTargetIndex, LPTSURFACE pRenderTarget) override
 		{
@@ -1455,6 +1875,7 @@ namespace
 			if(m_pDEPTH)
 				m_pDEPTH->Release();
 			m_pDEPTH = (CTSurfaceBGFX *) pNewZStencil;
+			m_bViewDirty = TRUE;
 
 			return D3D_OK;
 		}
@@ -1475,8 +1896,13 @@ namespace
 
 		HRESULT Clear( DWORD Count, const D3DRECT *pRects, DWORD Flags, D3DCOLOR Color, float Z, DWORD Stencil) override
 		{
-			if( m_pRTARGET != m_pBACKBUF )
+			bgfx::FrameBufferHandle hTarget;
+			if(!GetTarget(&hTarget))
 				return D3D_OK;
+
+			// A target without alpha reads as opaque, like D3D9's X8R8G8B8.
+			if(!HasAlpha(m_pRTARGET->m_vDESC.Format))
+				Color |= 0xFF000000;
 
 			uint16_t nFlags = 0;
 			if( Flags & D3DCLEAR_TARGET )
@@ -1499,7 +1925,7 @@ namespace
 
 			// A clear is the start of a new view: bgfx clears a view before its draw calls.
 			// D3DCOLOR is ARGB, bgfx wants RGBA.
-			bgfx::ViewId nView = OpenView( vRECT, TRUE);
+			bgfx::ViewId nView = OpenView( vRECT, TRUE, hTarget);
 			bgfx::setViewClear( nView, nFlags, (Color << 8) | (Color >> 24), Z, uint8_t(Stencil));
 			bgfx::touch(nView);
 
@@ -1657,10 +2083,10 @@ namespace
 
 			TLAYOUT *pLayout = SetStreams( INT(StartVertex), nCount, FALSE);
 			if(!pLayout)
-				return Skip();
+				return Skip("DP streams");
 
 			if( PrimitiveType == D3DPT_TRIANGLEFAN && !SetFanIndices( nCount, NULL, FALSE))
-				return Skip();
+				return Skip("DP fan");
 
 			SetDumpStream( INT(StartVertex), nCount, PrimitiveCount);
 			return Submit( PrimitiveType, *pLayout);
@@ -1677,24 +2103,24 @@ namespace
 			UINT nIndexSize = b32 ? 4 : 2;
 
 			if( (startIndex + nCount) * nIndexSize > m_pINDEX->m_vDATA.size() )
-				return Skip();
+				return Skip("DIP index range");
 
 			// Indices are relative to BaseVertexIndex (bgfx's start vertex of an indexed draw).
 			TLAYOUT *pLayout = SetStreams( BaseVertexIndex, MinVertexIndex + NumVertices, TRUE);
 			if(!pLayout)
-				return Skip();
+				return Skip("DIP streams");
 
 			const BYTE *pIndex = &m_pINDEX->m_vDATA[startIndex * nIndexSize];
 
 			if( Type == D3DPT_TRIANGLEFAN )
 			{
 				if(!SetFanIndices( nCount, pIndex, b32))
-					return Skip();
+					return Skip("DIP fan");
 			}
 			else if(m_pINDEX->m_bDynamic)
 			{
 				if( bgfx::getAvailTransientIndexBuffer( nCount, b32 ? true : false) < nCount )
-					return Skip();
+					return Skip("DIP transient indices");
 
 				bgfx::TransientIndexBuffer vTIB;
 				bgfx::allocTransientIndexBuffer( &vTIB, nCount, b32 ? true : false);
@@ -1717,11 +2143,11 @@ namespace
 
 			// A declaration can only be used here when all its elements are in stream 0.
 			if( m_pVDECL && m_pVDECL->m_dwStreams != 1 )
-				return Skip();
+				return Skip("UP declaration");
 
 			TLAYOUT& vLayout = m_pVDECL ? m_pVDECL->GetLayout( 0, VertexStreamZeroStride) : GetLayout( m_dwFVF, VertexStreamZeroStride);
 			if( !vLayout.m_bValid || bgfx::getAvailTransientVertexBuffer( nCount, vLayout.m_vLayout) < nCount )
-				return Skip();
+				return Skip("UP layout");
 
 			bgfx::TransientVertexBuffer vTVB;
 			bgfx::allocTransientVertexBuffer( &vTVB, nCount, vLayout.m_vLayout);
@@ -1729,7 +2155,7 @@ namespace
 			bgfx::setVertexBuffer( 0, &vTVB);
 
 			if( PrimitiveType == D3DPT_TRIANGLEFAN && !SetFanIndices( nCount, NULL, FALSE))
-				return Skip();
+				return Skip("UP fan");
 
 			// Like D3D9, a UP draw unbinds stream 0.
 			SetStreamSource( 0, NULL, 0, 0);
@@ -1836,7 +2262,13 @@ namespace
 				return D3DXERR_INVALIDDATA;
 
 			D3DFORMAT nFormat = GetD3DFormat(pIMAGE->m_format);
-			CTTextureBGFX *pTexture = new CTTextureBGFX( pIMAGE->m_width, pIMAGE->m_height, pIMAGE->m_numMips, Usage, nFormat, Pool);
+			UINT nLevels = GetFileLevels( pIMAGE, pSrcData, SrcDataSize);
+
+			// D3DX keeps the levels asked for (the engine asks for the file's own count).
+			if( MipLevels && MipLevels != D3DX_DEFAULT )
+				nLevels = TMin( nLevels, MipLevels);
+
+			CTTextureBGFX *pTexture = new CTTextureBGFX( pIMAGE->m_width, pIMAGE->m_height, nLevels, Usage, nFormat, Pool);
 
 			for( UINT i=0; i<pTexture->m_nLevels; i++)
 			{
@@ -1891,7 +2323,10 @@ namespace
 
 			bimg::ImageContainer *pIMAGE = bimg::imageParse( &g_vALLOCATOR, pSrcData, SrcDataSize, bimg::TextureFormat::BGRA8);
 			if(!pIMAGE)
+			{
+				LogImageFailure( pSrcData, SrcDataSize, -2);
 				return D3DXERR_INVALIDDATA;
+			}
 
 			if(pSrcInfo)
 				FillImageInfo( pIMAGE, D3DFMT_A8R8G8B8, pSrcData, SrcDataSize, pSrcInfo);
@@ -1913,9 +2348,62 @@ namespace
 			return hr;
 		}
 
-		HRESULT SaveSurfaceToFile( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT DestFormat, LPTSURFACE pSrcSurface, const PALETTEENTRY *pSrcPalette, const RECT *pSrcRect) override { return D3DERR_NOTAVAILABLE; }
+		HRESULT SaveSurfaceToFile( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT DestFormat, LPTSURFACE pSrcSurface, const PALETTEENTRY *pSrcPalette, const RECT *pSrcRect) override
+		{
+			CTSurfaceBGFX *pSRC = (CTSurfaceBGFX *) pSrcSurface;
+
+			if( !pDestFile || !pSRC )
+				return D3DERR_INVALIDCALL;
+
+			// Render targets and depth buffers have no copy in memory.
+			if( (pSRC->m_pTexture && pSRC->m_pTexture->IsTarget()) || pSRC == m_pBACKBUF || (pSRC->m_vDESC.Usage & D3DUSAGE_DEPTHSTENCIL) )
+				return D3DERR_NOTAVAILABLE;
+
+			pSRC->WaitReady();
+
+			RECT vRECT = { 0, 0, LONG(pSRC->m_vDESC.Width), LONG(pSRC->m_vDESC.Height)};
+			if(pSrcRect)
+				vRECT = *pSrcRect;
+
+			if( vRECT.left < 0 || vRECT.top < 0 || vRECT.right > LONG(pSRC->m_vDESC.Width) || vRECT.bottom > LONG(pSRC->m_vDESC.Height) || vRECT.right <= vRECT.left || vRECT.bottom <= vRECT.top )
+				return D3DERR_INVALIDCALL;
+
+			D3DFORMAT nFormat = pSRC->m_vDESC.Format;
+			UINT nWidth = UINT(vRECT.right - vRECT.left);
+			UINT nHeight = UINT(vRECT.bottom - vRECT.top);
+			UINT nPitch;
+			const BYTE *pBits = pSRC->GetBits(&nPitch);
+			std::vector<BYTE> vBGRA( nWidth * nHeight * 4);
+
+			if(IsBlockFormat(nFormat))
+			{
+				// A compressed surface is decoded whole, then cut.
+				std::vector<BYTE> vFULL( pSRC->m_vDESC.Width * pSRC->m_vDESC.Height * 4);
+
+				if(!DecodeToBGRA( nFormat, pBits, nPitch, pSRC->m_vDESC.Width, pSRC->m_vDESC.Height, &vFULL[0]))
+					return D3DERR_NOTAVAILABLE;
+
+				for( UINT y=0; y<nHeight; y++)
+					memcpy( &vBGRA[y * nWidth * 4], &vFULL[((vRECT.top + y) * pSRC->m_vDESC.Width + vRECT.left) * 4], nWidth * 4);
+			}
+			else if(!DecodeToBGRA( nFormat, pBits + vRECT.top * nPitch + GetPitch( nFormat, vRECT.left), nPitch, nWidth, nHeight, &vBGRA[0]))
+				return D3DERR_NOTAVAILABLE;
+
+			return SaveBGRA( pDestFile, DestFormat, &vBGRA[0], nWidth, nHeight);
+		}
 		HRESULT SaveSurfaceToFileInMemory( LPD3DXBUFFER *ppDestBuf, D3DXIMAGE_FILEFORMAT DestFormat, LPTSURFACE pSrcSurface, const PALETTEENTRY *pSrcPalette, const RECT *pSrcRect) override { return D3DERR_NOTAVAILABLE; }
-		HRESULT SaveTextureToFile( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT DestFormat, LPTTEXTURE pSrcTexture, const PALETTEENTRY *pSrcPalette) override { return D3DERR_NOTAVAILABLE; }
+		HRESULT SaveTextureToFile( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT DestFormat, LPTTEXTURE pSrcTexture, const PALETTEENTRY *pSrcPalette) override
+		{
+			LPTSURFACE pSURF = NULL;
+
+			if( !pSrcTexture || FAILED(pSrcTexture->GetSurfaceLevel( 0, &pSURF)) )
+				return D3DERR_INVALIDCALL;
+
+			HRESULT hr = SaveSurfaceToFile( pDestFile, DestFormat, pSURF, pSrcPalette, NULL);
+			pSURF->Release();
+
+			return hr;
+		}
 
 	private:
 		enum
@@ -1985,6 +2473,7 @@ namespace
 		static bimg::ImageContainer *ParseImage( LPCVOID pData, UINT nSize)
 		{
 			bimg::ImageContainer *pIMAGE = bimg::imageParse( &g_vALLOCATOR, pData, nSize);
+			int nSource = pIMAGE ? int(pIMAGE->m_format) : -1;
 
 			if( pIMAGE && pIMAGE->m_format != bimg::TextureFormat::BC1 && pIMAGE->m_format != bimg::TextureFormat::BC2 &&
 				pIMAGE->m_format != bimg::TextureFormat::BC3 && pIMAGE->m_format != bimg::TextureFormat::BGRA8 )
@@ -1995,7 +2484,64 @@ namespace
 				pIMAGE = pBGRA;
 			}
 
+			if(!pIMAGE)
+				LogImageFailure( pData, nSize, nSource);
+
 			return pIMAGE;
+		}
+
+		// Images bimg can not read are listed in %TEMP%\tclient-bgfx.log.
+		static void LogImageFailure( LPCVOID pData, UINT nSize, int nSource)
+		{
+			static std::mutex s_mutex;
+			std::lock_guard<std::mutex> lock(s_mutex);
+
+			char vPATH[MAX_PATH];
+			char vFILE[MAX_PATH];
+			FILE *pFILE = NULL;
+
+			GetTempPathA( MAX_PATH, vPATH);
+			sprintf_s( vFILE, "%stclient-bgfx.log", vPATH);
+
+			if( fopen_s( &pFILE, vFILE, "a") || !pFILE )
+				return;
+
+			const BYTE *p = (const BYTE *) pData;
+			fprintf( pFILE, "image not read: %u bytes, bimg format %d, head", nSize, nSource);
+
+			for( UINT i=0; i<TMin( nSize, 16U); i++)
+				fprintf( pFILE, " %02x", p[i]);
+
+			// DDS: flags, four cc, bit count and masks of the pixel format.
+			if( nSize >= 128 && !memcmp( p, "DDS ", 4) )
+			{
+				const DWORD *pPF = (const DWORD *) (p + 76);
+				fprintf( pFILE, " | dds %ux%u mips %u pf flags %x fourcc %.4s bits %u masks %08x %08x %08x %08x caps2 %x",
+					((const DWORD *) p)[4], ((const DWORD *) p)[3], ((const DWORD *) p)[7],
+					pPF[1], (const char *) &pPF[2], pPF[3], pPF[4], pPF[5], pPF[6], pPF[7], ((const DWORD *) p)[28]);
+			}
+
+			fprintf( pFILE, "\n");
+			fclose(pFILE);
+		}
+
+		// The levels a file really holds. bimg counts a full chain for any DDS with mipmaps,
+		// while the game's DDS files hold 5 levels (DDSD_MIPMAPCOUNT): the levels past them
+		// would be read beyond the data.
+		static UINT GetFileLevels( bimg::ImageContainer *pIMAGE, LPCVOID pData, UINT nSize)
+		{
+			const BYTE *p = (const BYTE *) pData;
+			UINT nLevels = pIMAGE->m_numMips;
+
+			if( nSize >= 128 && !memcmp( p, "DDS ", 4) )
+			{
+				DWORD dwFlags = ((const DWORD *) p)[2];
+				DWORD dwCount = ((const DWORD *) p)[7];
+
+				nLevels = TMin( nLevels, (dwFlags & 0x00020000) && dwCount ? UINT(dwCount) : 1U);
+			}
+
+			return TMax( nLevels, 1U);
 		}
 
 		static void FillImageInfo( bimg::ImageContainer *pIMAGE, D3DFORMAT nFormat, LPCVOID pData, UINT nSize, D3DXIMAGE_INFO *pInfo)
@@ -2006,7 +2552,7 @@ namespace
 			pInfo->Width = pIMAGE->m_width;
 			pInfo->Height = pIMAGE->m_height;
 			pInfo->Depth = 1;
-			pInfo->MipLevels = pIMAGE->m_numMips;
+			pInfo->MipLevels = GetFileLevels( pIMAGE, pData, nSize);
 			pInfo->Format = nFormat;
 			pInfo->ResourceType = D3DRTYPE_TEXTURE;
 
@@ -2105,6 +2651,9 @@ namespace
 			m_nView = 0;
 			m_bViewOpen = FALSE;
 			m_bViewDirty = TRUE;
+			m_bFlipY = FALSE;
+			m_bHighlight = FALSE;
+			m_nHighlight = 0;
 			m_nDraws = 0;
 			m_nSkipped = 0;
 		}
@@ -2254,16 +2803,41 @@ namespace
 			m_bViewDirty = TRUE;
 		}
 
-		// A new bgfx view on the back buffer: bgfx keeps the order of the draw calls of a
-		// sequential view, and a view has one rectangle and one clear.
-		bgfx::ViewId OpenView( const D3DVIEWPORT9& vRECT, BOOL bClear)
+		static BOOL HasAlpha( D3DFORMAT nFormat)
+		{
+			return nFormat == D3DFMT_A8R8G8B8 || nFormat == D3DFMT_A8B8G8R8 || nFormat == D3DFMT_A4R4G4B4 || nFormat == D3DFMT_A1R5G5B5 || nFormat == D3DFMT_A16B16G16R16F || nFormat == D3DFMT_A32B32G32R32F;
+		}
+
+		// The frame buffer of the render target: the back buffer (an invalid handle) or level 0
+		// of a render target texture. FALSE when it can not be drawn into.
+		BOOL GetTarget( bgfx::FrameBufferHandle *pTarget)
+		{
+			*pTarget = BGFX_INVALID_HANDLE;
+
+			if( m_pRTARGET == m_pBACKBUF )
+				return TRUE;
+
+			CTTextureBGFX *pTexture = m_pRTARGET->m_pTexture;
+			if( !pTexture || !pTexture->IsTarget() || m_pRTARGET->m_nLevel )
+				return FALSE;
+
+			*pTarget = pTexture->GetFrameBuffer(m_pDEPTH);
+			return bgfx::isValid(*pTarget);
+		}
+
+		// A new bgfx view on the render target: bgfx keeps the order of the draw calls of a
+		// sequential view, views run in order, and a view has one rectangle and one clear.
+		bgfx::ViewId OpenView( const D3DVIEWPORT9& vRECT, BOOL bClear, bgfx::FrameBufferHandle hTarget)
 		{
 			if( m_bViewOpen && m_nView + 1 < MAX_VIEWS )
 				m_nView++;
 
 			bgfx::ViewId nView = bgfx::ViewId(m_nView);
 
-			bgfx::setViewFrameBuffer( nView, BGFX_INVALID_HANDLE);
+			// OpenGL textures have their origin at the bottom: render targets are drawn upside
+			// down so they are sampled like D3D9's.
+			m_bFlipY = bgfx::isValid(hTarget) && bgfx::getCaps()->originBottomLeft;
+			bgfx::setViewFrameBuffer( nView, hTarget);
 			bgfx::setViewMode( nView, bgfx::ViewMode::Sequential);
 			bgfx::setViewRect( nView, uint16_t(vRECT.X), uint16_t(vRECT.Y), uint16_t(vRECT.Width), uint16_t(vRECT.Height));
 
@@ -2279,22 +2853,29 @@ namespace
 		// Checks a draw call can be done, and opens a view for it when needed.
 		BOOL BeginDraw()
 		{
-			// Render target textures come with a later step.
-			if( m_pRTARGET != m_pBACKBUF )
+			bgfx::FrameBufferHandle hTarget;
+
+			if(!GetTarget(&hTarget))
 			{
-				m_nSkipped++;
+				Skip("render target");
 				return FALSE;
 			}
 
 			if( !m_bViewOpen || m_bViewDirty )
-				OpenView( m_vVIEWPORT, FALSE);
+				OpenView( m_vVIEWPORT, FALSE, hTarget);
 
 			return TRUE;
 		}
 
-		HRESULT Skip()
+		// A draw call that can not be done. Anything already set for it is dropped.
+		HRESULT Skip( const char *pReason)
 		{
+			bgfx::discard();
 			m_nSkipped++;
+
+			if(m_pDUMP)
+				fprintf( m_pDUMP, "skip %s: fvf=%x decl=%u stride=%u vb=%p\n", pReason, m_dwFVF, m_pVDECL ? m_pVDECL->m_dwStreams : 0, m_vSTREAM[0].m_nStride, (void *) m_vSTREAM[0].m_pVB);
+
 			return D3D_OK;
 		}
 
@@ -2480,7 +3061,7 @@ namespace
 			SetVec4( &vVS[16], FLOAT(m_vVIEWPORT.X), FLOAT(m_vVIEWPORT.Y), FLOAT(TMax( 1U, m_vVIEWPORT.Width)), FLOAT(TMax( 1U, m_vVIEWPORT.Height)));
 			SetVec4( &vVS[20], m_vVIEWPORT.MinZ, m_vVIEWPORT.MaxZ, m_bHomogeneousDepth ? 1.0f : 0.0f, DWToFloat(m_vRS[D3DRS_DEPTHBIAS]));
 			SetVec4( &vVS[24], fFogMode, DWToFloat(m_vRS[D3DRS_FOGSTART]), DWToFloat(m_vRS[D3DRS_FOGEND]), DWToFloat(m_vRS[D3DRS_FOGDENSITY]));
-			SetVec4( &vVS[28], m_vRS[D3DRS_RANGEFOGENABLE] ? 1.0f : 0.0f, m_vRS[D3DRS_FOGENABLE] ? 1.0f : 0.0f, 0.0f, 0.0f);
+			SetVec4( &vVS[28], m_vRS[D3DRS_RANGEFOGENABLE] ? 1.0f : 0.0f, m_vRS[D3DRS_FOGENABLE] ? 1.0f : 0.0f, m_bFlipY ? 1.0f : 0.0f, 0.0f);
 			SetVec4( &vVS[32], vINVVIEW._41, vINVVIEW._42, vINVVIEW._43, 1.0f);
 			SendUniform( m_vVSU, vVS, VS_PARAMS);
 
@@ -2685,7 +3266,7 @@ namespace
 			if( dwWrite & D3DCOLORWRITEENABLE_RED ) dwState |= BGFX_STATE_WRITE_R;
 			if( dwWrite & D3DCOLORWRITEENABLE_GREEN ) dwState |= BGFX_STATE_WRITE_G;
 			if( dwWrite & D3DCOLORWRITEENABLE_BLUE ) dwState |= BGFX_STATE_WRITE_B;
-			if( dwWrite & D3DCOLORWRITEENABLE_ALPHA ) dwState |= BGFX_STATE_WRITE_A;
+			if( (dwWrite & D3DCOLORWRITEENABLE_ALPHA) && HasAlpha(m_pRTARGET->m_vDESC.Format) ) dwState |= BGFX_STATE_WRITE_A;
 
 			if( m_vRS[D3DRS_ZENABLE] && m_pDEPTH )
 			{
@@ -2695,16 +3276,16 @@ namespace
 					dwState |= BGFX_STATE_WRITE_Z;
 			}
 
-			if( m_vRS[D3DRS_CULLMODE] == D3DCULL_CW )
+			// A flipped picture turns the winding around.
+			if( m_vRS[D3DRS_CULLMODE] == (m_bFlipY ? D3DCULL_CCW : D3DCULL_CW) )
 				dwState |= BGFX_STATE_CULL_CW;
-			else if( m_vRS[D3DRS_CULLMODE] == D3DCULL_CCW )
+			else if( m_vRS[D3DRS_CULLMODE] == (m_bFlipY ? D3DCULL_CW : D3DCULL_CCW) )
 				dwState |= BGFX_STATE_CULL_CCW;
 
 			*pFactor = 0;
 			if(m_vRS[D3DRS_ALPHABLENDENABLE])
 			{
-				D3DFORMAT nTarget = m_pRTARGET->m_vDESC.Format;
-				BOOL bDestAlpha = nTarget == D3DFMT_A8R8G8B8 || nTarget == D3DFMT_A8B8G8R8 || nTarget == D3DFMT_A4R4G4B4 || nTarget == D3DFMT_A1R5G5B5 || nTarget == D3DFMT_A16B16G16R16F || nTarget == D3DFMT_A32B32G32R32F;
+				BOOL bDestAlpha = HasAlpha(m_pRTARGET->m_vDESC.Format);
 				uint64_t dwSrc = GetBlend( m_vRS[D3DRS_SRCBLEND], bDestAlpha);
 				uint64_t dwDest = GetBlend( m_vRS[D3DRS_DESTBLEND], bDestAlpha);
 				uint64_t dwSrcA = dwSrc;
@@ -2745,14 +3326,74 @@ namespace
 			return dwState;
 		}
 
+		// Diagnostics: while %TEMP%\tclient-bgfx-highlight.flag exists, the draw calls it
+		// selects are drawn solid magenta, over everything.
 		HRESULT Submit( D3DPRIMITIVETYPE nType, TLAYOUT& vLayout)
+		{
+			if( !m_bHighlight || m_vTSS[1][D3DTSS_COLOROP] != D3DTOP_MODULATE2X ||
+				m_vRS[D3DRS_SRCBLEND] != D3DBLEND_SRCALPHA || m_vRS[D3DRS_DESTBLEND] != D3DBLEND_DESTALPHA )
+				return SubmitDraw( nType, vLayout);
+
+			std::vector<DWORD> vRS( m_vRS, m_vRS + RENDER_STATES);
+			std::vector<DWORD> vTSS( &m_vTSS[0][0], &m_vTSS[0][0] + TEXTURE_STAGES * STAGE_STATES);
+
+			// 1 magenta, 2 own colors opaque, 3 no depth test, 4 no alpha test, 5 no fog,
+			// 6 no stage 1, 7 no lighting.
+			switch(m_nHighlight)
+			{
+			case 8	:
+			case 9	:
+				// 8 the texture alone, 9 the lit diffuse color alone, opaque.
+				m_vTSS[0][D3DTSS_COLOROP] = D3DTOP_SELECTARG1;
+				m_vTSS[0][D3DTSS_COLORARG1] = m_nHighlight == 8 ? D3DTA_TEXTURE : D3DTA_DIFFUSE;
+				m_vTSS[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
+				m_vTSS[0][D3DTSS_ALPHAARG1] = D3DTA_TFACTOR;
+				m_vTSS[1][D3DTSS_COLOROP] = D3DTOP_DISABLE;
+				m_vRS[D3DRS_ALPHABLENDENABLE] = FALSE;
+				m_vRS[D3DRS_ALPHATESTENABLE] = FALSE;
+				m_vRS[D3DRS_ZENABLE] = FALSE;
+				m_vRS[D3DRS_FOGENABLE] = FALSE;
+				m_vRS[D3DRS_CULLMODE] = D3DCULL_NONE;
+				break;
+
+			case 1	:
+				m_vRS[D3DRS_TEXTUREFACTOR] = 0xFFFF00FF;
+				m_vTSS[0][D3DTSS_COLOROP] = D3DTOP_SELECTARG1;
+				m_vTSS[0][D3DTSS_COLORARG1] = D3DTA_TFACTOR;
+				m_vTSS[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
+				m_vTSS[0][D3DTSS_ALPHAARG1] = D3DTA_TFACTOR;
+				m_vTSS[1][D3DTSS_COLOROP] = D3DTOP_DISABLE;
+
+			case 2	:
+				m_vRS[D3DRS_ALPHABLENDENABLE] = FALSE;
+				m_vRS[D3DRS_ALPHATESTENABLE] = FALSE;
+				m_vRS[D3DRS_ZENABLE] = FALSE;
+				m_vRS[D3DRS_FOGENABLE] = FALSE;
+				m_vRS[D3DRS_CULLMODE] = D3DCULL_NONE;
+				break;
+
+			case 3	: m_vRS[D3DRS_ZENABLE] = FALSE; break;
+			case 4	: m_vRS[D3DRS_ALPHATESTENABLE] = FALSE; break;
+			case 5	: m_vRS[D3DRS_FOGENABLE] = FALSE; break;
+			case 6	: m_vTSS[1][D3DTSS_COLOROP] = D3DTOP_DISABLE; break;
+			case 7	: m_vRS[D3DRS_LIGHTING] = FALSE; break;
+			}
+
+			HRESULT hr = SubmitDraw( nType, vLayout);
+
+			memcpy( m_vRS, &vRS[0], vRS.size() * sizeof(DWORD));
+			memcpy( &m_vTSS[0][0], &vTSS[0], vTSS.size() * sizeof(DWORD));
+
+			return hr;
+		}
+
+		HRESULT SubmitDraw( D3DPRIMITIVETYPE nType, TLAYOUT& vLayout)
 		{
 			bgfx::ProgramHandle hProgram = GetProgram(vLayout.m_dwShader);
 
 			if(!bgfx::isValid(hProgram))
 			{
-				bgfx::discard();
-				return Skip();
+				return Skip("no program");
 			}
 
 			for( int i=0; i<SHADER_STAGES; i++)
@@ -2798,17 +3439,48 @@ namespace
 			{
 				fclose(m_pDUMP);
 				m_pDUMP = NULL;
-				return;
 			}
+
+			// The flag holds the number of frames to dump, one per second (default 1).
+			// A series goes to numbered files.
+			static int s_nLeft = 0;
+			static int s_nIndex = 0;
+			static int s_nCount = 0;
+			static DWORD s_dwNext = 0;
 
 			GetTempPathA( MAX_PATH, vPATH);
 			sprintf_s( vFILE, "%stclient-bgfx-dump.flag", vPATH);
 
-			if( GetFileAttributesA(vFILE) == INVALID_FILE_ATTRIBUTES )
-				return;
-			DeleteFileA(vFILE);
+			if( GetFileAttributesA(vFILE) != INVALID_FILE_ATTRIBUTES )
+			{
+				FILE *pFLAG = NULL;
 
-			sprintf_s( vFILE, "%stclient-bgfx-dump.txt", vPATH);
+				s_nCount = 1;
+				if( !fopen_s( &pFLAG, vFILE, "r") && pFLAG )
+				{
+					if( fscanf_s( pFLAG, "%d", &s_nCount) != 1 || s_nCount < 1 )
+						s_nCount = 1;
+					fclose(pFLAG);
+				}
+
+				DeleteFileA(vFILE);
+				s_nLeft = s_nCount;
+				s_nIndex = 0;
+				s_dwNext = 0;
+			}
+
+			if( s_nLeft <= 0 || GetTickCount() < s_dwNext )
+				return;
+
+			if( s_nCount > 1 )
+				sprintf_s( vFILE, "%stclient-bgfx-dump-%02d.txt", vPATH, s_nIndex);
+			else
+				sprintf_s( vFILE, "%stclient-bgfx-dump.txt", vPATH);
+
+			s_nLeft--;
+			s_nIndex++;
+			s_dwNext = GetTickCount() + 1000;
+
 			if( fopen_s( &m_pDUMP, vFILE, "w") )
 				m_pDUMP = NULL;
 
@@ -2886,11 +3558,89 @@ namespace
 				if(pTEX)
 					fprintf( m_pDUMP, " fmt=%u %ux%u lv%u up%u", pTEX->m_nFormat, pTEX->m_nWidth, pTEX->m_nHeight, pTEX->m_nLevels, pTEX->m_nUpload);
 
+				if( pTEX && !pTEX->IsTarget() )
+				{
+					// The average B G R A of level 0 and whether it was written: an empty texture
+					// draws nothing.
+					std::vector<BYTE>& vLEVEL = pTEX->GetLevel(0);
+					std::vector<BYTE> vBGRA( pTEX->m_nWidth * pTEX->m_nHeight * 4);
+					UINT64 vSUM[4] = { 0, 0, 0, 0};
+
+					if(DecodeToBGRA( pTEX->m_nFormat, &vLEVEL[0], GetPitch( pTEX->m_nFormat, pTEX->m_nWidth), pTEX->m_nWidth, pTEX->m_nHeight, &vBGRA[0]))
+						for( size_t k=0; k<vBGRA.size(); k++)
+							vSUM[k % 4] += vBGRA[k];
+
+					UINT nPixels = TMax( 1U, pTEX->m_nWidth * pTEX->m_nHeight);
+					fprintf( m_pDUMP, " avg=%02x%02x%02x%02x w%u", UINT(vSUM[3] / nPixels), UINT(vSUM[2] / nPixels), UINT(vSUM[1] / nPixels), UINT(vSUM[0] / nPixels), pTEX->m_vWRITTEN[0] ? 1 : 0);
+				}
+
 				fprintf( m_pDUMP, " mag%u min%u mip%u adr%u,%u ttff%u tci%u", m_vSAMP[i][D3DSAMP_MAGFILTER], m_vSAMP[i][D3DSAMP_MINFILTER], m_vSAMP[i][D3DSAMP_MIPFILTER],
 					m_vSAMP[i][D3DSAMP_ADDRESSU], m_vSAMP[i][D3DSAMP_ADDRESSV], m_vTSS[i][D3DTSS_TEXTURETRANSFORMFLAGS], m_vTSS[i][D3DTSS_TEXCOORDINDEX]);
 			}
 
 			fprintf( m_pDUMP, " | rect=%.0f,%.0f-%.0f,%.0f\n", fMinX, fMinY, fMaxX, fMaxY);
+
+			// Lit draws with a normal: the lights, the world scale and vertex 0 lit the D3D9 way.
+			if( m_vRS[D3DRS_LIGHTING] && (vLayout.m_dwShader & (1 << 2)) && m_pDumpData && m_nDumpCount && (vLayout.m_dwShader & 3) == 0 )
+			{
+				const D3DMATRIX& w = m_vWORLD[0];
+				const FLOAT *pPos = (const FLOAT *) m_pDumpData;
+				const FLOAT *pNor = pPos + 3;
+				D3DXVECTOR3 vP( pPos[0], pPos[1], pPos[2]);
+				D3DXVECTOR3 vN( pNor[0], pNor[1], pNor[2]);
+				D3DXMATRIX vW(w);
+				D3DXMATRIX vINV;
+				D3DXVECTOR3 vWP;
+				D3DXVECTOR3 vWN;
+
+				D3DXVec3TransformCoord( &vWP, &vP, &vW);
+				D3DXMatrixInverse( &vINV, NULL, &vW);
+				D3DXMatrixTranspose( &vINV, &vINV);
+				vWN = D3DXVECTOR3(
+					vN.x * vINV._11 + vN.y * vINV._21 + vN.z * vINV._31,
+					vN.x * vINV._12 + vN.y * vINV._22 + vN.z * vINV._32,
+					vN.x * vINV._13 + vN.y * vINV._23 + vN.z * vINV._33);
+
+				fprintf( m_pDUMP, "    light: scale %.3f %.3f %.3f n0=(%.2f %.2f %.2f) wn=(%.2f %.2f %.2f) normalize=%u",
+					sqrtf( w._11 * w._11 + w._12 * w._12 + w._13 * w._13), sqrtf( w._21 * w._21 + w._22 * w._22 + w._23 * w._23), sqrtf( w._31 * w._31 + w._32 * w._32 + w._33 * w._33),
+					vN.x, vN.y, vN.z, vWN.x, vWN.y, vWN.z, m_vRS[D3DRS_NORMALIZENORMALS]);
+
+				D3DXVECTOR3 vColor( m_vMATERIAL.Emissive.r, m_vMATERIAL.Emissive.g, m_vMATERIAL.Emissive.b);
+				D3DXCOLOR vAMB(m_vRS[D3DRS_AMBIENT]);
+				vColor += D3DXVECTOR3( vAMB.r * m_vMATERIAL.Ambient.r, vAMB.g * m_vMATERIAL.Ambient.g, vAMB.b * m_vMATERIAL.Ambient.b);
+
+				for( std::map< DWORD, BOOL>::iterator it = m_mapLIGHTON.begin(); it != m_mapLIGHTON.end(); it++)
+				{
+					if(!(*it).second)
+						continue;
+
+					D3DLIGHT9& l = m_mapLIGHT[(*it).first];
+					D3DXVECTOR3 vL;
+					FLOAT fAtt = 1.0f;
+
+					if( l.Type == D3DLIGHT_DIRECTIONAL )
+						vL = -D3DXVECTOR3( l.Direction.x, l.Direction.y, l.Direction.z);
+					else
+					{
+						vL = D3DXVECTOR3( l.Position.x, l.Position.y, l.Position.z) - vWP;
+						FLOAT d = D3DXVec3Length(&vL);
+						fAtt = d > l.Range ? 0.0f : 1.0f / TMaxF( l.Attenuation0 + l.Attenuation1 * d + l.Attenuation2 * d * d, 0.0001f);
+					}
+					D3DXVec3Normalize( &vL, &vL);
+
+					FLOAT fDot = TMaxF( D3DXVec3Dot( &vWN, &vL), 0.0f);
+					vColor += fAtt * D3DXVECTOR3(
+						l.Ambient.r * m_vMATERIAL.Ambient.r + l.Diffuse.r * m_vMATERIAL.Diffuse.r * fDot,
+						l.Ambient.g * m_vMATERIAL.Ambient.g + l.Diffuse.g * m_vMATERIAL.Diffuse.g * fDot,
+						l.Ambient.b * m_vMATERIAL.Ambient.b + l.Diffuse.b * m_vMATERIAL.Diffuse.b * fDot);
+
+					fprintf( m_pDUMP, " | L%u t%u dif=%.2f,%.2f,%.2f amb=%.2f,%.2f,%.2f dir=%.2f,%.2f,%.2f range=%.0f att=%.2f,%.3f,%.4f dot=%.2f",
+						(*it).first, l.Type, l.Diffuse.r, l.Diffuse.g, l.Diffuse.b, l.Ambient.r, l.Ambient.g, l.Ambient.b,
+						l.Direction.x, l.Direction.y, l.Direction.z, l.Range, l.Attenuation0, l.Attenuation1, l.Attenuation2, fDot);
+				}
+
+				fprintf( m_pDUMP, " | d3d9 color0 %.2f %.2f %.2f a %.2f\n", vColor.x, vColor.y, vColor.z, m_vMATERIAL.Diffuse.a);
+			}
 		}
 
 		FILE *m_pDUMP;
@@ -2952,6 +3702,9 @@ namespace
 		UINT m_nView;
 		BOOL m_bViewOpen;
 		BOOL m_bViewDirty;
+		BOOL m_bFlipY;
+		BOOL m_bHighlight;
+		int m_nHighlight;
 		UINT m_nDraws;
 		UINT m_nSkipped;
 	};

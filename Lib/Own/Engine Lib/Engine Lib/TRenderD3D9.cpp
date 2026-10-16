@@ -165,7 +165,7 @@ namespace
 	class CTRenderDeviceD3D9 : public CTRenderDevice
 	{
 	public:
-		CTRenderDeviceD3D9( LPDIRECT3DDEVICE9 pD3D9) : m_pD3D9(pD3D9) {}
+		CTRenderDeviceD3D9( LPDIRECT3DDEVICE9 pD3D9) : m_pD3D9(pD3D9), m_pDUMP(NULL), m_nDraws(0) {}
 
 		ULONG Release() override { ULONG nCount = m_pD3D9->Release(); delete this; return nCount; }
 
@@ -173,7 +173,11 @@ namespace
 		UINT GetAvailableTextureMem() override { return m_pD3D9->GetAvailableTextureMem(); }
 		HRESULT GetDeviceCaps( D3DCAPS9 *pCaps) override { return m_pD3D9->GetDeviceCaps(pCaps); }
 		HRESULT Reset( D3DPRESENT_PARAMETERS *pPresentationParameters) override { return m_pD3D9->Reset(pPresentationParameters); }
-		HRESULT Present( const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion) override { return m_pD3D9->Present( pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion); }
+		HRESULT Present( const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion) override
+		{
+			UpdateDump();
+			return m_pD3D9->Present( pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
+		}
 		void SetGammaRamp( UINT iSwapChain, DWORD Flags, const D3DGAMMARAMP *pRamp) override { m_pD3D9->SetGammaRamp( iSwapChain, Flags, pRamp); }
 
 		HRESULT CreateTexture( UINT Width, UINT Height, UINT Levels, DWORD Usage, D3DFORMAT Format, D3DPOOL Pool, LPTTEXTURE *ppTexture, HANDLE *pSharedHandle) override
@@ -241,9 +245,130 @@ namespace
 		HRESULT SetSamplerState( DWORD Sampler, D3DSAMPLERSTATETYPE Type, DWORD Value) override { return m_pD3D9->SetSamplerState( Sampler, Type, Value); }
 		HRESULT SetSoftwareVertexProcessing( BOOL bSoftware) override { return m_pD3D9->SetSoftwareVertexProcessing(bSoftware); }
 
-		HRESULT DrawPrimitive( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount) override { return m_pD3D9->DrawPrimitive( PrimitiveType, StartVertex, PrimitiveCount); }
-		HRESULT DrawIndexedPrimitive( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UINT MinVertexIndex, UINT NumVertices, UINT startIndex, UINT primCount) override { return m_pD3D9->DrawIndexedPrimitive( Type, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount); }
-		HRESULT DrawPrimitiveUP( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void *pVertexStreamZeroData, UINT VertexStreamZeroStride) override { return m_pD3D9->DrawPrimitiveUP( PrimitiveType, PrimitiveCount, pVertexStreamZeroData, VertexStreamZeroStride); }
+		HRESULT DrawPrimitive( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount) override { DumpDraw( PrimitiveType, PrimitiveCount, 0); return m_pD3D9->DrawPrimitive( PrimitiveType, StartVertex, PrimitiveCount); }
+		HRESULT DrawIndexedPrimitive( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UINT MinVertexIndex, UINT NumVertices, UINT startIndex, UINT primCount) override { DumpDraw( Type, primCount, 0); return m_pD3D9->DrawIndexedPrimitive( Type, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount); }
+		HRESULT DrawPrimitiveUP( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void *pVertexStreamZeroData, UINT VertexStreamZeroStride) override { DumpDraw( PrimitiveType, PrimitiveCount, VertexStreamZeroStride); return m_pD3D9->DrawPrimitiveUP( PrimitiveType, PrimitiveCount, pVertexStreamZeroData, VertexStreamZeroStride); }
+
+		// Diagnostics, like the bgfx backend's: when %TEMP%\tclient-d3d9-dump.flag exists, the
+		// next frame's draw calls are written to %TEMP%\tclient-d3d9-dump.txt.
+		void UpdateDump()
+		{
+			char vPATH[MAX_PATH];
+			char vFILE[MAX_PATH];
+
+			if(m_pDUMP)
+			{
+				fclose(m_pDUMP);
+				m_pDUMP = NULL;
+			}
+
+			// The flag holds the number of frames to dump, one per second (default 1).
+			// A series goes to numbered files.
+			static int s_nLeft = 0;
+			static int s_nIndex = 0;
+			static int s_nCount = 0;
+			static DWORD s_dwNext = 0;
+
+			GetTempPathA( MAX_PATH, vPATH);
+			sprintf_s( vFILE, "%stclient-d3d9-dump.flag", vPATH);
+
+			if( GetFileAttributesA(vFILE) != INVALID_FILE_ATTRIBUTES )
+			{
+				FILE *pFLAG = NULL;
+
+				s_nCount = 1;
+				if( !fopen_s( &pFLAG, vFILE, "r") && pFLAG )
+				{
+					if( fscanf_s( pFLAG, "%d", &s_nCount) != 1 || s_nCount < 1 )
+						s_nCount = 1;
+					fclose(pFLAG);
+				}
+
+				DeleteFileA(vFILE);
+				s_nLeft = s_nCount;
+				s_nIndex = 0;
+				s_dwNext = 0;
+			}
+
+			if( s_nLeft <= 0 || GetTickCount() < s_dwNext )
+				return;
+
+			if( s_nCount > 1 )
+				sprintf_s( vFILE, "%stclient-d3d9-dump-%02d.txt", vPATH, s_nIndex);
+			else
+				sprintf_s( vFILE, "%stclient-d3d9-dump.txt", vPATH);
+
+			s_nLeft--;
+			s_nIndex++;
+			s_dwNext = GetTickCount() + 1000;
+
+			if( fopen_s( &m_pDUMP, vFILE, "w") )
+				m_pDUMP = NULL;
+			m_nDraws = 0;
+		}
+
+		void DumpDraw( D3DPRIMITIVETYPE nType, UINT nCount, UINT nStrideUP)
+		{
+			if(!m_pDUMP)
+				return;
+
+			DWORD dwFVF = 0;
+			IDirect3DVertexBuffer9 *pVB = NULL;
+			IDirect3DVertexDeclaration9 *pDECL = NULL;
+			UINT nOffset = 0;
+			UINT nStride = nStrideUP;
+			DWORD vRS[8];
+			static const D3DRENDERSTATETYPE vSTATE[8] = { D3DRS_LIGHTING, D3DRS_ALPHABLENDENABLE, D3DRS_SRCBLEND, D3DRS_DESTBLEND, D3DRS_BLENDOP, D3DRS_ALPHATESTENABLE, D3DRS_ZENABLE, D3DRS_TEXTUREFACTOR };
+
+			m_pD3D9->GetFVF(&dwFVF);
+			m_pD3D9->GetVertexDeclaration(&pDECL);
+			if(!nStrideUP)
+				m_pD3D9->GetStreamSource( 0, &pVB, &nOffset, &nStride);
+
+			for( int i=0; i<8; i++)
+				m_pD3D9->GetRenderState( vSTATE[i], &vRS[i]);
+
+			fprintf( m_pDUMP, "#%u fvf=%x decl=%p st=%u prim=%d n=%u | L=%u blend=%u %u>%u op%u at=%u z=%u tf=%08x", m_nDraws++,
+				dwFVF, (void *) pDECL, nStride, nType, nCount, vRS[0], vRS[1], vRS[2], vRS[3], vRS[4], vRS[5], vRS[6], vRS[7]);
+
+			for( DWORD i=0; i<2; i++)
+			{
+				DWORD dwColorOp, dwAlphaOp, dwArg1, dwArg2;
+				IDirect3DBaseTexture9 *pBASE = NULL;
+
+				m_pD3D9->GetTextureStageState( i, D3DTSS_COLOROP, &dwColorOp);
+				m_pD3D9->GetTextureStageState( i, D3DTSS_COLORARG1, &dwArg1);
+				m_pD3D9->GetTextureStageState( i, D3DTSS_COLORARG2, &dwArg2);
+				m_pD3D9->GetTextureStageState( i, D3DTSS_ALPHAOP, &dwAlphaOp);
+				m_pD3D9->GetTexture( i, &pBASE);
+				fprintf( m_pDUMP, " | s%u c=%u(%x,%x) a=%u tex=%p", i, dwColorOp, dwArg1, dwArg2, dwAlphaOp, (void *) pBASE);
+
+				if(pBASE)
+				{
+					if( pBASE->GetType() == D3DRTYPE_TEXTURE )
+					{
+						IDirect3DTexture9 *pTEX = (IDirect3DTexture9 *) pBASE;
+						D3DSURFACE_DESC vDESC;
+
+						pTEX->GetLevelDesc( 0, &vDESC);
+						fprintf( m_pDUMP, " fmt=%u %ux%u lv%u", vDESC.Format, vDESC.Width, vDESC.Height, pTEX->GetLevelCount());
+					}
+
+					pBASE->Release();
+				}
+			}
+
+			fprintf( m_pDUMP, "\n");
+
+			if(pVB)
+				pVB->Release();
+
+			if(pDECL)
+				pDECL->Release();
+		}
+
+		FILE *m_pDUMP;
+		UINT m_nDraws;
 
 		HRESULT CreateVertexDeclaration( const D3DVERTEXELEMENT9 *pVertexElements, IDirect3DVertexDeclaration9 **ppDecl) override { return m_pD3D9->CreateVertexDeclaration( pVertexElements, ppDecl); }
 		HRESULT SetVertexDeclaration( IDirect3DVertexDeclaration9 *pDecl) override { return m_pD3D9->SetVertexDeclaration(pDecl); }

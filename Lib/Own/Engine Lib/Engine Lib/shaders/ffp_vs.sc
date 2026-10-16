@@ -20,7 +20,7 @@ uniform vec4 u_tView[4];
 // [4] viewport x, y, width, height
 // [5] viewport min z, max z, homogeneous depth (OpenGL), depth bias
 // [6] fog mode (0 none, 1 exp, 2 exp2, 3 linear), start, end, density
-// [7] range fog, fog enable, -, -
+// [7] range fog, fog enable, flip y (render targets on OpenGL), -
 // [8] camera position
 uniform vec4 u_tVS[9];
 
@@ -43,12 +43,25 @@ vec3 transformPoint( int nIndex, vec4 vPos)
 		dot( vPos, u_tWorld[nIndex * 3 + 2]));
 }
 
-vec3 transformVector( int nIndex, vec3 vDir)
+// Like D3D9, normals go through the inverse transpose of the world matrix: a
+// scaled mesh gets longer or shorter normals (and brighter or darker lighting)
+// unless NORMALIZENORMALS is on. The uploaded rows are the matrix columns, so
+// the rows of the inverse are their cross products over the determinant.
+vec3 transformNormal( int nIndex, vec3 vNormal)
 {
+	vec3 c0 = u_tWorld[nIndex * 3].xyz;
+	vec3 c1 = u_tWorld[nIndex * 3 + 1].xyz;
+	vec3 c2 = u_tWorld[nIndex * 3 + 2].xyz;
+	vec3 r0 = cross( c1, c2);
+	float fDet = dot( c0, r0);
+
+	if( abs(fDet) < 1e-12 )
+		return vec3( 0.0, 0.0, 0.0);
+
 	return vec3(
-		dot( vDir, u_tWorld[nIndex * 3].xyz),
-		dot( vDir, u_tWorld[nIndex * 3 + 1].xyz),
-		dot( vDir, u_tWorld[nIndex * 3 + 2].xyz));
+		dot( r0, vNormal),
+		dot( cross( c2, c0), vNormal),
+		dot( cross( c0, c1), vNormal)) / fDet;
 }
 
 vec4 materialColor( float fSource, vec4 vMaterial, vec4 vDiffuse, vec4 vSpecular, bool bDiffuse)
@@ -137,7 +150,7 @@ void main()
 	if( fMode < 0.5 )
 	{
 		vWorld = transformPoint( 0, vPos);
-		vNormal = transformVector( 0, vNormalIn);
+		vNormal = transformNormal( 0, vNormalIn);
 	}
 	else
 	{
@@ -178,12 +191,12 @@ void main()
 		for( int i=0; i<4; i++)
 		{
 			vWorld += vWeight[i] * transformPoint( vIndex[i], vPos);
-			vNormal += vWeight[i] * transformVector( vIndex[i], vNormalIn);
+			vNormal += vWeight[i] * transformNormal( vIndex[i], vNormalIn);
 		}
 	}
 #else
 	vWorld = transformPoint( 0, vPos);
-	vNormal = transformVector( 0, vNormalIn);
+	vNormal = transformNormal( 0, vNormalIn);
 #endif
 
 	vec4 vWorld4 = vec4( vWorld, 1.0);
@@ -282,4 +295,7 @@ void main()
 	v_texcoord0 = vec4( stageCoord( 0, vSet0, vSet1), stageCoord( 1, vSet0, vSet1));
 	v_texcoord1 = vec4( stageCoord( 2, vSet0, vSet1), stageCoord( 3, vSet0, vSet1));
 	v_fog = clamp( fFog, 0.0, 1.0);
+
+	if( u_tVS[7].z > 0.5 )
+		gl_Position.y = -gl_Position.y;
 }

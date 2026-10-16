@@ -100,11 +100,12 @@ void CTachyonApp::LoadStdProfileSettings()
 	else
 		m_pTachyonWnd->m_Device.m_option.m_bUseSHADER = strValue == _T("TRUE");
 
-	// D3D9 or BGFX: the backend of the render layer.
+	// BGFX (default) or D3D9: the backend of the render layer. Builds without
+	// TCLIENT_BGFX (MSBuild) always draw with D3D9.
 	m_pTachyonWnd->m_Device.m_option.m_bBGFX = GetProfileString(
 		_T("Settings"),
 		_T("Renderer"),
-		_T("D3D9")).CompareNoCase(_T("BGFX")) == 0;
+		_T("BGFX")).CompareNoCase(_T("BGFX")) == 0;
 
 	dwValue = GetProfileInt(
 		_T("Settings"),
