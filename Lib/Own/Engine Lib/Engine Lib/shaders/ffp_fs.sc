@@ -90,13 +90,37 @@ vec4 stageOp( float fOp, vec4 a1, vec4 a2, vec4 a0, vec4 vDiffuse, vec4 vTexture
 	return a1;
 }
 
+// Whether an operation reads D3DTA_TEXTURE (2) through the arguments it uses, or the
+// texture alpha. D3D9 passes the current color through such an operation when the
+// stage has no texture: effects use MODULATE2X and weapons ADDSIGNED2X with a
+// texture argument on an empty stage 1.
+bool isTexture( float fSelect)
+{
+	return fSelect > 1.5 && fSelect < 2.5;
+}
+
+bool usesTexture( vec4 vOp)
+{
+	int nOp = int(vOp.x + 0.5);
+
+	if( nOp == 13 || nOp == 15 )
+		return true;
+	if( nOp == 2 )
+		return isTexture(vOp.y);
+	if( nOp == 3 )
+		return isTexture(vOp.z);
+	if( nOp == 25 || nOp == 26 )
+		return isTexture(vOp.y) || isTexture(vOp.z) || isTexture(vOp.w);
+
+	return isTexture(vOp.y) || isTexture(vOp.z);
+}
+
 vec4 sampleStage( int nStage, vec4 vCoord01, vec4 vCoord23)
 {
 	vec4 vBound = u_tPS[3];
 	vec4 vBias = u_tPS[4];
 
-	// D3D9's fixed pipeline reads a stage without a texture as opaque white: effects
-	// use MODULATE2X with D3DTA_TEXTURE on an empty stage 1 to double their color.
+	// A stage without a texture is not sampled: usesTexture skips it.
 	vec4 vWhite = vec4( 1.0, 1.0, 1.0, 1.0);
 
 	if( nStage == 0 )
@@ -127,6 +151,8 @@ void main()
 			break;
 
 		vec4 vTexture = sampleStage( i, v_texcoord0, v_texcoord1);
+		vec4 vBound = u_tPS[3];
+		bool bBound = (i == 0 ? vBound.x : i == 1 ? vBound.y : i == 2 ? vBound.z : vBound.w) > 0.5;
 		vec4 vConstant = u_tPS[5 + i];
 
 		vec4 c1 = stageArg( vColorOp.y, vColorMod.x, vDiffuse, vCurrent, vTexture, vSpecular, vConstant);
@@ -135,9 +161,12 @@ void main()
 		vec4 vColor = stageOp( vColorOp.x, c1, c2, c0, vDiffuse, vTexture, vCurrent);
 		float fAlpha = vCurrent.w;
 
+		if( !bBound && usesTexture(vColorOp) )
+			vColor = vCurrent;
+
 		if( int(vColorOp.x + 0.5) == 24 )
 			fAlpha = vColor.w;
-		else if( vAlphaOp.x > 1.5 )
+		else if( vAlphaOp.x > 1.5 && (bBound || !usesTexture(vAlphaOp)) )
 		{
 			vec4 l1 = stageArg( vAlphaOp.y, vAlphaMod.x, vDiffuse, vCurrent, vTexture, vSpecular, vConstant);
 			vec4 l2 = stageArg( vAlphaOp.z, vAlphaMod.y, vDiffuse, vCurrent, vTexture, vSpecular, vConstant);
