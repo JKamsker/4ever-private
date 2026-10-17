@@ -1,4 +1,4 @@
-namespace TWorld.Protocol;
+﻿namespace TWorld.Protocol;
 
 /// <summary>
 /// Message-plane bases and the Phase-1 message IDs for TWorldSvr. Values come from THIS repo's
@@ -280,6 +280,14 @@ public static class Msg
     public const ushort MW_CORPSCMD_ACK = MW_BASE + 0x0092;
     public const ushort MW_CORPSENEMYLIST_REQ = MW_BASE + 0x0093;
     public const ushort MW_CORPSENEMYLIST_ACK = MW_BASE + 0x0094;
+    public const ushort MW_MOVECORPSENEMY_REQ = MW_BASE + 0x0095;   // corps relays (BroadcastCorps): the client's body, re-addressed
+    public const ushort MW_MOVECORPSENEMY_ACK = MW_BASE + 0x0096;
+    public const ushort MW_MOVECORPSUNIT_REQ = MW_BASE + 0x0097;
+    public const ushort MW_MOVECORPSUNIT_ACK = MW_BASE + 0x0098;
+    public const ushort MW_ADDCORPSENEMY_REQ = MW_BASE + 0x0099;
+    public const ushort MW_ADDCORPSENEMY_ACK = MW_BASE + 0x009A;
+    public const ushort MW_DELCORPSENEMY_REQ = MW_BASE + 0x009B;
+    public const ushort MW_DELCORPSENEMY_ACK = MW_BASE + 0x009C;
     public const ushort MW_CORPSHP_REQ = MW_BASE + 0x009D;
     public const ushort MW_CORPSHP_ACK = MW_BASE + 0x009E;
     public const ushort MW_PARTYMOVE_REQ = MW_BASE + 0x009F;

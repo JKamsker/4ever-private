@@ -48,9 +48,16 @@ public sealed partial class WorldService
         var fr = ch.Friends.Values.FirstOrDefault(f => string.Equals(f.Name, protectedName, StringComparison.OrdinalIgnoreCase));
         if (fr is null) return;
 
-        if (connect == (byte)FriendConnState.Disconnection && _socialDb is not null)
-            await Persist(() => _socialDb!.FriendEraseAsync(ch.CharId, fr.Id), "TFriendDelete");
+        ShowProtectedState(ch, protectedName, connect);
+        // C++ SendDM_FRIENDERASE_REQ: blocking a friend breaks the friendship — the DB row, then (OnDM_FRIENDERASE_ACK) EraseFriend,
+        // which also tells the blocker's client
+        if (connect == (byte)FriendConnState.Disconnection)
+            await EraseFriend(ch, fr.Id);
+    }
 
+    private void ShowProtectedState(Character ch, string protectedName, byte connect)
+    {
+        uint charId = ch.CharId;
         if (!_state.CharactersByName.TryGetValue(protectedName, out var target)) return;
         if (!target.Friends.TryGetValue(charId, out var theirs)) return;   // the target's entry for this char
         if (!ch.Friends.TryGetValue(target.CharId, out var mine)) return;  // this char's entry for the target
@@ -86,8 +93,8 @@ public sealed partial class WorldService
         foreach (var fr in load.Friends)
         {
             var f = new Friend { Id = fr.FriendId, Name = fr.Name, Level = fr.Level, Group = fr.Group, Class = fr.Class, Type = FriendType.Friend };
-            // bRet (protected/blacklist) is treated as not-protected here — the connection path proceeds.
-            if (_state.CharactersByName.TryGetValue(fr.Name, out var fc) && fc.DbLoading)
+            // a friend who blocks me shows offline (C++ bRet)
+            if (_state.CharactersByName.TryGetValue(fr.Name, out var fc) && fc.DbLoading && !fr.Protected)
             {
                 f.Connected = true;
                 f.Region = fc.Region;
@@ -113,8 +120,17 @@ public sealed partial class WorldService
                 player.Friends[f.Id] = f;
                 if (partner is not null && partner.Friends.TryGetValue(player.CharId, out var back))
                 {
-                    back.Connected = true;
-                    back.Region = player.Region;
+                    if (tg.Protected)                   // I block them: they are not told I came online
+                    {
+                        back.Connected = false;
+                        f.Connected = false;
+                        partner = null;
+                    }
+                    else
+                    {
+                        back.Connected = true;
+                        back.Region = player.Region;
+                    }
                 }
             }
 

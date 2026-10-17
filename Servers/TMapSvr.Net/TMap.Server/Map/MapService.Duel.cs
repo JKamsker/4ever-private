@@ -1,4 +1,4 @@
-using TMap.Data;
+﻿using TMap.Data;
 using TMap.Protocol;
 
 namespace TMap.Server.Map;
@@ -20,12 +20,12 @@ namespace TMap.Server.Map;
 /// has ended; an enemy's attack ends the duel instead (<see cref="CanDuel"/>). <b>Faithful quirks:</b> the player's duel
 /// state is never set to standby or started (only to ended), so the two may already fight during the 10 s countdown;
 /// <c>DuelLose</c> against someone other than the opponent sends an end for a duel id that is really a character id, a
-/// no-op. <b>Not ported:</b> the duel record and per-class score (<c>RecordDuel</c> — the C++ never saves it) and the
-/// protected list (<c>PROTECTED_DUEL</c> — no block list is kept, so nobody refuses).</para>
+/// no-op. <b>Not ported:</b> the duel record and per-class score (<c>RecordDuel</c> — the C++ never saves it). Someone blocking
+/// the inviter's duels refuses at once (<c>PROTECTED_DUEL</c>, MapService.Social.cs).</para>
 /// </summary>
 public sealed partial class MapService
 {
-    private const byte DuelSuccess = 0, DuelBusy = 2, DuelFail = 3;           // DUEL_RESULT
+    private const byte DuelSuccess = 0, DuelRefuse = 1, DuelBusy = 2, DuelFail = 3;   // DUEL_RESULT
     private const byte DuelStandby = 1, DuelStart = 2, DuelEnd = 3;           // DUEL_TYPE
     private const uint DuelStandbyTime = 10, DuelTime = 5 * 60;               // seconds
     private const float DuelAreaRange = 60f;
@@ -50,6 +50,11 @@ public sealed partial class MapService
             || _state.FindByChar(targetId) is not { Char: { } target } ts)
         {
             SendCS_DUELSTART_ACK(s, DuelFail, ch.CharId, targetId);
+            return;
+        }
+        if (!CheckProtected(target, ch.CharId, ProtectedDuel))
+        {
+            SendCS_DUELSTART_ACK(s, DuelRefuse, ch.CharId, targetId);
             return;
         }
         if (ts.IsMain && target.DuelId == 0 && !IsActionBlock(target) && !HaveDieBuff(target))

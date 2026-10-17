@@ -62,6 +62,10 @@ public sealed class BotConfig
     /// <summary>The second bot's account for a scenario (same password, first character).</summary>
     public string Account2 { get; set; } = "";
 
+    /// <summary>The third and fourth bots' accounts, for the corps scenario (a second party).</summary>
+    public string Account3 { get; set; } = "";
+    public string Account4 { get; set; } = "";
+
     public float MoveRadius { get; set; } = 40f;
     public float MoveSpeed { get; set; } = 3.0f;
     public float MoveStep { get; set; } = 2.0f;

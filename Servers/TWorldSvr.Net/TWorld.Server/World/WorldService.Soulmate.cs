@@ -122,6 +122,8 @@ public sealed partial class WorldService
         Narrow(candidates, c => !c.Soulmates.TryGetValue(c.CharId, out var s) || s.Target == 0);
         Narrow(candidates, c => ch.Sex != c.Sex);
 
+        // C++ SendDM_SOULMATEREG_REQ(…, TRUE): a soulmate found is saved too (TSoulmateReg), not only one chosen by name
+        await Persist(() => _socialDb!.SoulmateRegAsync(ch.CharId, candidates[0].CharId), "TSoulmateReg");
         await RegSoulmate(ch, candidates[0], search: true, npcInven, npcItem);
 
         static void Narrow(List<Character> list, Func<Character, bool> pred)

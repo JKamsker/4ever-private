@@ -1,4 +1,4 @@
-using TMap.Protocol;
+﻿using TMap.Protocol;
 
 namespace TMap.Server.Map;
 
@@ -20,8 +20,7 @@ namespace TMap.Server.Map;
 /// sends them.</item>
 /// </list>
 /// <para>The guild skills (re-read on founding, joining, leaving, a duty and the guild window) are in MapService.GuildSkill.cs.
-/// <b>Not ported:</b> the protected list (an invite is never refused by it), the guild cloak reset on
-/// leaving, the security-code lock on leave / kick, the UDP guild log.</para>
+/// An invite is refused by the invitee's protected list (MapService.Social.cs). <b>Not ported:</b> the security-code lock on leave / kick, the UDP guild log.</para>
 /// </summary>
 public sealed partial class MapService
 {
@@ -241,6 +240,12 @@ public sealed partial class MapService
         }
         if (ch.GuildId != 0) { Refuse(GuildHaveGuild); return; }
         if (GuildLeaveWait(ch) is var wait and not 0) { Refuse(wait); return; }
+        // C++ asks the protected list only in its last else: not after having left a guild, even long ago
+        if (ch.Persist.GuildLeave is not (GuildLeaveSelf or GuildLeaveDisorganization) && !CheckProtected(ch, inviter, ProtectedInvite))
+        {
+            Refuse(GuildJoinDeny);
+            return;
+        }
         SendGuildResult(s, Msg.CS_GUILDINVITE_ACK, GuildSuccess, w => { w.WriteString(guildName); w.WriteUInt32(inviter); w.WriteString(inviterName); });
     }
 

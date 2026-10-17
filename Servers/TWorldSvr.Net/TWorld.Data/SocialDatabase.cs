@@ -37,25 +37,27 @@ public sealed class SocialDatabase
 
         var friends = new List<FriendRow>();
         await using (var cmd = new SqlCommand(
-            @"SELECT F.dwFriendID, C.szName, F.bGroup, C.bClass, C.bLevel
+            @"SELECT F.dwFriendID, C.szName, F.bGroup, C.bClass, C.bLevel,
+                     CASE WHEN EXISTS (SELECT 1 FROM TPROTECTEDTABLE P WHERE P.dwCharID = F.dwFriendID AND P.dwProtected = @c) THEN 1 ELSE 0 END
               FROM TFRIENDTABLE AS F INNER JOIN TCHARTABLE AS C ON F.dwFriendID = C.dwCharID
               WHERE F.dwCharID = @c AND C.bDelete = 0", c))
         {
             cmd.Parameters.AddWithValue("@c", cid);
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct))
-                friends.Add(new FriendRow(r.GetUIntSafe(0), r.GetStringSafe(1), r.GetByteSafe(2), r.GetByteSafe(3), r.GetByteSafe(4)));
+                friends.Add(new FriendRow(r.GetUIntSafe(0), r.GetStringSafe(1), r.GetByteSafe(2), r.GetByteSafe(3), r.GetByteSafe(4), r.GetInt32(5) != 0));
         }
 
         var targets = new List<FriendTargetRow>();
         await using (var cmd = new SqlCommand(
-            @"SELECT F.dwCharID, C.szName
+            @"SELECT F.dwCharID, C.szName,
+                     CASE WHEN EXISTS (SELECT 1 FROM TPROTECTEDTABLE P WHERE P.dwCharID = @c AND P.dwProtected = F.dwCharID) THEN 1 ELSE 0 END
               FROM TFRIENDTABLE AS F INNER JOIN TCHARTABLE AS C ON F.dwCharID = C.dwCharID
               WHERE F.dwFriendID = @c AND C.bDelete = 0", c))
         {
             cmd.Parameters.AddWithValue("@c", cid);
             await using var r = await cmd.ExecuteReaderAsync(ct);
-            while (await r.ReadAsync(ct)) targets.Add(new FriendTargetRow(r.GetUIntSafe(0), r.GetStringSafe(1)));
+            while (await r.ReadAsync(ct)) targets.Add(new FriendTargetRow(r.GetUIntSafe(0), r.GetStringSafe(1), r.GetInt32(2) != 0));
         }
 
         return new FriendLoad(groups, friends, targets);

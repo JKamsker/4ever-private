@@ -109,8 +109,8 @@ public sealed partial class MapService
     /// <summary>C++ <c>CTMonster::OnDie</c> OWNER_PARTY exp path (TMonster.cpp:615-694): the near party members
     /// (the monster's 3×3 neighborhood whose effective party id equals the keeper party) share the exp — the
     /// party-size bonus scales the pool, which is split by member level, then each is level-gap-scaled and
-    /// awarded with its <c>wBonus</c> (MapService.DuringItem.cs). The <b>soulmate +10%</b> and cross-map members
-    /// (<c>SendMW_MONSTERDIE_ACK</c>) are deferred (documented).</summary>
+    /// awarded with its <c>wBonus</c> (MapService.DuringItem.cs), its soulmate among them getting a tenth more
+    /// (<see cref="CheckSoulExp"/>). Cross-map members (<c>SendMW_MONSTERDIE_ACK</c>) are deferred (documented).</summary>
     private void AwardPartyKill(Monster mon, uint getExp)
     {
         var members = _state.PlayersAround(mon)
@@ -128,8 +128,9 @@ public sealed partial class MapService
         {
             var m = ks.Char!;
             uint shared = totalExp * m.Level / totalLevel;                // integer level-weighted split
-            uint gain = (uint)((double)((float)shared * LevelRate(m.Level, mon.Level)) + 0.99);
-            GainExp(ks, m, WithExpBonus(m, gain));
+            uint gain = WithExpBonus(m, (uint)((double)((float)shared * LevelRate(m.Level, mon.Level)) + 0.99));
+            CheckSoulExp(members, m, gain);                               // MapService.Soulmate.cs
+            GainExp(ks, m, gain);
             HuntQuest(ks, m, mon);                                        // C++ fires the hunt quest per member
         }
     }
@@ -170,6 +171,7 @@ public sealed partial class MapService
             foreach (var p in _state.InView(s)) SendCS_LEVEL_ACK(p, ch.CharId, ch.Level);
             BroadcastHpMp(s, ch);
             SendCS_CHARSTATINFO_ACK(s, ch);
+            SendMW_LEVELUP_ACK(s, ch);  // the world's level (guild, party, soulmate) — MapService.Soulmate.cs
         }
         SendCS_EXP_ACK(s, ch);
     }

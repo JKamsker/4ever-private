@@ -115,6 +115,9 @@ public sealed class TemplateStore
     // price 0 (DB-free / unknown grade).
     public Dictionary<int, uint> LevelMoney { get; } = new();
 
+    // The soulmate fees (C++ CTBLLevelChart m_dwSearchCost / m_dwRegCost, keyed by bLevel; MapService.Soulmate.cs).
+    public Dictionary<int, (uint Search, uint Reg)> SoulmateCost { get; } = new();
+
     /// <summary>The exp threshold to leave level <paramref name="level"/> (C++ <c>FindTLevel(level)-&gt;m_dwEXP</c>),
     /// or null if the level chart has no such row (DB-free / above the top ⇒ no more level-ups).</summary>
     public uint? LevelExpOf(int level) => LevelExp.TryGetValue(level, out var e) ? e : null;

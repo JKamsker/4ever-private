@@ -1,4 +1,4 @@
-using TWorld.Protocol;
+﻿using TWorld.Protocol;
 using TWorld.Server.World;
 using Xunit;
 
@@ -95,8 +95,10 @@ public class MiscTests
         arena.WriteUInt32(72); arena.WriteUInt32(73);
         client.Send(arena);
 
-        // C's removal broadcasts PARTYDEL to the remaining members + the leaver.
-        Assert.Equal(Msg.MW_PARTYDEL_REQ, client.Receive(TimeSpan.FromSeconds(5)).Id);
+        // C's removal: first off the squads (C++ NotifyDelCorpsUnit), then PARTYDEL to the remaining members + the leaver.
+        ushort id;
+        while ((id = client.Receive(TimeSpan.FromSeconds(5)).Id) is Msg.MW_DELCORPSUNIT_REQ or Msg.MW_DELSQUAD_REQ or Msg.MW_CORPSJOIN_REQ) { }
+        Assert.Equal(Msg.MW_PARTYDEL_REQ, id);
 
         await Task.Delay(40);
         Assert.Equal((byte)1, party.Arena);

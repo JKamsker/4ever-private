@@ -38,7 +38,7 @@ public sealed partial class MapService
         {
             case ChatGroup.Near:
                 foreach (var other in _state.Neighbors(s))
-                    other.Send(BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk));
+                    SendChat(other, BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk), s.CharId);
                 s.Send(BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk)); // echo to self
                 break;
 
@@ -46,7 +46,7 @@ public sealed partial class MapService
                 var to = FindByName(name);
                 if (to is not null)
                 {
-                    to.Send(BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk));
+                    SendChat(to, BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk), s.CharId);
                     s.Send(BuildCS_CHAT_ACK(group, s.CharId, ch.Name, talk)); // echo to sender
                 }
                 else
@@ -59,6 +59,12 @@ public sealed partial class MapService
                 SendMW_CHAT_ACK(s, (byte)group, target, name, talk);
                 break;
         }
+    }
+
+    /// <summary>C++ <c>SendCS_CHAT_ACK</c>: nothing reaches a player who blocks the sender's chat (MapService.Social.cs).</summary>
+    private static void SendChat(ClientSession to, byte[] msg, uint senderId)
+    {
+        if (to.Char is not { } ch || CheckProtected(ch, senderId, ProtectedChat)) to.Send(msg);
     }
 
     private static byte[] BuildCS_CHAT_ACK(ChatGroup group, uint senderId, string name, string talk)

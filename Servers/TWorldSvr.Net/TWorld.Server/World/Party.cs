@@ -21,6 +21,9 @@ public sealed class Party
     /// <summary>Whether the party has opted into arena play (m_bArena).</summary>
     public byte Arena { get; set; }
 
+    /// <summary>C++ <c>m_command</c>: the last order given to this squad in its corps.</summary>
+    public CorpsCommand Command { get; set; }
+
     public byte Size => (byte)Members.Count;
     public bool IsFull => Members.Count >= Proto.MaxPartyMember;
     public bool IsChief(uint charId) => ChiefId == charId;
@@ -45,6 +48,7 @@ public sealed class Party
         if (charId == Order) SetNextOrder(charId);  // advance the order pointer before removing (CTParty::DelMember)
         Members.Remove(m);
         m.Party = null;
+        m.Command = default;                        // C++ memset(m_command)
         return true;
     }
 
@@ -93,13 +97,37 @@ public sealed class Party
     }
 }
 
+/// <summary>C++ <c>TCOMMAND</c>: an order in a corps — what to do, and the object or place it is about.</summary>
+public readonly record struct CorpsCommand(byte Command, byte TgType, uint TgObjId, ushort TgPosX, ushort TgPosZ);
+
 /// <summary>In-memory corps (CTCorps) — a squad of parties under a commander/general. Ephemeral.</summary>
 public sealed class Corps
 {
     public ushort Id { get; set; }
     public ushort Commander { get; set; }    // commanding party id
     public uint GeneralId { get; set; }      // commanding party's chief
-    public Dictionary<ushort, Party> Parties { get; } = new();
+    public SortedDictionary<ushort, Party> Parties { get; } = new();   // C++ std::map: by party id
+
+    /// <summary>CTCorps::Enter.</summary>
+    public void Enter(Party party) { Parties[party.Id] = party; party.CorpsId = Id; }
+
+    /// <summary>CTCorps::Leave: true when a single party is left.</summary>
+    public bool Leave(Party party)
+    {
+        Parties.Remove(party.Id);
+        party.CorpsId = 0;
+        party.Command = default;
+        return Parties.Count == 1;
+    }
+
+    /// <summary>CTCorps::GetNextCommander: when the commanding party leaves, the first other one takes over.</summary>
+    public Party? NextCommander(ushort leaving)
+    {
+        if (Commander != leaving) return null;
+        foreach (var p in Parties.Values)
+            if (p.Id != Commander) { Commander = p.Id; GeneralId = p.ChiefId; return p; }
+        return null;
+    }
 }
 
 /// <summary>Allocates/recycles party (and corps) ids from the 0x100..0xFFFF range (m_qGenPartyID).</summary>

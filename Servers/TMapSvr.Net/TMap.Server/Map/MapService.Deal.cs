@@ -1,4 +1,4 @@
-using TMap.Data;
+﻿using TMap.Data;
 using TMap.Protocol;
 
 namespace TMap.Server.Map;
@@ -11,7 +11,7 @@ namespace TMap.Server.Map;
 /// and only leave the bag at execution; a full guard (<c>ValidDealItem</c> + double <c>CanPush</c>) precedes any
 /// mutation, so a full bag aborts cleanly with no partial trade.
 ///
-/// <para><b>Deferred (documented, PORT_STATUS.md):</b> the <c>CheckProtected</c> block-list / <c>IsActionBlock</c>
+/// <para><b>Deferred (documented, PORT_STATUS.md):</b> the <c>IsActionBlock</c>
 /// / <c>CanTalk</c> nation gates on the invite; the ~20 whole-player <b>deal-lock</b> guards that block
 /// move/sell/use/drop/bank/mail while <c>m_bStatus &gt;= DEAL_START</c> (the execution-time <c>ValidDeal</c>
 /// re-check already guarantees trade integrity if an offered item is moved/consumed mid-deal); the cross-map
@@ -37,6 +37,7 @@ public sealed partial class MapService
         string targetName = r.ReadString();
         var t = FindByName(targetName);
         if (t is null || t == s || !t.IsMain || t.State != EnterState.InGame || t.Char is null) return;  // silent (C++ FindPlayer gate)
+        if (!CheckProtected(t.Char, ch.CharId, ProtectedDeal)) { SendCS_DEALITEMEND_ACK(s, DealResult.Deny, targetName); return; }
         SendCS_DEALITEMASK_ACK(t, ch.Name);   // to the target only
     }
 

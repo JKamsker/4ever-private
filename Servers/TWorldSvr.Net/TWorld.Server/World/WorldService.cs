@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using TWorld.Data;
 using TWorld.Protocol;
 using TWorld.Server.Net;
@@ -859,12 +859,7 @@ public sealed partial class WorldService
         }
 
         party.AddMember(target);
-        if (party.CorpsId != 0 && _state.FindCorps(party.CorpsId) is { } corps)
-        {
-            var w = new PacketWriter(Msg.MW_CORPSJOIN_REQ);
-            w.WriteUInt32(target.CharId); w.WriteUInt32(target.Key); w.WriteUInt16(corps.Id); w.WriteUInt16(corps.Commander);
-            SendToChar(target, w.ToArray());
-        }
+        OnPartyMemberAdded(party, target);   // C++ AddPartyMember: its corps and the squads (WorldService.Corps.cs)
         PartyAttr(target);
     }
 
@@ -895,6 +890,7 @@ public sealed partial class WorldService
         if (ch.Party is not { } party) return;
         var corps = party.CorpsId != 0 ? _state.FindCorps(party.CorpsId) : null;
         bool dissolve = false;
+        NotifyDelCorpsUnit(corps, ch);                                        // WorldService.Corps.cs
 
         if (party.Size > 2 || !delete)
         {
@@ -902,12 +898,13 @@ public sealed partial class WorldService
             {
                 party.ChiefId = next.CharId;   // CTParty::GetNextChief
                 foreach (var m in party.Members) PartyAttr(m);
+                ChgSquadChief(corps, party);
+                ReportEnemyList(corps, party.Id, party.ChiefId);
             }
         }
         else
         {
-            if (corps is not null) NotifyCorpsLeave(corps, party);
-            corps = null;
+            corps = NotifyCorpsLeave(corps, party);
             party.ChiefId = 0;
             dissolve = true;
         }
@@ -949,9 +946,11 @@ public sealed partial class WorldService
         party.ChiefId = target.CharId;
         Tell(PartyChgChief);
 
-        if (party.CorpsId != 0 && _state.FindCorps(party.CorpsId) is { } corps && corps.Commander == party.Id)
-            corps.GeneralId = party.ChiefId;
+        var corps = party.CorpsId != 0 ? _state.FindCorps(party.CorpsId) : null;
+        if (corps is not null && corps.Commander == party.Id) corps.GeneralId = party.ChiefId;
         foreach (var m in party.Members) PartyAttr(m);
+        ChgSquadChief(corps, party);                                          // WorldService.Corps.cs
+        ReportEnemyList(corps, party.Id, party.ChiefId);
     }
 
     private void OnChgPartyType(PacketReader r)

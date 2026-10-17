@@ -42,6 +42,7 @@ public sealed partial class MapService
         PetStore = gameDb;
         CompanionStore = gameDb;
         GuildSkillStore = gameDb;
+        ProtectedStore = gameDb;
         _templates = templates;
         _log = log;
     }
@@ -216,6 +217,37 @@ public sealed partial class MapService
                 case Msg.CS_GUILDPEER_REQ: OnCS_GUILDPEER_REQ(session, r); break;
                 case Msg.CS_GUILDMEMBERLIST_REQ: OnCS_GUILDMEMBERLIST_REQ(session, r); break;
                 case Msg.CS_GUILDINFO_REQ: OnCS_GUILDINFO_REQ(session, r); break;
+                case Msg.CS_PROTECTEDADD_REQ: await OnCS_PROTECTEDADD_REQ(session, r); break;      // MapService.Social.cs
+                case Msg.CS_PROTECTEDERASE_REQ: OnCS_PROTECTEDERASE_REQ(session, r); break;
+                case Msg.CS_PROTECTEDOPTION_REQ: OnCS_PROTECTEDOPTION_REQ(session, r); break;
+                case Msg.CS_FRIENDLIST_REQ: OnCS_FRIENDLIST_REQ(session); break;
+                case Msg.CS_FRIENDASK_REQ: OnCS_FRIENDASK_REQ(session, r); break;
+                case Msg.CS_FRIENDREPLY_REQ: OnCS_FRIENDREPLY_REQ(session, r); break;
+                case Msg.CS_FRIENDERASE_REQ: OnCS_FRIENDERASE_REQ(session, r); break;
+                case Msg.CS_FRIENDGROUPMAKE_REQ: OnCS_FRIENDGROUPMAKE_REQ(session, r); break;
+                case Msg.CS_FRIENDGROUPDELETE_REQ: OnCS_FRIENDGROUPDELETE_REQ(session, r); break;
+                case Msg.CS_FRIENDGROUPCHANGE_REQ: OnCS_FRIENDGROUPCHANGE_REQ(session, r); break;
+                case Msg.CS_FRIENDGROUPNAME_REQ: OnCS_FRIENDGROUPNAME_REQ(session, r); break;
+                case Msg.CS_TMSSEND_REQ: OnCS_TMSSEND_REQ(session, r); break;
+                case Msg.CS_TMSINVITE_REQ: OnCS_TMSINVITE_REQ(session, r); break;
+                case Msg.CS_TMSOUT_REQ: OnCS_TMSOUT_REQ(session, r); break;
+                case Msg.CS_CORPSASK_REQ: CorpsToWorld(session, r, Msg.MW_CORPSASK_ACK); break;              // MapService.Corps.cs
+                case Msg.CS_CORPSREPLY_REQ: { string n = r.ReadString(); byte a = r.ReadByte(); if (session.IsMain && session.Char is not null) SendToWorld(Msg.MW_CORPSREPLY_ACK, session, w => { w.WriteByte(a); w.WriteString(n); }); break; }
+                case Msg.CS_CORPSLEAVE_REQ: CorpsToWorld(session, r, Msg.MW_CORPSLEAVE_ACK); break;
+                case Msg.CS_CHGCORPSCOMMANDER_REQ: CorpsToWorld(session, r, Msg.MW_CHGCORPSCOMMANDER_ACK); break;
+                case Msg.CS_CORPSCMD_REQ: OnCS_CORPSCMD_REQ(session, r); break;
+                case Msg.CS_CORPSENEMYLIST_REQ: CorpsToWorld(session, r, Msg.MW_CORPSENEMYLIST_ACK); break;
+                case Msg.CS_MOVECORPSENEMY_REQ: CorpsToWorld(session, r, Msg.MW_MOVECORPSENEMY_ACK); break;
+                case Msg.CS_MOVECORPSUNIT_REQ: CorpsToWorld(session, r, Msg.MW_MOVECORPSUNIT_ACK); break;
+                case Msg.CS_ADDCORPSENEMY_REQ: CorpsToWorld(session, r, Msg.MW_ADDCORPSENEMY_ACK); break;
+                case Msg.CS_DELCORPSENEMY_REQ: CorpsToWorld(session, r, Msg.MW_DELCORPSENEMY_ACK); break;
+                case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
+                case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
+                case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_SOULMATESEARCH_REQ: OnCS_SOULMATESEARCH_REQ(session, r); break;          // MapService.Soulmate.cs
+                case Msg.CS_SOULMATEREGREADY_REQ: OnCS_SOULMATEREGREADY_REQ(session, r); break;
+                case Msg.CS_SOULMATEREG_REQ: OnCS_SOULMATEREG_REQ(session, r); break;
+                case Msg.CS_SOULMATEEND_REQ: OnCS_SOULMATEEND_REQ(session); break;
                 case Msg.CS_CANCELSKILL_REQ: OnCS_CANCELSKILL_REQ(session, r); break;
                 case Msg.CS_LOOPSKILL_REQ: OnCS_LOOPSKILL_REQ(session, r); break;
                 case Msg.CS_CANCELACTION_REQ: OnCS_CANCELACTION_REQ(session, r); break;
@@ -346,6 +378,44 @@ public sealed partial class MapService
                 case Msg.MW_GUILDLEAVE_REQ: await OnMW_GUILDLEAVE_REQ(r); break;
                 case Msg.MW_GUILDMEMBERLIST_REQ: OnMW_GUILDMEMBERLIST_REQ(r); break;
                 case Msg.MW_GUILDINFO_REQ: await OnMW_GUILDINFO_REQ(r); break;
+                case Msg.MW_FRIENDLIST_REQ: RelayToClient(r, Msg.CS_FRIENDLIST_ACK); break;               // MapService.Social.cs
+                case Msg.MW_FRIENDCONNECTION_REQ: RelayToClient(r, Msg.CS_FRIENDCONNECTION_ACK); break;
+                case Msg.MW_FRIENDREGION_REQ: RelayToClient(r, Msg.CS_FRIENDREGION_ACK); break;
+                case Msg.MW_FRIENDADD_REQ: RelayToClient(r, Msg.CS_FRIENDADD_ACK); break;
+                case Msg.MW_FRIENDASK_REQ: OnMW_FRIENDASK_REQ(r); break;
+                case Msg.MW_FRIENDERASE_REQ: RelayToClient(r, Msg.CS_FRIENDERASE_ACK); break;
+                case Msg.MW_FRIENDGROUPMAKE_REQ: RelayToClient(r, Msg.CS_FRIENDGROUPMAKE_ACK); break;
+                case Msg.MW_FRIENDGROUPDELETE_REQ: RelayToClient(r, Msg.CS_FRIENDGROUPDELETE_ACK); break;
+                case Msg.MW_FRIENDGROUPCHANGE_REQ: RelayToClient(r, Msg.CS_FRIENDGROUPCHANGE_ACK); break;
+                case Msg.MW_FRIENDGROUPNAME_REQ: RelayToClient(r, Msg.CS_FRIENDGROUPNAME_ACK); break;
+                case Msg.MW_TMSRECV_REQ: RelayToClient(r, Msg.CS_TMSRECV_ACK); break;
+                case Msg.MW_TMSINVITE_REQ: RelayToClient(r, Msg.CS_TMSINVITE_ACK); break;
+                case Msg.MW_TMSOUT_REQ: RelayToClient(r, Msg.CS_TMSOUT_ACK); break;
+                case Msg.MW_TMSINVITEASK_REQ: OnMW_TMSINVITEASK_REQ(r); break;
+                case Msg.MW_CHGCORPSCOMMANDER_REQ: RelayToClient(r, Msg.CS_CHGCORPSCOMMANDER_ACK); break;     // MapService.Corps.cs
+                case Msg.MW_CORPSASK_REQ: OnMW_CORPSASK_REQ(r); break;
+                case Msg.MW_CORPSREPLY_REQ: RelayToClient(r, Msg.CS_CORPSREPLY_ACK); break;
+                case Msg.MW_CORPSJOIN_REQ: OnMW_CORPSJOIN_REQ(r); break;
+                case Msg.MW_ADDSQUAD_REQ: RelayToClient(r, Msg.CS_ADDSQUAD_ACK); break;
+                case Msg.MW_DELSQUAD_REQ: RelayToClient(r, Msg.CS_DELSQUAD_ACK); break;
+                case Msg.MW_ADDCORPSUNIT_REQ: RelayToClient(r, Msg.CS_ADDCORPSUNIT_ACK); break;
+                case Msg.MW_DELCORPSUNIT_REQ: RelayToClient(r, Msg.CS_DELCORPSUNIT_ACK); break;
+                case Msg.MW_CORPSCMD_REQ: RelayToClient(r, Msg.CS_CORPSCMD_ACK); break;
+                case Msg.MW_CORPSENEMYLIST_REQ: RelayToClient(r, Msg.CS_CORPSENEMYLIST_ACK); break;
+                case Msg.MW_MOVECORPSENEMY_REQ: RelayToClient(r, Msg.CS_MOVECORPSENEMY_ACK); break;
+                case Msg.MW_MOVECORPSUNIT_REQ: RelayToClient(r, Msg.CS_MOVECORPSUNIT_ACK); break;
+                case Msg.MW_ADDCORPSENEMY_REQ: RelayToClient(r, Msg.CS_ADDCORPSENEMY_ACK); break;
+                case Msg.MW_DELCORPSENEMY_REQ: RelayToClient(r, Msg.CS_DELCORPSENEMY_ACK); break;
+                case Msg.MW_CORPSHP_REQ: RelayToClient(r, Msg.CS_CORPSHP_ACK); break;
+                case Msg.MW_CHGSQUADCHIEF_REQ: RelayToClient(r, Msg.CS_CHGSQUADCHIEF_ACK); break;
+                case Msg.MW_REPORTENEMYLIST_REQ: RelayToClient(r, Msg.CS_REPORTENEMYLIST_ACK); break;
+                case Msg.MW_PARTYMEMBERRECALLANS_REQ: OnMW_PARTYMEMBERRECALLANS_REQ(r); break;
+                case Msg.MW_PARTYMEMBERRECALL_REQ: OnMW_PARTYMEMBERRECALL_REQ(r); break;
+                case Msg.CT_USERMOVE_ACK: OnCT_USERMOVE_ACK(r); break;
+                case Msg.MW_SOULMATE_REQ: OnMW_SOULMATE_REQ(r); break;                                    // MapService.Soulmate.cs
+                case Msg.MW_SOULMATESEARCH_REQ: OnMW_SOULMATESEARCH_REQ(r); break;
+                case Msg.MW_SOULMATEREG_REQ: OnMW_SOULMATEREG_REQ(r); break;
+                case Msg.MW_SOULMATEEND_REQ: OnMW_SOULMATEEND_REQ(r); break;
                 case Msg.MW_GUILDSKILLACTION_ACK: await OnMW_GUILDSKILLACTION_ACK(r); break;              // MapService.GuildSkill.cs
                 case Msg.MW_UPDATEGUILDCOOLDOWN_REQ: await OnMW_UPDATEGUILDCOOLDOWN_REQ(r); break;
                 case Msg.MW_ADDCOOLDOWN_REQ: OnMW_ADDCOOLDOWN_REQ(r); break;

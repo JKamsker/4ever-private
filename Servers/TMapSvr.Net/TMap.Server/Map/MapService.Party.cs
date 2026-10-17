@@ -17,8 +17,8 @@ namespace TMap.Server.Map;
 /// through the world (CSSender.cpp:1334), as is every level-up.</para>
 ///
 /// <para><b>Not ported:</b> the arena gates (no arenas), the <c>MAP_INDUN</c> kick on leaving a party (no dungeon
-/// instances), the protected (block) list — every invite passes <c>CheckProtected</c> — the squad-chief
-/// message (the world does not send it), and member recall.</para>
+/// instances). The protected (block) list is in MapService.Social.cs; corps, squads and member recall in
+/// MapService.Corps.cs.</para>
 /// </summary>
 public sealed partial class MapService
 {
@@ -119,7 +119,7 @@ public sealed partial class MapService
         uint charId = r.ReadUInt32(), key = r.ReadUInt32();
         string origin = r.ReadString(), target = r.ReadString();
         byte obtainType = r.ReadByte(), reply = r.ReadByte();
-        r.ReadUInt32();                                   // dwOrigin — only CheckProtected reads it
+        uint originId = r.ReadUInt32();
 
         var s = FindPlayer(charId, key);
         if (s is not { IsMain: true, State: EnterState.InGame, Char: { } ch })
@@ -139,6 +139,11 @@ public sealed partial class MapService
         if (IsActionBlock(ch))
         {
             SendMW_PARTYJOIN_ACK(origin, ch.Name, obtainType, AskBusy, MaxHpFor(ch), ch.Hp, MaxMpFor(ch), ch.Mp);
+            return;
+        }
+        if (!CheckProtected(ch, originId, ProtectedInvite))
+        {
+            SendMW_PARTYJOIN_ACK(origin, ch.Name, obtainType, AskNo, MaxHpFor(ch), ch.Hp, MaxMpFor(ch), ch.Mp);
             return;
         }
 

@@ -177,7 +177,7 @@ public sealed partial class GameDatabase
     // The per-level chart (CTBLLevelChart): the repair-cost coefficient (m_dwRepairCost), dwEXP (the
     // level-up threshold) + bSkillPoint (granted per level), and dwMoney (the base price the item
     // buy/sell math scales by m_fPrice).
-    private const string LevelChartSql = @"SELECT bLevel, dwRepairCost, dwEXP, bSkillPoint, dwMoney, dwRefineCost, dwPvPMoney, wPvPoint FROM TLEVELCHART";
+    private const string LevelChartSql = @"SELECT bLevel, dwRepairCost, dwEXP, bSkillPoint, dwMoney, dwRefineCost, dwPvPMoney, wPvPoint, dwSearchCost, dwRegCost FROM TLEVELCHART";
     // The kill-point chart (CTBLPvPointChart): the rows with no local are the open-field kill table (m_mapTPvPointKill).
     private const string PvPointChartSql = @"SELECT wLocalID, bStatus, bEvent, dwIncPoint, dwDecPoint FROM TPVPOINTCHART";
     private const string TitleChartSql = @"SELECT wTitleID, wCategory, bKind, dwRequirement FROM TTITLECHART";
@@ -502,6 +502,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 store.RefineCostByLevel[level] = r.GetUIntSafe(5);
                 store.LevelPvPMoney[level] = r.GetUIntSafe(6);
                 store.LevelPvPoint[level] = r.GetUShortSafe(7);
+                store.SoulmateCost[level] = (r.GetUIntSafe(8), r.GetUIntSafe(9));
             }
 
         await using (var cmd = new SqlCommand(PvPointChartSql, c))

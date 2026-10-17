@@ -167,6 +167,7 @@ public sealed partial class MapService
             baseDmg -= DistributeSkill(shared, target, baseDmg);   // C++ CalcDamage: dwValue -= DistributeSkill(dwValue)
         uint dmg = (uint)Math.Min((int)baseDmg, (int)target.Hp); // clamp to remaining HP
         if (hitType != HtMiss) target.Hp -= dmg;
+        if (dmg != 0 && target.Hp != 0 && _state.FindByChar(target.CharId) is { } hurt) CheckSoulHp(hurt, target);   // C++ OnDamage
         // C++ Defend: the monster's hostile skill, hit or miss, ends the player's buffs that stop on being hit.
         if (_templates.Skills.TryGetValue(skillId, out var hostile) && hostile.IsNegative && _state.FindByChar(target.CharId) is { } hit)
             EraseBuffByDefend(target.MaintainSkills, hostile, i => EraseMaintainPlayer(hit, target, i));

@@ -77,8 +77,10 @@ public sealed partial class WorldService
         {
             tms.Members[target.CharId] = target;
             target.TmsIds.Add(tms.Id);
+            // fixed C++ bug: it sent (target id, member key, member id), so only the one brought back heard — every member is
+            // now shown the new roster, the sender as inviter
             foreach (var m in tms.Members.Values.OrderBy(c => c.CharId))
-                SendToChar(m, BuildTmsInvite(target.CharId, m.Key, m.CharId, tms));
+                SendToChar(m, BuildTmsInvite(m.CharId, m.Key, ch.CharId, tms));
         }
         else
         {
@@ -178,16 +180,22 @@ public sealed partial class WorldService
         if (tms.Members.Count == 0) _state.TmsMap.Remove(tmsId);
     }
 
-    /// <summary>Drop a logging-out char from every conversation it's in (and dissolve any that empty). Keeps
-    /// TMS member lists free of stale references — called from CloseChar.</summary>
+    /// <summary>C++ <c>LeaveTMS</c> (TWorldSvr.cpp:2780): a logging-out char leaves every conversation it's in — the others are
+    /// told — and any that empty are dissolved. Called from CloseChar.</summary>
     private void TmsLeaveAll(Character ch)
     {
         foreach (var tmsId in ch.TmsIds.ToList())
         {
             if (_state.TmsMap.TryGetValue(tmsId, out var tms))
             {
-                tms.Members.Remove(ch.CharId);
                 tms.LastMember = ch.Name;
+                tms.Members.Remove(ch.CharId);
+                foreach (var m in tms.Members.Values.OrderBy(c => c.CharId))
+                {
+                    var w = new PacketWriter(Msg.MW_TMSOUT_REQ);
+                    w.WriteUInt32(m.CharId); w.WriteUInt32(m.Key); w.WriteUInt32(tmsId); w.WriteString(ch.Name);
+                    SendToChar(m, w.ToArray());
+                }
                 if (tms.Members.Count == 0) _state.TmsMap.Remove(tmsId);
             }
         }

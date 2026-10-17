@@ -212,6 +212,7 @@ public sealed partial class MapService
 
         // C++ OnMW_CHARINFO_REQ: the guild skills first, among the skills the character info carries (MapService.GuildSkill.cs).
         await RefreshGuildSkills(s, notify: false);
+        await LoadProtected(ch);                                // C++ OnDM_LOADCHAR_REQ (MapService.Social.cs)
         if (s.Char != ch) return;
 
         // This is where the client actually receives its character (see agent analysis, item 5).
@@ -226,6 +227,7 @@ public sealed partial class MapService
         SendCS_CHARSTATINFO_ACK(s, ch);
         SendCS_PETLIST_ACK(s, ch);   // C++ sends it after CS_CHARSTATINFO_ACK (SSHandler.cpp:2171)
         SendCS_COMPANIONLIST_ACK(s, ch);
+        SendCS_PROTECTEDLIST_ACK(s, ch);   // C++ after the companion list (SSHandler.cpp:2174)
         RestoreSavedRecalls(s, ch);  // C++ OnDM_LOADCHAR_ACK: the summons saved at logout, before…
         SummonTamedAtLogin(s, ch);   // C++ InitCharInfo ends with the sorcerer's tamed monster
     }

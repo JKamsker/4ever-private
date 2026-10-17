@@ -221,6 +221,17 @@ public sealed class Character
     /// <summary>C++ <c>m_mapGuildSkill</c> — the guild skills held, run out or not (MapService.GuildSkill.cs).</summary>
     public Dictionary<ushort, GuildSkillHeld> GuildSkills { get; } = new();
 
+    /// <summary>C++ <c>m_mapTPROTECTED</c> — the protected (block) list by character id (MapService.Social.cs), read once on
+    /// entering.</summary>
+    public Dictionary<uint, ProtectedEntry> Protected { get; } = new();
+    public bool ProtectedLoaded;
+
+    /// <summary>C++ <c>m_dwSoulmate</c> / <c>m_strSoulmate</c> / <c>m_dwSoulSilence</c> — the soulmate chosen, as the world says
+    /// (MapService.Soulmate.cs), and when the last bond was ended (0 = none: a day must pass before choosing again).</summary>
+    public uint SoulmateId;
+    public string SoulmateName = "";
+    public uint SoulSilence;
+
     /// <summary>C++ <c>m_vRemainSkill</c> — the learned skills whose rows apply for good (<c>IsRemainType</c>). The C++
     /// fills it with every such skill at login and, on learning one, first drops another of the same
     /// <c>m_bPriority</c>; this reads the learned list instead (the live remain skills, 41-46, are one per class).</summary>

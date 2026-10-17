@@ -47,6 +47,7 @@ public sealed partial class MapService
         var dmg = CalcDamage(p, def, tpl, level, hitType, isMagic, isLong);
         uint hpBefore = target.Hp, mpBefore = target.Mp;
         ApplyPlayerDamage(target, dmg, maxHp, maxMp);
+        if (dmg.DamageHp > 0 && target.Hp != 0) CheckSoulHp(ts, target);                // C++ OnDamage (MapService.Soulmate.cs)
 
         byte atkHit = hitType == HtMiss ? HtMiss : target.Hp == 0 ? HtLastHit : dmg.Blocked ? HtBlock : hitType;
         if (hitType != HtMiss && tpl is { } lt) SendLifeDrain(lt, level, attackId, attackType, hostId, dmg);

@@ -87,6 +87,23 @@ database. Then everything is removed, the bots' PvP points are restored, and the
 bought guards go with the map). The first part also checks the founder's 10 guild skills, the second the guild falling a
 level when a member joins below its level's minimum. 59 checks in all.
 
+## Scenario: social (friends, messenger, block list, soulmates)
+
+`--Bot:Scenario=social` (same arguments) needs no restart. A asks B to be friends; A makes a friend group, puts B in it,
+renames it and deletes it (refused while B is in it). They talk in the messenger; B leaves and A's next line brings B
+back. Then B blocks A: the friendship breaks, A's whisper, trade, duel and party invite are refused, and B can't ask A to
+be friends. B logs in again: its block list comes back, and A is not told B came online. B unblocks A and the whisper
+gets through again. Last, A searches for a soulmate (finds B, pays the level's fee, saved in `TSOULMATETABLE`), ends the
+bond and must wait a day. The bots' friend, group, block-list and soulmate rows and A's money are put back. 37 checks.
+
+## Scenario: corps (four bots: parties at war, member recall)
+
+`--Bot:Scenario=corps` also needs `--Bot:Account3` and `--Bot:Account4` (same country). A and B, then C and D, make
+parties (each newcomer is shown its party as a squad). A asks C to form a corps; A's order reaches all four, C's HP report
+reaches its party and A (not B). A hands command to C's party, and C takes A's party out, which ends the corps. Then a
+recall: D's answer for B is ignored, B's yes brings B to A (A's Evocation Scroll is used), and C's Scroll of Teleportation
+takes C to A. The scrolls and B's and C's positions are put back. 14 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

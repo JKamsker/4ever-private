@@ -67,6 +67,12 @@ public sealed class Character
     /// <summary>Live party (null if none) — in-memory, dissolves on logout.</summary>
     public Party? Party { get; set; }
 
+    /// <summary>C++ <c>m_command</c>: the last corps order this member was given (shown in its squad, CS_ADDSQUAD_ACK).</summary>
+    public CorpsCommand Command { get; set; }
+
+    /// <summary>A member-recall question sent to this character and not answered yet: who asked, with which item.</summary>
+    public (string User, byte Inven, byte Item)? PendingRecall { get; set; }
+
     // --- Phase 3: friends + soulmate (loaded from DB on enter, mirrors C++ TCHARACTER maps) ---
 
     /// <summary>friendId → friend entry (m_mapTFRIEND). Includes one-way "target" entries.</summary>
