@@ -52,11 +52,17 @@ public sealed partial class MapService
         return sb.ToString();
     }
 
-    /// <summary>C++ <c>SendDM_POSTRECV_REQ</c> without an item: a mail saved, its receiver told.</summary>
+    /// <summary>C++ <c>BuildNetString(header, body)</c> (TMapSvr.cpp:10165): both lengths as <c>%04X%04X</c>, then both — the form the
+    /// client reads a mail's title and text in (<c>CTTextLinker::MakeNetToLinkText</c>; anything else shows empty).</summary>
+    public static string NetString(string body, string header = "") => $"{header.Length:X4}{body.Length:X4}{header}{body}";
+
+    /// <summary>C++ <c>SendDM_POSTRECV_REQ</c> without an item: a mail saved, its receiver told. The title and the text go as
+    /// <see cref="NetString"/>s, as every C++ caller builds them.</summary>
     private async Task MailFrom(uint sendId, string sender, uint recvId, string recver, string title, string message, byte type,
         uint gold = 0, uint silver = 0, uint cooper = 0)
     {
         if (PostStore is not { } db) return;
+        (title, message) = (NetString(title), NetString(message));
         long now = UnixNow();
         (int saved, uint postId, _) = await Safe(() => db.SavePostAsync(sendId, recvId, recver, sender, title, message, 0, type,
             gold, silver, cooper, now), (PostInternal, 0u, 0u));
@@ -304,10 +310,10 @@ public sealed partial class MapService
         SendToWorld(Msg.MW_MONSTERBUY_ACK, s, w => { w.WriteUInt16(npcId); w.WriteUInt16(id); w.WriteUInt32(row!.Price); });
     }
 
-    private byte CheckMonsterBuy(ClientSession s, Character ch, ushort npcId, ushort id, out MonsterShopRow? row)
+    private byte CheckMonsterBuy(ClientSession s, Character ch, ushort npcId, ushort id, out MonsterShopRow? row, bool duty = true)
     {
         row = null;
-        if (ch.GuildDuty == GuildDutyNone) return MsbAuthority;
+        if (duty && ch.GuildDuty == GuildDutyNone) return MsbAuthority;
         if (_state.FindNpc(npcId) is not { } npc || !CanTalk(npc, ch)) return MsbInvalidNpc;
         if (!npc.Monsters.TryGetValue(id, out row)) return MsbNotFound;
         if (row.TowerId != 0 && (CastleOfMap(ch.MapId)?.War?.Towers.GetValueOrDefault(row.TowerId)?.Ball is not { } ball || ball.Camp != ch.Camp))
@@ -332,8 +338,7 @@ public sealed partial class MapService
             return;
         }
         if (ret != MsbSuccess) { SendByte(s, Msg.CS_MONSTERBUY_ACK, ret); return; }
-        byte check = CheckMonsterBuy(s, ch, npcId, id, out var row);
-        if (check == MsbAuthority) check = MsbSuccess;                     // (the C++ does not ask again)
+        byte check = CheckMonsterBuy(s, ch, npcId, id, out var row, duty: false);   // the C++ does not ask for the duty again
         if (check != MsbSuccess)
         {
             Recover();

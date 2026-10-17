@@ -61,9 +61,9 @@ INSERT INTO TGUILDMEMBERTABLE (dwCharID, dwGuildID, bDuty, bPeer, dwService) VAL
             await Task.Delay(2500);                                          // the logout saves land first
             await ClearGuilds(db);
             await db.ExecAsync(@"DELETE FROM TITEMTABLE WHERE bStorageType=2 AND dwStorageID IN
-                (SELECT dwPostID FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='Castle reward');
-                DELETE FROM TPOSTITEMTABLE WHERE dwPostID IN (SELECT dwPostID FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='Castle reward');
-                DELETE FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='Castle reward'", (int)idA, (int)idB);
+                (SELECT dwPostID FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='0000000DCastle reward');
+                DELETE FROM TPOSTITEMTABLE WHERE dwPostID IN (SELECT dwPostID FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='0000000DCastle reward');
+                DELETE FROM TPOSTTABLE WHERE dwCharID IN (@p0, @p1) AND szTitle='0000000DCastle reward'", (int)idA, (int)idB);
             foreach (var t in CastleTables)
                 await db.ExecAsync($"IF OBJECT_ID('TBOT_BAK_{t}') IS NOT NULL BEGIN DELETE FROM {t}; INSERT INTO {t} SELECT * FROM TBOT_BAK_{t}; DROP TABLE TBOT_BAK_{t} END");
             foreach (var (id, p) in new[] { (idA, posA), (idB, posB) })
@@ -188,7 +188,7 @@ DELETE FROM TGUILDTABLE WHERE dwID IN ({BlueGuild}, {RedGuild})");
             var saved = await db.RowAsync("SELECT dwGuildID, bCountry FROM TCASTLETABLE WHERE wCastle=@p0", (int)Chesed);
             Check("saved: Chesed belongs to the winning guild now, with its chief's country (TCASTLETABLE)", saved is not null
                 && Convert.ToUInt32(saved[0]) == expected && Convert.ToInt32(saved[1]) == 1, saved is null ? "no row" : $"guild={saved[0]} country={saved[1]}");
-            var mail = await db.RowAsync("SELECT COUNT(*) FROM TPOSTTABLE WHERE dwCharID=@p0 AND szTitle='Castle reward'", (int)(expected == RedGuild ? idB : idA));
+            var mail = await db.RowAsync("SELECT COUNT(*) FROM TPOSTTABLE WHERE dwCharID=@p0 AND szTitle='0000000DCastle reward'", (int)(expected == RedGuild ? idB : idA));
             Check("castle war: the winners' chief in the castle gets the castle's reward by mail", mail is not null && Convert.ToInt32(mail[0]) == 1,
                 $"posts={mail?[0]}");
 

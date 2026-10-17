@@ -337,12 +337,10 @@ public sealed partial class WorldService
         switch ((ExpiredType)type)
         {
             case ExpiredType.GuildWanted:
-                if (_state.GuildWanted.Remove(value1))
-                    _log.LogInformation("Guild-wanted ad for guild {Id} auto-expired.", value1);
+                _ = ExpireGuildWanted(value1);
                 break;
             case ExpiredType.GuildTacticsWanted:
-                if (_state.TacticsWanted.Remove(value2))
-                    _log.LogInformation("Tactics-wanted ad {Id} auto-expired.", value2);
+                _ = ExpireTacticsWanted(value1, value2);
                 break;
             case ExpiredType.GuildTactics:
                 if (_state.FindGuild(value1) is { } g && g.FindTactics(value2) is { } tm)

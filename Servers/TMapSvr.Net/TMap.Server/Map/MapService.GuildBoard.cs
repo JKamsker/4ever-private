@@ -228,7 +228,7 @@ public sealed partial class MapService
         uint pv = r.Remaining >= 4 ? r.ReadUInt32() : 0;
         long money = CalcMoney(gold, silver, cooper);
         if (exp == 0 && money == 0 && pv == 0) return;
-        if ((exp != 0 && (ch.Level < GuildEstablishLevel || ch.Exp < exp)) || (money != 0 && !ch.UseMoney(money, commit: false))
+        if ((exp != 0 && (ch.Level < GuildEstablishLevel || !CanUseExp(ch, exp))) || (money != 0 && !ch.UseMoney(money, commit: false))
             || (pv != 0 && ch.PvpUseablePoint < pv))
         {
             SendByte(s, Msg.CS_GUILDCONTRIBUTION_ACK, GuildContributionNotEnough);
@@ -246,13 +246,18 @@ public sealed partial class MapService
         if (FindPlayer(charId, key) is not { Char: { } ch } s || IsTutorial(ch)) return;
         if (result == 0)
         {
-            if (exp != 0 && ch.Exp >= exp) { ch.Exp -= exp; SendCS_EXP_ACK(s, ch); }
+            if (exp != 0 && CanUseExp(ch, exp)) { ch.Exp -= exp; SendCS_EXP_ACK(s, ch); }
             long money = CalcMoney(gold, silver, cooper);
             if (money != 0 && ch.UseMoney(money, commit: true)) SendCS_MONEY_ACK(s, ch);
             if (pv != 0) UsePvPoint(s, ch, pv, PvpeGuild, PvpUseable);
         }
         SendByte(s, Msg.CS_GUILDCONTRIBUTION_ACK, result);
     }
+
+    /// <summary>C++ <c>CTPlayer::UseExp</c> (TPlayer.cpp:1407): only exp above the current level's floor can be given — the level is
+    /// never lost.</summary>
+    private bool CanUseExp(Character ch, uint exp)
+        => exp != 0 && _templates.LevelExpOf(ch.Level - 1) is { } floor && ch.Exp > floor && exp < ch.Exp - floor;
 
     // ================================ the board, fame, recruiting, records ================================
 

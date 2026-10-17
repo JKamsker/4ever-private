@@ -236,6 +236,10 @@ DELETE FROM TGUILDMEMBERSKILLTABLE WHERE dwCharID IN (@p0, @p1)", (int)idA, (int
         var gotPoints = b.TryWait(CS_PVPPOINT_ACK, timeoutMs: 5000);
         var note = b.TryWait(CS_POSTRECV_ACK, timeoutMs: 5000);
         Check("guild points: … B gets them and a letter (CS_PVPPOINT_ACK, CS_POSTRECV_ACK)", gotPoints is not null && note is not null, $"points={gotPoints is not null} mail={note is not null}");
+        await Task.Delay(500);
+        var letter = await db.RowAsync("SELECT TOP 1 szTitle, szMessage FROM TPOSTTABLE WHERE dwCharID=@p0 AND dwSendID=@p1 ORDER BY dwPostID DESC", (int)idB, (int)idA);
+        Check("guild points: … the letter's title and text are as the client reads them (C++ BuildNetString)", letter is not null
+            && (string)letter[1] == "0000000BWell fought" && ((string)letter[0]).StartsWith("0000"), letter is null ? "no mail" : $"{letter[0]} | {letter[1]}");
 
         // ---- the castle guards' shop ----
         a.Send(Req(CS_NPCITEMLIST_REQ_G, w => w.WriteUInt16(GuardShopNpc)));

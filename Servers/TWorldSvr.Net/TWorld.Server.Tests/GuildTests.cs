@@ -11,7 +11,7 @@ public class GuildTests
 
     /// <summary>Drives a character through connect/addchar/chardata to the point ENTERCHAR_REQ is emitted,
     /// returns that reader, then confirms entry. Assumes MW_CONNECT_ACK was already sent on this client.</summary>
-    private static PacketReader EnterChar(TcpTestClient client, uint charId, uint key, byte level, byte country)
+    internal static PacketReader EnterChar(TcpTestClient client, uint charId, uint key, byte level, byte country)
     {
         var add = new PacketWriter(Msg.MW_ADDCHAR_ACK);
         add.WriteUInt32(charId); add.WriteUInt32(key); add.WriteUInt32(0x0100007F); add.WriteUInt16(5816); add.WriteUInt32(charId + 1000);
@@ -31,7 +31,7 @@ public class GuildTests
         return enterChar;
     }
 
-    private static void ConfirmEnter(TcpTestClient client, uint charId, uint key)
+    internal static void ConfirmEnter(TcpTestClient client, uint charId, uint key)
     {
         var ack = new PacketWriter(Msg.MW_ENTERCHAR_ACK);
         ack.WriteUInt32(charId); ack.WriteUInt32(key);
@@ -45,7 +45,7 @@ public class GuildTests
         Assert.Equal(Msg.MW_CONRESULT_REQ, client.Receive(TimeSpan.FromSeconds(5)).Id);
     }
 
-    private static void Connect(TcpTestClient client)
+    internal static void Connect(TcpTestClient client)
     {
         var c = new PacketWriter(Msg.MW_CONNECT_ACK);
         c.WriteUInt16(WId); c.WriteByte(1); c.WriteByte(0);

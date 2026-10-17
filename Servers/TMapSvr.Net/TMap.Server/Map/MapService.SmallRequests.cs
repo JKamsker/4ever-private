@@ -228,6 +228,7 @@ public sealed partial class MapService
         if (useTime != 0) item.EndTime = UnixNow() + useTime * 3600L;
         LinkItemAttr(item);
         long now = UnixNow();
+        (title, message) = (NetString(title), NetString(message));        // C++ BuildNetString(NAME_NULL, …)
         (int saved, uint postId, uint recv) = await Safe(() => db.SavePostAsync(0, recvId, recver, "Operator", title, message,
             0, PostPackage, 0, 0, 0, now), (PostInternal, 0u, 0u));
         if (saved != 0 || postId == 0) return;

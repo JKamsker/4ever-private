@@ -172,6 +172,22 @@ public sealed partial class MapService
 
     // ================================ the world's answers ================================
 
+    /// <summary>C++ <c>CTPlayer::ResetCloak</c> (TPlayer.cpp:5555): every item marked with the guild loses the mark — a worn one shown
+    /// around, any other told to the player.</summary>
+    private void ResetCloak(ClientSession s, Character ch)
+    {
+        foreach (var inv in ch.Invens)
+            foreach (var it in inv.Items)
+            {
+                if (it.Ext[Item.IevGuild] == 0) continue;
+                it.Ext[Item.IevGuild] = 0;
+                var msg = new PacketWriter(Msg.CS_RESETCLOAK_ACK, capacity: 6).WriteUInt32(ch.CharId).WriteByte(inv.InvenId).WriteByte(it.ItemSlot).ToArray();
+                s.Send(msg);
+                if (inv.InvenId == Proto.InvenEquip && s.IsMain)
+                    foreach (var p in _state.Neighbors(s)) p.Send(msg);
+            }
+    }
+
     /// <summary>C++ <c>SendCS_GUILDATTR_ACK</c> to the player and those around it: its guild, fame, peerage and tactics guild.</summary>
     private void ShowGuildAttr(ClientSession s, Character ch, byte peer)
     {
@@ -251,7 +267,7 @@ public sealed partial class MapService
             ch.Persist.GuildLeaveTime = 0;
             ShowGuildAttr(s, ch, GuildPeerNone);
         }
-        if (result == GuildSuccess) await RefreshGuildSkills(s);
+        await RefreshGuildSkills(s);                                        // C++: whatever the result
     }
 
     /// <summary>C++ <c>OnMW_GUILDDUTY_REQ</c> (SSHandler.cpp:8379).</summary>
@@ -297,6 +313,7 @@ public sealed partial class MapService
             ch.Persist.GuildLeave = reason;
             ch.Persist.GuildLeaveTime = time;
         }
+        ResetCloak(s, ch);
         (ch.GuildId, ch.GuildDuty, ch.GuildPeer, ch.GuildName, ch.Fame, ch.FameColor) = (0, 0, 0, "", 0, 0);
         if (ch.TacticsId == 0) { ch.Castle = 0; ch.Camp = 0; }
         if (!s.IsMain) return;

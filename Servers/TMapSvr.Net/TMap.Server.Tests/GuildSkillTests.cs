@@ -80,6 +80,38 @@ public class GuildSkillTests
     }
 
     [Fact]
+    public async Task AFounder_KeepsTheMemberSkillItHad()
+    {
+        var (h, a, ca, db) = await Setup();
+        a.Char!.GuildId = 0;
+        db.Member[(a.CharId, MemberSkill)] = new GuildSkillRow(MemberSkill, 3, Now + 1000);
+
+        await h.Service.DispatchWorldAsync(Cs(Msg.MW_GUILDESTABLISH_REQ, w =>
+        { w.WriteUInt32(a.CharId); w.WriteUInt32(a.Key); w.WriteByte(0); w.WriteUInt32(Guild); w.WriteString("Blue"); w.WriteByte(1); }));
+
+        Assert.Equal((byte)3, db.Member[(a.CharId, MemberSkill)].Level);
+        Assert.Contains((MemberSkill, (byte)3, Now + 1000), Update(ca));
+        Assert.Equal((byte)1, db.Guild[(Guild, ChiefSkill)].Level);
+    }
+
+    [Fact]
+    public async Task Joining_SendsTheGuildSkills()
+    {
+        var (h, a, ca, db) = await Setup(duty: 0);
+        a.Char!.GuildId = 0;
+        db.Member[(a.CharId, MemberSkill)] = new GuildSkillRow(MemberSkill, 2, Now + 1000);
+
+        await h.Service.DispatchWorldAsync(Cs(Msg.MW_GUILDJOIN_REQ, w =>
+        {
+            w.WriteUInt32(a.CharId); w.WriteUInt32(a.Key); w.WriteByte(15 /* GUILD_JOIN_SUCCESS */); w.WriteUInt32(Guild); w.WriteUInt32(0); w.WriteUInt32(0);
+            w.WriteString("Blue"); w.WriteUInt32(a.CharId); w.WriteString("Ann"); w.WriteByte(0);
+        }));
+
+        Assert.Equal(Guild, a.Char.GuildId);
+        Assert.Contains((MemberSkill, (byte)2, Now + 1000), Update(ca));
+    }
+
+    [Fact]
     public async Task ARunOutSkill_IsRenewedFor300PvPPoints_And31Days()
     {
         var (h, a, ca, db) = await Setup(duty: 0);

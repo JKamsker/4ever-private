@@ -133,7 +133,15 @@ DELETE FROM TGUILDTABLE WHERE szName = '{TestGuild}'");
             && Read(attr, r => { r.ReadUInt32(); uint g = r.ReadUInt32(); r.ReadUInt32(); r.ReadUInt32(); string n = r.ReadString(); r.ReadByte(); r.ReadUInt32(); r.ReadString(); return (g, n); })
                == (guildId, TestGuild), Describe(attr));
 
-        // Invite, answer, join.
+        // Invite, answer, join — a "no" first: the inviter is told who refused.
+        a.Discard(CS_GUILDJOIN_ACK);                                          // the founder's own JOIN_SUCCESS (C++ NotifyAddGuildMember)
+        a.Send(Req(CS_GUILDINVITE_REQ, w => w.WriteString(nameB)));
+        b.TryWait(CS_GUILDINVITE_ACK, timeoutMs: 5000);
+        b.Send(Req(CS_GUILDINVITEANSWER_REQ, w => { w.WriteByte(1); w.WriteUInt32(a.CharId); }));     // ASK_NO
+        var no = a.TryWait(CS_GUILDJOIN_ACK, timeoutMs: 5000);
+        Check("guild: B says no — A is told B refused (CS_GUILDJOIN_ACK, ASK_NO, B's name)", no is not null
+            && Read(no, r => { byte res = r.ReadByte(); r.ReadUInt32(); r.ReadString(); r.ReadUInt32(); string who = r.ReadString(); while (r.Remaining > 0) r.ReadByte(); return (res, who); }) == (1, nameB),
+            Describe(no));
         a.Send(Req(CS_GUILDINVITE_REQ, w => w.WriteString(nameB)));
         var inv = b.TryWait(CS_GUILDINVITE_ACK, timeoutMs: 5000);
         Check("guild: A invites B — B is asked (CS_GUILDINVITE_ACK)", inv is not null
@@ -162,10 +170,15 @@ DELETE FROM TGUILDTABLE WHERE szName = '{TestGuild}'");
         Check("guild: A makes B a vice-chief (CS_GUILDDUTY_ACK)", duty is not null
             && Read(duty, r => (r.ReadByte(), r.ReadString(), r.ReadByte())) == (0, nameB, 1), Describe(duty));
         a.Send(Req(CS_GUILDPEER_REQ, w => { w.WriteString(nameB); w.WriteByte(1); }));
-        var peer = b.TryWait(CS_GUILDPEER_ACK, timeoutMs: 5000);
-        Check("guild: A gives B a peerage (CS_GUILDPEER_ACK)", peer is not null
-            && Read(peer, r => (r.ReadByte(), r.ReadString(), r.ReadByte(), r.ReadByte())) is var pr && pr.Item1 == 0 && pr.Item2 == nameB && pr.Item3 == 1,
+        var peer = a.TryWait(CS_GUILDPEER_ACK, timeoutMs: 5000);
+        Check("guild: a level-1 guild has no peerage to give — refused (CS_GUILDPEER_ACK, GUILD_FAIL; C++ CheckPeerage)", peer is not null
+            && Read(peer, r => (r.ReadByte(), r.ReadString(), r.ReadByte(), r.ReadByte())) is var pr && pr.Item1 == 3 && pr.Item2 == nameB,
             Describe(peer));
+        a.Discard(CS_GUILDLEAVE_ACK);
+        b.Send(Req(CS_GUILDKICKOUT_REQ, w => w.WriteString(nameA)));
+        var ousted = a.TryWait(CS_GUILDLEAVE_ACK, timeoutMs: 2000);
+        Check("guild: B, a vice-chief, cannot put out the chief (nothing happens)", ousted is null
+            && await db.RowAsync("SELECT 1 FROM TGUILDMEMBERTABLE WHERE dwCharID=@p0", (int)a.CharId) is not null, Describe(ousted));
 
         // ---- G2: the board ----
         a.Send(Req(CS_GUILDARTICLEADD_REQ, w => { w.WriteString("Welcome"); w.WriteString("Be nice"); }));
@@ -179,6 +192,16 @@ DELETE FROM TGUILDTABLE WHERE szName = '{TestGuild}'");
         });
         Check("guild board: A posts an article — the board shows it, written by A, dated", added is not null && Read(added, r => r.ReadByte()) == 0
             && post.n == 1 && post.writer == nameA && post.title == "Welcome" && post.date.Length == 10, $"{Describe(added)} {post}");
+        a.Send(Req(CS_GUILDINFO_REQ, _ => { }));
+        var info = a.TryWait(CS_GUILDINFO_ACK, timeoutMs: 5000);
+        string notice = info is null ? "" : Read(info, r =>
+        {
+            r.ReadByte(); r.ReadUInt32(); r.ReadString(); r.ReadInt64(); r.ReadUInt16(); r.ReadUInt16(); r.ReadString(); r.ReadByte();
+            r.ReadString(); r.ReadString(); r.ReadByte(); for (int i = 0; i < 5; i++) r.ReadUInt32(); r.ReadByte(); r.ReadByte();
+            for (int i = 0; i < 3; i++) r.ReadUInt32(); r.ReadByte(); r.ReadByte();
+            string t = r.ReadString(); while (r.Remaining > 0) r.ReadByte(); return t;
+        });
+        Check("guild board: … and titles the guild window's notice (CS_GUILDINFO_ACK)", notice == "Welcome", Describe(info));
         a.Send(Req(CS_GUILDARTICLEUPDATE_REQ, w => { w.WriteUInt32(post.id); w.WriteString("Welcome!"); w.WriteString("Be very nice"); }));
         Check("guild board: … edits it (CS_GUILDARTICLEUPDATE_ACK)", a.TryWait(CS_GUILDARTICLEUPDATE_ACK, timeoutMs: 5000) is { } up && Read(up, r => r.ReadByte()) == 0, "no reply");
         a.Send(Req(CS_GUILDARTICLEDEL_REQ, w => w.WriteUInt32(post.id)));

@@ -17,6 +17,7 @@ public class GuildBoardTests
         var t = new TemplateStore();
         t.Items[Gem] = new ItemTemplate(Gem, 0, new[] { 0f, 0f, 0f, 0f }, Stack: 50, IsSell: 4 | 1);   // ITEMTRADE_CABINET, can deal
         t.Items[Junk] = new ItemTemplate(Junk, 0, new[] { 0f, 0f, 0f, 0f }, Stack: 50, IsSell: 1);
+        t.LevelExp[29] = 10_000;                                            // level 30's floor
         return t;
     }
 
@@ -122,6 +123,44 @@ public class GuildBoardTests
         }));
         Assert.Equal(200u, a.Char.Cooper);
         Assert.Equal((byte)0, Result(ca, Msg.CS_GUILDCONTRIBUTION_ACK));
+    }
+
+    [Fact]
+    public async Task AnExpContribution_NeverTakesTheLevelsFloor()
+    {
+        var (h, a, ca, _, _) = await Setup();
+        a.Char!.Exp = 15_000;                                                 // 5000 above level 30's floor
+
+        await h.Service.DispatchClientAsync(a, Cs(Msg.CS_GUILDCONTRIBUTION_REQ, w => { w.WriteUInt32(5_000); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0); }));
+        Assert.Equal((byte)1 /* NOTENOUGH */, Result(ca, Msg.CS_GUILDCONTRIBUTION_ACK));
+        Assert.False(h.World.Has(Msg.MW_GUILDCONTRIBUTION_ACK));
+
+        await h.Service.DispatchClientAsync(a, Cs(Msg.CS_GUILDCONTRIBUTION_REQ, w => { w.WriteUInt32(4_999); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0); }));
+        Assert.True(h.World.Has(Msg.MW_GUILDCONTRIBUTION_ACK));
+        await h.Service.DispatchWorldAsync(World(Msg.MW_GUILDCONTRIBUTION_REQ, a, w =>
+        {
+            w.WriteByte(0); w.WriteUInt32(4_999); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0); w.WriteUInt32(0);
+        }));
+        Assert.Equal(10_001u, a.Char.Exp);
+    }
+
+    [Fact]
+    public async Task Leaving_TakesTheGuildMarkOffACloak()
+    {
+        var (h, a, ca, _, cb) = await Setup();
+        var worn = new Inven { InvenId = 0xFE };
+        var cloak = new Item { ItemSlot = 7, TemplateId = Junk, Count = 1, DlId = 950 };
+        cloak.Ext[Item.IevGuild] = a.CharId;
+        worn.Items.Add(cloak);
+        a.Char!.Invens.Add(worn);
+
+        await h.Service.DispatchWorldAsync(World(Msg.MW_GUILDLEAVE_REQ, a, w => { w.WriteString("Ann"); w.WriteByte(12 /* LEAVE_SELF */); w.WriteUInt32(1); }));
+
+        Assert.Equal(0u, cloak.Ext[Item.IevGuild]);
+        var r = new PacketReader(cb.Last(Msg.CS_RESETCLOAK_ACK)!);            // worn: shown around
+        Assert.Equal((a.CharId, (byte)0xFE, (byte)7), (r.ReadUInt32(), r.ReadByte(), r.ReadByte()));
+        Assert.True(ca.Has(Msg.CS_RESETCLOAK_ACK));
+        Assert.Equal(0u, a.Char.GuildId);
     }
 
     [Fact]

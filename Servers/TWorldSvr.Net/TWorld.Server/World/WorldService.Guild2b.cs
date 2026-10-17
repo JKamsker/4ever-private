@@ -36,7 +36,7 @@ public sealed partial class WorldService
             case Msg.MW_GUILDFAME_ACK: await OnGuildFame(r); return true;
             case Msg.MW_GUILDWANTEDADD_ACK: await OnGuildWantedAdd(r); return true;
             case Msg.MW_GUILDWANTEDDEL_ACK: await OnGuildWantedDel(r); return true;
-            case Msg.MW_GUILDWANTEDLIST_ACK: OnGuildWantedList(r); return true;
+            case Msg.MW_GUILDWANTEDLIST_ACK: await OnGuildWantedList(r); return true;
             case Msg.MW_GUILDVOLUNTEERING_ACK: await OnGuildVolunteering(r); return true;
             case Msg.MW_GUILDVOLUNTEERINGDEL_ACK: await OnGuildVolunteeringDel(r); return true;
             case Msg.MW_GUILDVOLUNTEERLIST_ACK: OnGuildVolunteerList(r); return true;
@@ -54,7 +54,7 @@ public sealed partial class WorldService
             case Msg.MW_GUILDTACTICSKICKOUT_ACK: await OnGuildTacticsKickout(r); return true;
             case Msg.MW_GUILDTACTICSWANTEDADD_ACK: await OnGuildTacticsWantedAdd(r); return true;
             case Msg.MW_GUILDTACTICSWANTEDDEL_ACK: await OnGuildTacticsWantedDel(r); return true;
-            case Msg.MW_GUILDTACTICSWANTEDLIST_ACK: OnGuildTacticsWantedList(r); return true;
+            case Msg.MW_GUILDTACTICSWANTEDLIST_ACK: await OnGuildTacticsWantedList(r); return true;
             case Msg.MW_GUILDTACTICSVOLUNTEERING_ACK: await OnGuildTacticsVolunteering(r); return true;
             case Msg.MW_GUILDTACTICSVOLUNTEERINGDEL_ACK: OnGuildTacticsVolunteeringDel(r); return true;
             case Msg.MW_GUILDTACTICSVOLUNTEERLIST_ACK: OnGuildTacticsVolunteerList(r); return true;
@@ -164,7 +164,7 @@ public sealed partial class WorldService
         // guild's totals, and never the whole guild.
         byte[] Answer(byte result, bool echo) => BuildContributionReq(charId, key, result, echo ? exp : 0, echo ? gold : 0, echo ? silver : 0, echo ? cooper : 0, echo ? pv : 0);
         var ch = _state.FindChar(charId, key);
-        if (ch?.Guild is not { } g || g.Disorg != 0) return;
+        if (ch?.Guild is not { } g || _state.FindTacticsGuild(charId) is not null || g.Disorg != 0) return;
         if (g.Level == MaxGuildLevel && exp != 0) { SendToCharId(charId, key, Answer(2 /* GUILD_CONTRIBUTION_MAXGUILDLEVEL */, false)); return; }
         long money = cooper + (long)silver * Proto.MoneyMultiply + (long)gold * Proto.MoneyMultiply * Proto.MoneyMultiply;
         bool ok = g.FindMember(charId) is not null
@@ -195,7 +195,7 @@ public sealed partial class WorldService
     private void OnGuildArticleList(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
-        var g = _state.GetCurGuild(charId);
+        var g = _state.FindChar(charId, key)?.Guild;
         if (g is null) return;
         SendArticleList(charId, key, g);
     }
@@ -212,18 +212,25 @@ public sealed partial class WorldService
         SendToCharId(charId, key, w.ToArray());
     }
 
+    /// <summary>C++ <c>CTime(dwTime).Format("%Y-%m-%d")</c> — the date a post shows.</summary>
+    internal static string ArticleDate(uint time) => DateTimeOffset.FromUnixTimeSeconds(time).ToLocalTime().ToString("yyyy-MM-dd");
+
+    private const int MaxBoardTitle = 256, MaxBoardText = 2048, MaxGuildArticle = 100;   // NetCode.h MAX_BOARD_* / MAX_GUILD_ARTICLE_COUNT
+
+    /// <summary>C++ <c>OnMW_GUILDARTICLEADD_ACK</c> → <c>CTGuild::AddArticle</c>: at most 100 posts; the newest titles the board.</summary>
     private async Task OnGuildArticleAdd(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
         string title = r.ReadString(); string text = r.ReadString();
-        var g = _state.FindGuildByChar(charId);
-        if (g is null) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEADD_REQ, charId, key, GuildResult.NotFound)); return; }
+        if (title.Length == 0 || title.Length > MaxBoardTitle || text.Length > MaxBoardText) return;
+        var g = _state.FindChar(charId, key)?.Guild;
+        if (g?.FindMember(charId) is not { } mem) return;
+        if (g.Articles.Count >= MaxGuildArticle) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEADD_REQ, charId, key, GuildResult.Fail)); return; }
         uint id = ++g.ArticleSeq;
         uint now = (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var mem = g.FindMember(charId);
-        g.Articles[id] = new GuildArticle { Id = id, Duty = mem?.Duty ?? 0, Writer = mem?.Name ?? "", Title = title, Article = text,
-            Date = DateTimeOffset.FromUnixTimeSeconds(now).ToLocalTime().ToString("yyyy-MM-dd") };   // C++ CTime::Format("%Y-%m-%d")
-        await Persist("articleAdd", db => db.ArticleAddAsync(g.Id, id, mem?.Duty ?? 0, mem?.Name ?? "", title, text, now));
+        g.Articles[id] = new GuildArticle { Id = id, Duty = mem.Duty, Writer = mem.Name, Title = title, Article = text, Date = ArticleDate(now) };
+        g.ArticleTitle = title;
+        await Persist("articleAdd", db => db.ArticleAddAsync(g.Id, id, mem.Duty, mem.Name, title, text, now));
         SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEADD_REQ, charId, key, GuildResult.Success));
         SendArticleList(charId, key, g);                                   // C++: the list follows
     }
@@ -231,8 +238,11 @@ public sealed partial class WorldService
     private async Task OnGuildArticleDel(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32(); uint id = r.ReadUInt32();
-        var g = _state.FindGuildByChar(charId);
-        if (g is null || !g.Articles.Remove(id)) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEDEL_REQ, charId, key, GuildResult.Fail)); return; }
+        var g = _state.FindChar(charId, key)?.Guild;
+        if (g is null) return;
+        if (!g.Articles.Remove(id, out var gone)) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEDEL_REQ, charId, key, GuildResult.Fail)); return; }
+        if (g.ArticleTitle == gone.Title)                                  // C++ CTGuild::DelArticle: the newest left titles the board
+            g.ArticleTitle = g.Articles.Values.OrderByDescending(a => a.Id).FirstOrDefault()?.Title ?? g.ArticleTitle;
         await Persist("articleDel", db => db.ArticleDelAsync(g.Id, id));
         SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEDEL_REQ, charId, key, GuildResult.Success));
         SendArticleList(charId, key, g);
@@ -242,8 +252,11 @@ public sealed partial class WorldService
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32(); uint id = r.ReadUInt32();
         string title = r.ReadString(); string text = r.ReadString();
-        var g = _state.FindGuildByChar(charId);
-        if (g is null || !g.Articles.TryGetValue(id, out var a)) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEUPDATE_REQ, charId, key, GuildResult.Fail)); return; }
+        if (title.Length == 0 || title.Length > MaxBoardTitle || text.Length > MaxBoardText) return;
+        var g = _state.FindChar(charId, key)?.Guild;
+        if (g is null) return;
+        if (!g.Articles.TryGetValue(id, out var a)) { SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEUPDATE_REQ, charId, key, GuildResult.Fail)); return; }
+        if (g.ArticleTitle == a.Title) g.ArticleTitle = title;              // C++ CTGuild::UpdateArticle
         a.Title = title; a.Article = text;
         await Persist("articleUpdate", db => db.ArticleUpdateAsync(g.Id, id, title, text));
         SendToCharId(charId, key, BuildResult(Msg.MW_GUILDARTICLEUPDATE_REQ, charId, key, GuildResult.Success));
@@ -299,17 +312,51 @@ public sealed partial class WorldService
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32(); _ = r.ReadUInt32();
         var g = _state.FindChar(charId, key)?.Guild;
         if (g is null) return;
-        bool had = _state.GuildWanted.Remove(g.Id);                        // C++ DelGuildWanted (its applicants go with it)
+        bool had = await DelGuildWanted(g.Id);
         SendToCharId(charId, key, BuildResult(Msg.MW_GUILDWANTEDDEL_REQ, charId, key, had ? GuildResult.Success : GuildResult.Fail));
         if (!had) return;
         SendWantedList(charId, key);
         await Persist("wantedDel", db => db.WantedDelAsync(g.Id));
     }
 
-    private void OnGuildWantedList(PacketReader r)
+    /// <summary>C++ <c>OnMW_GUILDWANTEDLIST_ACK</c> (SSHandler.cpp:4515): ads more than a day past their end expire (EXPIRED_GMW), then
+    /// the list.</summary>
+    private async Task OnGuildWantedList(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
+        long now = UnixNow();
+        foreach (var ad in _state.GuildWanted.Values.Where(a => a.EndTime + DayOne < now).ToList()) await ExpireGuildWanted(ad.GuildId);
         SendWantedList(charId, key);
+    }
+
+    private const long DayOne = 86400;                                                // DAY_ONE
+
+    /// <summary>C++ <c>DelGuildWanted</c> (TWorldSvr.cpp:4641): the guild's ad, each application with it.</summary>
+    private async Task<bool> DelGuildWanted(uint guildId)
+    {
+        if (!_state.GuildWanted.TryGetValue(guildId, out var ad)) return false;
+        foreach (var app in ad.Apps.Keys.ToList()) await DelGuildWantedAppSaved(app);
+        _state.GuildWanted.Remove(guildId);
+        return true;
+    }
+
+    /// <summary>C++ <c>OnSM_EVENTEXPIRED_ACK</c> EXPIRED_GMW: the ad goes, and its row.</summary>
+    private async Task ExpireGuildWanted(uint guildId)
+    {
+        if (await DelGuildWanted(guildId)) _log.LogInformation("Guild-wanted ad for guild {Id} expired.", guildId);
+        await Persist("wantedDel", db => db.WantedDelAsync(guildId));
+    }
+
+    /// <summary>C++ <c>OnSM_EVENTEXPIRED_ACK</c> EXPIRED_GTW: the ad and its applications go, and its row.</summary>
+    private async Task ExpireTacticsWanted(uint guildId, uint id)
+    {
+        if (_state.TacticsWanted.TryGetValue(id, out var ad) && ad.GuildId == guildId)
+        {
+            foreach (var app in ad.Apps.Keys.ToList()) DelTacticsApp(app);
+            _state.TacticsWanted.Remove(id);
+            _log.LogInformation("Tactics-wanted ad {Id} expired.", id);
+        }
+        await Persist("tacticsWantedDel", db => db.TacticsWantedDelAsync(id));
     }
 
     /// <summary>C++ <c>NotifyGuildWantedList</c> → <c>SendMW_GUILDWANTEDLIST_REQ</c>: the posts of one's own country (by guild id,
@@ -344,6 +391,7 @@ public sealed partial class WorldService
         else if (!_state.GuildWanted.TryGetValue(wantedId, out var ad) || ad.Country != ch.Country) result = GuildResult.Fail;
         else if (ad.EndTime < DateTimeOffset.UtcNow.ToUnixTimeSeconds()) result = GuildResult.WantedEnd;
         else if (ad.MaxLevel < ch.Level || ad.MinLevel > ch.Level) result = GuildResult.MismatchLevel;
+        else if (_state.FindTacticsGuild(charId)?.Id == ad.GuildId) result = GuildResult.SameGuildTactics;
         else
         {
             ad.Apps[charId] = new GuildWantedApp { CharId = charId, WantedId = wantedId, Class = ch.Class, Level = ch.Level, Name = ch.Name };
@@ -417,18 +465,15 @@ public sealed partial class WorldService
         if (_state.FindGuildByChar(targetId) is not null) return GuildResult.HaveGuild;
         if (g.Members.Count >= g.MaxMembers) return GuildResult.MemberFull;
         if (g.FindMember(targetId) is not null) return GuildResult.AlreadyMember;
+        if (g.FindTactics(targetId) is not null) return GuildResult.SameGuildTactics;
         if (g.FindMember(g.Chief) is null) return GuildResult.Fail;
-        var tgt = _state.Characters.TryGetValue(targetId, out var tc) ? tc : null;
-        g.Members[targetId] = new GuildMember { CharId = targetId, Name = app.Name, Level = app.Level, Class = app.Class, Duty = (byte)GuildDuty.None, OnlineChar = tgt };
-        _state.CharGuild[targetId] = g.Id;
-        if (tgt is not null) tgt.Guild = g;
-        UpdateGuildLevel(g);                                               // CTGuild::AddMember
-        foreach (var a in _state.GuildWanted.Values) a.Apps.Remove(targetId);
-        await Persist("volunteerReply", db => db.MemberAddAsync(g.Id, targetId, app.Level, (byte)GuildDuty.None));
-        // C++ NotifyAddGuildMember: the newcomer (if online) and the chief.
-        if (tgt is not null) SendToChar(tgt, BuildGuildJoinReq(tgt.CharId, tgt.Key, (byte)GuildResult.JoinSuccess, g.Id, g.Fame, g.FameColor, g.Name, targetId, app.Name, (byte)g.MaxMembers));
-        if (g.FindMember(g.Chief)?.OnlineChar is { } chief)
-            SendToChar(chief, BuildGuildJoinReq(chief.CharId, chief.Key, (byte)GuildResult.JoinSuccess, g.Id, g.Fame, g.FameColor, g.Name, targetId, app.Name, (byte)g.MaxMembers));
+        var mem = new GuildMember
+        {
+            CharId = targetId, Name = app.Name, Level = app.Level, Class = app.Class, Duty = (byte)GuildDuty.None,
+            Tactics = _state.FindTacticsGuild(targetId)?.Id ?? 0, WarCountry = g.Country,
+        };
+        await GuildMemberAdd(g, mem);                                      // the application (and its row) goes with it
+        NotifyAddGuildMember(mem, g);
         return GuildResult.Success;
     }
 
@@ -436,31 +481,29 @@ public sealed partial class WorldService
     private void OnGuildPointLog(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
-        var g = _state.FindGuildByChar(charId);
+        if (_state.FindChar(charId, key)?.Guild is not { } g || _state.FindTacticsGuild(charId) is not null) return;
         var w = new PacketWriter(Msg.MW_GUILDPOINTLOG_REQ);
         w.WriteUInt32(charId); w.WriteUInt32(key);
-        w.WriteUInt16((ushort)(g?.PointRewards.Count ?? 0));  // count is WORD
-        if (g is not null)
-            foreach (var pr in g.PointRewards) { w.WriteInt64(pr.Date); w.WriteString(pr.Name); w.WriteUInt32(pr.Point); } // date, name, point
+        w.WriteUInt16((ushort)g.PointRewards.Count);  // count is WORD
+        foreach (var pr in g.PointRewards) { w.WriteInt64(pr.Date); w.WriteString(pr.Name); w.WriteUInt32(pr.Point); } // date, name, point
         SendToCharId(charId, key, w.ToArray());
     }
 
     private void OnGuildPvpRecord(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
-        var g = _state.FindGuildByChar(charId);
+        if (_state.FindChar(charId, key) is null || _state.GetCurGuild(charId) is not { } g) return;   // C++ GetCurGuild
         var w = new PacketWriter(Msg.MW_GUILDPVPRECORD_REQ);
         w.WriteUInt32(charId); w.WriteUInt32(key);
-        w.WriteUInt16((ushort)(g?.Members.Count ?? 0)); // member count is WORD
-        if (g is not null)
-            foreach (var mem in g.Members.Values)
+        w.WriteUInt16((ushort)g.Members.Count); // member count is WORD
+        foreach (var mem in g.Members.Values)
             {
-                // per member: id, weekKill(WORD), weekDie(WORD), points[PVPE_KILL_H..PVPE_WIN) = indices 1..5 (5 DWORD),
-                // then the most-recent record (kill, die, 5 points) or zeros. Week-aggregate isn't tracked → zeros.
+                // C++ SendMW_GUILDPVPRECORD_REQ: id, the week's kill/die (WORD) and points[PVPE_KILL_H..PVPE_WIN) (5 DWORD), then the
+                // last record if it is of the most recent war day (m_dwRecentRecordDate), else zeros.
                 w.WriteUInt32(mem.CharId);
-                w.WriteUInt16(0); w.WriteUInt16(0);
-                for (int i = 1; i <= 5; i++) w.WriteUInt32(0);
-                var rec = mem.Records.Count > 0 ? mem.Records[^1] : null;
+                w.WriteUInt16(mem.WeekRecord.KillCount); w.WriteUInt16(mem.WeekRecord.DieCount);
+                for (int i = 1; i <= 5; i++) w.WriteUInt32(mem.WeekRecord.Point[i]);
+                var rec = mem.Records.Count > 0 && mem.Records[^1].Date >= _state.RecentRecordDate ? mem.Records[^1] : null;
                 if (rec is not null)
                 {
                     w.WriteUInt16(rec.KillCount); w.WriteUInt16(rec.DieCount);
@@ -741,9 +784,13 @@ public sealed partial class WorldService
         await Persist("tacticsWantedDel", db => db.TacticsWantedDelAsync(id));
     }
 
-    private void OnGuildTacticsWantedList(PacketReader r)
+    /// <summary>C++ <c>OnMW_GUILDTACTICSWANTEDLIST_ACK</c> (SSHandler.cpp:4778): ads more than a day past their end expire
+    /// (EXPIRED_GTW), then the list.</summary>
+    private async Task OnGuildTacticsWantedList(PacketReader r)
     {
         uint charId = r.ReadUInt32(); uint key = r.ReadUInt32();
+        long now = UnixNow();
+        foreach (var ad in _state.TacticsWanted.Values.Where(a => a.EndTime + DayOne < now).ToList()) await ExpireTacticsWanted(ad.GuildId, ad.Id);
         SendTacticsWantedList(charId, key);
     }
 

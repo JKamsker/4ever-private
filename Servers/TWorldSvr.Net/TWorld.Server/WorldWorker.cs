@@ -184,8 +184,9 @@ public sealed class WorldWorker : BackgroundService
             foreach (var a in await db.LoadArticlesAsync(ct))
                 if (state.Guilds.TryGetValue(a.GuildId, out var g))
                 {
-                    g.Articles[a.Id] = new GuildArticle { Id = a.Id, Duty = a.Duty, Writer = a.Writer, Title = a.Title, Article = a.Article, Date = a.Time.ToString() };
+                    g.Articles[a.Id] = new GuildArticle { Id = a.Id, Duty = a.Duty, Writer = a.Writer, Title = a.Title, Article = a.Article, Date = WorldService.ArticleDate(a.Time) };
                     if (a.Id > g.ArticleSeq) g.ArticleSeq = a.Id;
+                    g.ArticleTitle = a.Title;                                    // C++ CTGuild::AddArticle (load): the last loaded
                 }
         });
         await TryLoad("tactics", async () =>
@@ -224,7 +225,9 @@ public sealed class WorldWorker : BackgroundService
                     var pr = new GuildPvpRecord { CharId = rec.CharId, Date = rec.Date, KillCount = rec.KillCount, DieCount = rec.DieCount };
                     Array.Copy(rec.Point, pr.Point, Math.Min(rec.Point.Length, pr.Point.Length));
                     mem.Records.Add(pr);
+                    if (state.RecentRecordDate < rec.Date) state.RecentRecordDate = rec.Date;
                 }
+            foreach (var g in state.Guilds.Values) g.CalcWeekRecord(state.RecentRecordDate);   // C++ LoadData
         });
         await TryLoad("stats", async () =>
         {
@@ -246,8 +249,8 @@ public sealed class WorldWorker : BackgroundService
         {
             foreach (var w in await db.LoadWantedAsync(ct))
             {
-                var name = state.FindGuild(w.GuildId)?.Name ?? "";
-                state.GuildWanted[w.GuildId] = new GuildWanted { GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Name = name };
+                var guild = state.FindGuild(w.GuildId);                           // C++ AddGuildWanted: the guild's name and country
+                state.GuildWanted[w.GuildId] = new GuildWanted { GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Name = guild?.Name ?? "", Country = guild?.Country ?? 0 };
             }
         });
         await TryLoad("tactics-wanted", async () =>
@@ -262,9 +265,12 @@ public sealed class WorldWorker : BackgroundService
         {
             foreach (var v in await db.LoadVolunteersAsync(ct))
             {
-                // type 1 = guild-wanted applicant, type 2 = tactics-wanted applicant (best-effort attach by id)
-                if (state.GuildWanted.TryGetValue(v.Id, out var gw))
-                    gw.Apps[v.CharId] = new GuildWantedApp { CharId = v.CharId, WantedId = v.Id, Class = v.Class, Level = v.Level, Name = v.Name };
+                // C++ LoadData: bType GUILDAPP_MEMBER (1) applies to a guild's ad (by guild id), else to a tactics ad (by its id)
+                if (v.Type == (byte)GuildRelation.Alliance)
+                {
+                    if (state.GuildWanted.TryGetValue(v.Id, out var gw))
+                        gw.Apps[v.CharId] = new GuildWantedApp { CharId = v.CharId, WantedId = v.Id, Class = v.Class, Level = v.Level, Name = v.Name };
+                }
                 else if (state.TacticsWanted.TryGetValue(v.Id, out var tw))
                     tw.Apps[v.CharId] = new GuildTacticsWantedApp { CharId = v.CharId, WantedId = v.Id, WantedGuildId = tw.GuildId, Class = v.Class, Level = v.Level, Name = v.Name,
                         Day = tw.Day, Point = tw.Point, Gold = tw.Gold, Silver = tw.Silver, Cooper = tw.Cooper };

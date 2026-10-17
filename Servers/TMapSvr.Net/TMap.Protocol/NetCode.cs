@@ -42,6 +42,7 @@ public static class Msg
     public const ushort CS_MONHOST_ACK = CS_MAP + 0x000F;  // monster retarget/host-change (dwMonID + bSet: TRUE to the new host, FALSE to others)
     public const ushort CS_MOVEITEM_REQ = CS_MAP + 0x0028;  // move/swap/split/merge/drop/equip an item
     public const ushort CS_MOVEITEM_ACK = CS_MAP + 0x0029;  // BYTE result (TMOVEITEM_RESULT)
+    public const ushort CS_RESETCLOAK_ACK = CS_MAP + 0x0219; // dwCharID, bInvenID, bItemID — a cloak's guild mark gone
     public const ushort CS_UPDATEITEM_ACK = CS_MAP + 0x002A; // bInvenID + item block (count/slot changed)
     public const ushort CS_ADDITEM_ACK = CS_MAP + 0x002B;    // bInvenID + item block (new item in a slot)
     public const ushort CS_DELITEM_ACK = CS_MAP + 0x002C;    // bInvenID + bItemID (item removed)

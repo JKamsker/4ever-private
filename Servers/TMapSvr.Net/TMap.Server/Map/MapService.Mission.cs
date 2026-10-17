@@ -138,6 +138,7 @@ public sealed partial class MapService
         var item = new Item { TemplateId = tpl.ItemId, Count = count, Template = tpl, DuraMax = tpl.DuraMax, DuraCur = tpl.DuraMax };
         LinkItemAttr(item);
         long now = UnixNow();
+        title = NetString(title);                                          // C++ BuildNetString(NAME_NULL, GetSvrMsg(…)), the text as is
         (int saved, uint postId, uint recv) = await Safe(() => db.SavePostAsync(0, recvId, recver, "Operator", title, message,
             0, PostPackage, 0, silver, 0, now), (PostInternal, 0u, 0u));
         if (saved != 0 || postId == 0) return;

@@ -86,7 +86,7 @@ public class GuildTacticsTests
         Assert.Equal(((byte)0, b.CharId), (r.ReadByte(), r.ReadUInt32()));
         Assert.True(ca.Has(Msg.CS_GUILDTACTICSREPLY_ACK));
         var mail = Assert.Single(db.Mails);
-        Assert.Equal(("Ann", 2u, "Welcome!", "You have been hired as a mercenary of [Blue] guild."), (mail.Sender, mail.CharId, mail.Title, mail.Message));
+        Assert.Equal(("Ann", 2u, MapService.NetString("Welcome!"), MapService.NetString("You have been hired as a mercenary of [Blue] guild.")), (mail.Sender, mail.CharId, mail.Title, mail.Message));
         Assert.Equal((byte)0, a.Char!.TacticsId == 0 ? (byte)0 : (byte)1);   // the hirer stays as it was
     }
 
@@ -114,7 +114,7 @@ public class GuildTacticsTests
         Assert.Equal((0u, ""), (b.Char.TacticsId, b.Char.TacticsName));
         Assert.True(ca.Has(Msg.CS_GUILDATTR_ACK));
         var mail = Assert.Single(db.Mails);
-        Assert.Equal(("You are discharged from Mercenary.", "[300] Merit points are given.", 2u, 0u, 5u), (mail.Title, mail.Message, mail.Gold, mail.Silver, mail.Cooper));
+        Assert.Equal((MapService.NetString("You are discharged from Mercenary."), MapService.NetString("[300] Merit points are given."), 2u, 0u, 5u), (mail.Title, mail.Message, mail.Gold, mail.Silver, mail.Cooper));
     }
 
     [Fact]
@@ -159,7 +159,19 @@ public class GuildTacticsTests
         var r = new PacketReader(ca.Last(Msg.CS_GUILDPOINTREWARD_ACK)!);
         Assert.Equal(((byte)0, 950u), (r.ReadByte(), r.ReadUInt32()));
         var mail = Assert.Single(db.Mails);
-        Assert.Equal(("[Blue] guild has provided [50] points to you.", "gg", 2u), (mail.Title, mail.Message, mail.CharId));
+        Assert.Equal((MapService.NetString("[Blue] guild has provided [50] points to you."), MapService.NetString("gg"), 2u), (mail.Title, mail.Message, mail.CharId));
+    }
+
+    [Fact]
+    public async Task TheGuardShop_TheWorldsYes_DoesNotAskForTheDutyAgain()
+    {
+        var (h, a, ca, _, _, _) = await Setup();
+        a.Char!.GuildDuty = 0;                                                // demoted while the world took the money
+        await h.Service.DispatchWorldAsync(World(Msg.MW_MONSTERBUY_REQ, w =>
+        { w.WriteByte(0); w.WriteUInt32(a.CharId); w.WriteUInt32(a.Key); w.WriteUInt32(Guild); w.WriteUInt16(ShopNpc); w.WriteUInt16(1); w.WriteUInt32(500_000); }));
+        Assert.Equal((byte)0, new PacketReader(ca.Last(Msg.CS_MONSTERBUY_ACK)!).ReadByte());
+        Assert.NotNull(h.State.FindMonster(Monster.MakeId(GuardSpawn, 1, 0)));
+        Assert.False(h.World.Has(Msg.MW_GUILDMONEYRECOVER_ACK));
     }
 
     [Fact]

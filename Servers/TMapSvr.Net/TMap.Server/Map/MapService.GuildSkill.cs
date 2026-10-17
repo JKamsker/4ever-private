@@ -86,11 +86,20 @@ public sealed partial class MapService
             await Safe(async () => { await db.SaveGuildSkillAsync(ch.CharId, ch.GuildId, gs.Type, new GuildSkillRow(gs.SkillId, gs.Level, gs.EndTime)); return 0; }, 0);
     }
 
-    /// <summary>C++ <c>OnMW_GUILDESTABLISH_REQ</c>: the founder holds every guild skill at level 1, with no time yet.</summary>
+    /// <summary>C++ <c>OnMW_GUILDESTABLISH_REQ</c> (SSHandler.cpp:8129): the founder holds every guild skill it lacks at level 1, with
+    /// no time yet — a member skill it already has (its own, kept from before) stays as it is.</summary>
     private async Task GiveFounderGuildSkills(ClientSession s, Character ch)
     {
+        var have = new HashSet<ushort>();
+        if (GuildSkillStore is { } db)
+        {
+            var (member, guild) = await Safe(() => db.LoadGuildSkillsAsync(ch.CharId, ch.GuildId), (new List<GuildSkillRow>(), new List<GuildSkillRow>()));
+            if (s.Char != ch) return;
+            foreach (var row in member.Concat(guild)) have.Add(row.SkillId);
+        }
         foreach (var (id, type) in _templates.GuildSkillTypes)
-            if (!ch.GuildSkills.ContainsKey(id)) ch.GuildSkills[id] = new GuildSkillHeld(id, type, 1, 0);
+            if (!have.Contains(id)) ch.GuildSkills[id] = new GuildSkillHeld(id, type, 1, 0);
+            else ch.GuildSkills.Remove(id);                                // not saved over
         await SaveGuildSkills(ch);
         await RefreshGuildSkills(s);
     }
@@ -141,20 +150,19 @@ public sealed partial class MapService
                     ch.Persist.StatPoint--;
                 }
                 ch.GuildSkills[id] = held = held is null ? new GuildSkillHeld(id, type, 1, now + GuildSkillPeriod) : held with { Level = (byte)(held.Level + 1) };
-                if (type != 0) SendUpdateGuildCooldown(ch.GuildId, id, held.Level, renew: true, use: false);
                 break;
             case GsRenew:
                 if (held is null || ch.PvpUseablePoint < SkillRenewPrice || !CheckGuildDuty(ch, type) || held.EndTime > now) return;
                 UsePvPoint(s, ch, SkillRenewPrice, 0, PvpUseable);
                 SendCS_MONEY_ACK(s, ch);
                 ch.GuildSkills[id] = held = held with { EndTime = now + GuildSkillPeriod };
-                if (type != 0) SendUpdateGuildCooldown(ch.GuildId, id, held.Level, renew: true, use: true);
                 break;
             default:
                 return;
         }
 
         await SaveGuildSkills(ch);
+        if (type != 0) SendUpdateGuildCooldown(ch.GuildId, id, held.Level, renew: true, use: action == GsRenew);   // saved first: the guild re-reads it
         if (s.Char != ch) return;
         await RefreshGuildSkills(s);
         var ack = new PacketWriter(Msg.CS_GUILDSKILLACTION_ACK, capacity: 2 + size * 2);
