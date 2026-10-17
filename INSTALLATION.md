@@ -1,182 +1,146 @@
-# 4Story (Araz-4ever) — Installation & Setup
+# 4Dev — Installation
 
-How to bring the 4Story stack up on a single Windows machine. The server backend runs **entirely under
-Docker Compose** — SQL Server, the database restore/migrations, and the **TPatch / TWorld / TLogin /
-TControl** servers (all ported to **.NET**). The **only** piece still run by hand is **TMapSvr**, which
-remains the original **C++ console app** until its .NET port is finished. The game **client** is the
-MFC/DirectX 9 app, built with Visual Studio.
+Get 4Dev running on one Windows PC in **4 steps**: install the tools, get the files, start the
+servers, build and launch the game.
 
-> **Rule of thumb:** always use `docker compose` for SQL, the migrations, and the four .NET servers.
-> Do **not** run the C++ `Servers\Services\*.exe` for World/Login/Control/Patch — the Docker ones are
-> authoritative. TMap is the lone exception (see §5).
+- The **servers** all run in **Docker**, so you don't build them yourself.
+- The **game client** is built on your machine with Visual Studio.
 
 ---
 
-## 1. Overview & ports
+## Step 1 — Install the tools
 
-`docker compose up` starts everything below except TMap. The client connects to **TLoginSvr** first,
-then is routed to the map server.
-
-| Component | Container / where | Host port | Proto |
-|---|---|---|---|
-| SQL Server 2022 | `araz-mssql` (compose) | **11433** → 1433 | TCP |
-| DB restore + migrations | `araz-mssql-importer` (compose, one-shot) | — | — |
-| TLoginSvr (.NET) — *client entry point* | `araz-loginsvr` | **4816** | TCP |
-| TWorldSvr (.NET) — hub | `araz-worldsvr` | **3816** | TCP |
-| TControlSvr (.NET) | `araz-controlsvr` | **3615** | TCP |
-| TPatchSvr (.NET) | `araz-patchsvr` | **3716** | TCP |
-| **TMapSvr (C++ console, manual)** | host process | **5816** | TCP |
-
-- The SA password is read from a **`.env`** file next to `docker-compose.yml` (`SA_PASSWORD=...`); the
-  .NET servers get their connection strings from it. It is **git-ignored** — never commit it.
-- The client is handed the map address from `TGlobal_gsp.dbo.TIPADDR.szIPAddr`. For same-machine play
-  `127.0.0.1` works; for LAN play set it to this box's LAN IP.
-
----
-
-## 2. Prerequisites
-
-| Requirement | Why |
+| Tool | Why you need it |
 |---|---|
-| Windows 11 x64 | TMap is Win32/x86; client is MFC/DirectX 9. |
-| **Docker Desktop** | Runs SQL Server + the four .NET servers + migrations. |
-| **Git + Git LFS** | Two client assets are LFS-tracked (see §3) — **without them the client crashes on start**. |
-| **VS 2022 Build Tools** with **C++ ATL + MFC**, MSVC **v143**, Windows 11 SDK **10.0.22621.0** | Builds **TMapSvr** (C++) and the **client**. Projects are already pinned to v143 / SDK 22621, so no `/p:` toolset overrides are needed. Install with `scripts\install-build-deps.ps1` (elevated). |
+| **Windows 10/11 (x64)** | The game client is a Windows app. |
+| **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** | Runs the database and every game server. |
+| **[Git](https://git-scm.com/) + [Git LFS](https://git-lfs.com/)** | Downloads the project, including the big game files. |
+| **Visual Studio 2022 or newer** (Community or Build Tools) with **Desktop development with C++** | Builds the game client. CMake and Ninja come with it. |
 
-> The DirectX SDK (June 2010) is **vendored** in the repo (`Lib\3rdParty\DirectX9 (June 2010)`) and
-> referenced by relative path — nothing to install machine-wide.
+> Tip: from an **administrator** PowerShell, `scripts\install-build-deps.ps1` installs the Visual Studio
+> part for you.
+
+Everything else (DirectX SDK, SDL3, bgfx, zlib…) is already included in the repo.
 
 ---
 
-## 3. Clone + pull LFS assets (do this first)
+## Step 2 — Get the files
 
 ```powershell
-git clone git@github.com:Pi-bouf/4ever-private.git
+git clone git@github.com:Pi-Bouf/4ever-private.git
 cd 4ever-private
 git lfs install
 git lfs pull
 ```
 
-`Game\Data\Mesh\Character.TMH` (~143 MB) and `Game\TClientCmd.tif` (~147 MB) are **Git LFS** files. If
-they are left as 134-byte pointer stubs, `TClient.exe` crashes at startup in `CTachyonRes::LoadMESH`
-(MFC `CMemoryException`, exit `0xE06D7363`). Verify they are real:
+**Don't skip `git lfs pull`.** Without it, some game files are just tiny placeholders and the game
+crashes as soon as it starts. To check, look at this file's size. It should be around **146 MB**, not
+a few bytes:
 
 ```powershell
-Get-Item "Game\Data\Mesh\Character.TMH","Game\TClientCmd.tif" | Select Name,Length
+(Get-Item "Game\Data\Mesh\Character.TMH").Length
 ```
 
 ---
 
-## 4. Step 1 — Bring up the server backend (Docker Compose)
+## Step 3 — Start the servers
 
-Create **`.env`** next to `docker-compose.yml` with your chosen SA password:
+1. **Choose a database password.** Create a file named **`.env`** at the root of the project
+   (next to `docker-compose.yml`) containing one line:
 
-```
-SA_PASSWORD=<SA_PASSWORD>
-```
+   ```
+   SA_PASSWORD=YourStrong!Passw0rd
+   ```
 
-Then build + start the whole backend:
+   SQL Server needs a strong password (8+ characters, with upper case, lower case, digits and symbols).
+   This file is private, so never commit it.
 
-```powershell
-docker compose up -d --build
-```
+2. **Set your IP address.** Open `Database\migrations\002_local_network_config.sql` and replace the IP
+   in `SET szIPAddr = '...'` with:
+   - `127.0.0.1` if you play on this same PC, or
+   - this PC's LAN IP (e.g. `192.168.1.20`) if other PCs on your network will connect.
 
-This brings up, in order:
-1. **`araz-mssql`** — SQL Server 2022 (host port **11433**).
-2. **`araz-mssql-importer`** — restores `TGLOBAL_RAGEZONE.bak` → `TGlobal_gsp` and `TGAME_RAGEZONE.bak`
-   → `TGame_gsp` (idempotent), then applies every `Database\migrations\*.sql` exactly once. Migration
-   `002` sets `TGROUP.szPasswd` to your `.env` SA password (so login can open the game DB) and seeds the
-   routing IP; migration `001` seeds a **`test` / `test123`** account.
-3. **`araz-loginsvr` / `araz-worldsvr` / `araz-controlsvr` / `araz-patchsvr`** — the .NET servers, which
-   start only after the importer completes successfully.
+3. **Start everything:**
 
-**Verify:**
-```powershell
-docker compose ps
-docker logs araz-loginsvr   # expect: "Login server listening on port 4816."
-```
-
-> **If the importer fails / the stack was interrupted** (e.g. a reboot mid-restore leaves `TGlobal_gsp`
-> stuck `RESTORING`), reset the data volume and re-run: `docker compose down -v; docker compose up -d`.
-> The `.bak`s + migrations rebuild the databases deterministically.
-
----
-
-## 5. Step 2 — TMapSvr (C++ console) — the only manual server
-
-There is **no .NET map server yet**, so the map server runs as the original C++ console app and connects
-to the Docker world + Docker SQL. **This step is temporary — remove it once the .NET TMap port lands.**
-
-1. **Build** (Release / x86, v143):
    ```powershell
-   & msbuild Servers\TServer.sln /t:TMapSvr /p:Configuration=Release /p:Platform=x86 /m
-   ```
-   Output: `Servers\Services\TMapSvr.exe`.
-
-2. **ODBC DSN** → point it at the **Docker** SQL (host port **11433**, not 1433). Create `TGAME_GSP` in
-   **both** the 64-bit (`odbcad32.exe`) and 32-bit (`C:\Windows\SysWOW64\odbcad32.exe`) admins:
-
-   | DSN | Server | Default DB |
-   |---|---|---|
-   | `TGAME_GSP` | `127.0.0.1,11433` | `TGame_gsp` |
-   | `TGLOBAL_GSP` | `127.0.0.1,11433` | `TGlobal_gsp` |
-
-   Use SQL auth (`sa` / `<SA_PASSWORD>`); Test Connection must pass in both.
-
-3. **Config** `Servers\Services\Configurations\TMapSvr.ini`:
-   ```ini
-   [TMapConfig]
-   GameDSN=TGAME_GSP
-   DBUser=sa
-   GamePasswd=<SA_PASSWORD>
-   WorldIP=127.0.0.1
-   WorldPort=3816       ; the Docker world (araz-worldsvr, host-mapped)
-   GamePort=5816
-   GroupID=1
-   ServerID=1
+   docker compose up -d --build
    ```
 
-4. **Run** (own console window; do not redirect stdout):
+   The first start takes a few minutes. Docker creates the databases, sets them up, then starts the
+   five game servers.
+
+4. **Check that everything is up:**
+
    ```powershell
-   $svc="E:\4ever-private-main\Servers\Services"
-   Start-Process "$svc\TMapSvr.exe" -WorkingDirectory $svc
+   docker compose ps
    ```
-   It takes **~45 s** to load game data, then listens on **5816** and connects to `worldsvr:3816`.
-   Verify: `Get-NetTCPConnection -State Listen | ? LocalPort -eq 5816`.
+
+   `mssql-importer` should say **Exited (0)**. That's normal: it only runs once. All the other
+   containers should say **Up**.
+
+### What's running
+
+| Server | Service | Port |
+|---|---|---|
+| Database (SQL Server 2022) | `mssql` | 11433 |
+| Login (the game connects here first) | `loginsvr` | 4816 |
+| World | `worldsvr` | 3816 |
+| Map (the game world itself) | `mapsvr` | 5816 |
+| Patch | `patchsvr` | 3716 |
+| Control | `controlsvr` | 3615 |
 
 ---
 
-## 6. Step 3 — Build & launch the client
+## Step 4 — Build and launch the game
 
-Build (Release / x86, v143) — output goes to `Game\TClient.exe`:
+1. **Build the client** (from the project root):
 
-```powershell
-& msbuild Client\TClient.sln /p:Configuration=Release /p:Platform=x86 /m
-```
+   ```powershell
+   .\Client\build.ps1 -Deploy
+   ```
 
-`TClient.exe` takes the login-server address on its command line:
+   This builds the game and copies `TClient.exe` into the `Game\` folder.
 
-```
-TClient.exe <LoginServerIP> 4816 [Channel]
-```
+2. **Launch it.** The game needs the server address and port:
 
-Example (same machine): `TClient.exe 127.0.0.1 4816 1` — log in with **`test` / `test123`**.
+   ```powershell
+   cd Game
+   .\TClient.exe 127.0.0.1 4816
+   ```
 
-> **Resolution:** `config.ini` ships with `ScreenX=`/`ScreenY=` **empty**; on first launch the client
-> adapts to the primary display (writes the detected resolution back). Set explicit values there to
-> override.
+   Windows asks for **administrator** permission. Accept it.
+
+3. **Log in** with the test account: **`test`** / **`test123`** 🎉
+
+> The window size is set in `Game\config.ini` (`ScreenX` / `ScreenY`, 1600×1200 by default).
 
 ---
 
-## 7. Troubleshooting
+## Everyday use
 
-| Symptom | Cause / fix |
+| I want to… | Command |
 |---|---|
-| Client crashes instantly at startup (`CMemoryException`, a `Game\TClient(...).dmp` appears) | LFS assets are pointer stubs. Run `git lfs pull` (§3). |
-| Client opens then closes / won't connect | Missing launch args. Needs `TClient.exe <IP> <Port> <Channel>`; check `araz-loginsvr` is up on 4816. |
-| Client connects to login but **hangs** | `TGROUP.szPasswd` doesn't match SQL `sa`. The importer's migration `002` sets it from `.env`; make sure `.env` SA password matches the running container, then `docker compose down -v; docker compose up -d`. |
-| `.NET` servers don't start | The `mssql-importer` failed — `docker logs araz-mssql-importer`. Usual fix: `docker compose down -v; docker compose up -d`. |
-| TMap never listens on 5816 | Still in `LoadData` (~45 s), or its DSN points at `1433` instead of the Docker **`11433`**. |
-| TMap/DSN "Test Connection" fails | Create the DSN in **both** 32- and 64-bit ODBC admins, `127.0.0.1,11433`, `sa`. |
-| Client routed to an unreachable map | `TIPADDR.szIPAddr` is stale. For LAN play set it to this box's LAN IP (see the `002` migration / update `TGlobal_gsp.dbo.TIPADDR`). |
-| Everything fails after reboot | SQL container stopped: `docker compose up -d` (or `docker start araz-mssql`). |
+| Start the servers | `docker compose up -d` |
+| Stop the servers | `docker compose down` |
+| See a server's logs | `docker compose logs mapsvr` (or any service name) |
+| Rebuild the servers after a code change | `docker compose up -d --build` |
+| Reset the databases to a clean state | `docker compose down -v` then `docker compose up -d` |
+
+> `down -v` **deletes all game data** (characters, items…) and rebuilds the databases from scratch.
+
+---
+
+## Something's wrong?
+
+| Problem | Fix |
+|---|---|
+| The game crashes right at startup | The big files are missing. Run `git lfs pull` (Step 2). |
+| The game opens then closes | Launch it with the address: `TClient.exe 127.0.0.1 4816`. |
+| Login works but the game hangs or can't enter the world | The IP in migration `002` is wrong (Step 3.2). Fix it, then reset: `docker compose down -v` and `docker compose up -d`. |
+| Servers don't start | Check the database setup: `docker compose logs mssql-importer`. Usually fixed by `docker compose down -v` and `docker compose up -d`. |
+| Nothing works after a reboot | Docker Desktop isn't running, or the containers are stopped. Start Docker, then `docker compose up -d`. |
+| Can't log in | Wait 1–2 minutes after `docker compose up`, since the servers load game data at boot. Check with `docker compose logs loginsvr`. |
+
+---
+
+Thanks Zemi, thanks Araz <3
