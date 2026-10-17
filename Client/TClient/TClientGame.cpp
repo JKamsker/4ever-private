@@ -12380,23 +12380,9 @@ void CTClientGame::OnImeComposition( HWND hWnd, WPARAM wParam, LPARAM lParam)
 	TEdit *pTEDIT = GetCurEdit();
 	if( pTEDIT == m_pChatFrame->GetChatEditCtrl() )
 	{
-		HIMC hImc = ImmGetContext(hWnd);
-
-		CHAR szCompResultStr[1024];
-		if( (lParam & GCS_RESULTSTR) == GCS_RESULTSTR )
-		{
-			INT nResultSize = ImmGetCompositionString( hImc, GCS_RESULTSTR, NULL, 0 );
-			ImmGetCompositionString(hImc, GCS_RESULTSTR, szCompResultStr, nResultSize );
-			szCompResultStr[ nResultSize ] = '\0';
-
-			for( INT i=0 ; i < nResultSize ; ++i )
-				if( szCompResultStr[ i ] == _T(' ') )
-				{
-					m_pChatFrame->CheckChatMode();
-					break;
-				}
-		}
-		ImmReleaseContext(hWnd, hImc);
+		if( (lParam & GCS_RESULTSTR) == GCS_RESULTSTR &&
+			CTachyonInput::GetImeResult().Find(_T(' ')) >= 0 )
+			m_pChatFrame->CheckChatMode();
 	}
 }
 
@@ -12528,9 +12514,7 @@ void CTClientGame::OnKeyDown( UINT nChar, int nRepCnt, UINT nFlags)
 	{
 		if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
 		{
-			HIMC hImc = ImmGetContext(TSAFE_HWND(m_pMainWnd));
-			ImmNotifyIME( hImc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-			ImmReleaseContext( TSAFE_HWND(m_pMainWnd), hImc);
+			CTachyonInput::CancelImeComposition();
 		}
 
 		if(pKeyDlg->IsWaitInput())
@@ -12543,9 +12527,7 @@ void CTClientGame::OnKeyDown( UINT nChar, int nRepCnt, UINT nFlags)
 	{
 		if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
 		{
-			HIMC hImc = ImmGetContext(TSAFE_HWND(m_pMainWnd));
-			ImmNotifyIME( hImc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-			ImmReleaseContext( TSAFE_HWND(m_pMainWnd), hImc);
+			CTachyonInput::CancelImeComposition();
 		}
 
 		if( m_vTFRAME[TFRAME_CINEMATIC]->IsVisible() && CTKeySetting::GetInstance()->GetCurKeySet( CTachyonInput::ScanToVKey(nFlags), CTClientKEY::GetCurMOD()) == TKEY_CLOSE_UI )
@@ -12562,9 +12544,7 @@ void CTClientGame::OnKeyDown( UINT nChar, int nRepCnt, UINT nFlags)
 	{
 		if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
 		{
-			HIMC hImc = ImmGetContext(TSAFE_HWND(m_pMainWnd));
-			ImmNotifyIME( hImc, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-			ImmReleaseContext( TSAFE_HWND(m_pMainWnd), hImc);
+			CTachyonInput::CancelImeComposition();
 		}
 
 		OnActivateKEY(CTachyonInput::ScanToVKey(nFlags));

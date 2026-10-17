@@ -1,7 +1,15 @@
 #include "StdAfx.h"
+#include <SDL3/SDL.h>
 
 
 HWND CTachyonInput::m_hWND = NULL;
+
+CString CTachyonInput::m_strImeComposition;
+CString CTachyonInput::m_strImeResult;
+std::vector<BYTE> CTachyonInput::m_vImeAttr;
+std::vector<DWORD> CTachyonInput::m_vImeClause;
+VECTORSTRING CTachyonInput::m_vImeCandidate;
+int CTachyonInput::m_nImeSelection = 0;
 
 void CTachyonInput::SetWindow( HWND hWND)
 {
@@ -83,4 +91,170 @@ CHAR CTachyonInput::ScanToChar( UINT nFlags)
 		_strlwr_s(nChar);
 
 	return nChar[0];
+}
+
+// The game's strings are in the ANSI code page; SDL's text is UTF-8.
+CString CTachyonInput::FromUTF8( LPCSTR lpszUTF8)
+{
+	CStringW strW;
+	int nLength = ::MultiByteToWideChar( CP_UTF8, 0, lpszUTF8, -1, NULL, 0);
+
+	if( nLength <= 1 )
+		return CString();
+
+	::MultiByteToWideChar( CP_UTF8, 0, lpszUTF8, -1, strW.GetBufferSetLength(nLength), nLength);
+	strW.ReleaseBuffer();
+
+	return CString(strW);
+}
+
+void CTachyonInput::SetImeComposition( LPCSTR lpszUTF8, int nStart, int nLength)
+{
+	m_strImeComposition = FromUTF8(lpszUTF8);
+	m_vImeAttr.assign( m_strImeComposition.GetLength(), BYTE(ATTR_INPUT));
+	m_vImeClause.clear();
+
+	if( m_strImeComposition.IsEmpty() )
+		return;
+
+	// SDL counts characters; IMM's attributes and clauses count bytes.
+	CStringW strW(m_strImeComposition);
+	int nEnd = nStart + nLength;
+
+	if( nStart < 0 || nLength <= 0 || nEnd > strW.GetLength() )
+	{
+		m_vImeClause.push_back(0);
+		m_vImeClause.push_back(DWORD(m_strImeComposition.GetLength()));
+
+		return;
+	}
+
+	DWORD dwStart = DWORD(CString(strW.Left(nStart)).GetLength());
+	DWORD dwEnd = DWORD(CString(strW.Left(nEnd)).GetLength());
+
+	for( DWORD i=dwStart; i<dwEnd && i<m_vImeAttr.size(); i++)
+		m_vImeAttr[i] = ATTR_TARGET_CONVERTED;
+
+	m_vImeClause.push_back(0);
+	if(dwStart)
+		m_vImeClause.push_back(dwStart);
+
+	m_vImeClause.push_back(dwEnd);
+	if( dwEnd < DWORD(m_strImeComposition.GetLength()) )
+		m_vImeClause.push_back(DWORD(m_strImeComposition.GetLength()));
+}
+
+void CTachyonInput::SetImeResult( LPCSTR lpszUTF8)
+{
+	m_strImeResult = FromUTF8(lpszUTF8);
+	m_strImeComposition.Empty();
+	m_vImeAttr.clear();
+	m_vImeClause.clear();
+}
+
+void CTachyonInput::SetImeCandidates( const char * const *pUTF8, int nCount, int nSelection)
+{
+	m_vImeCandidate.clear();
+	m_nImeSelection = nSelection < 0 ? 0 : nSelection;
+
+	for( int i=0; i<nCount; i++)
+		m_vImeCandidate.push_back(FromUTF8(pUTF8[i]));
+}
+
+CString CTachyonInput::GetImeComposition()
+{
+	return m_strImeComposition;
+}
+
+CString CTachyonInput::GetImeResult()
+{
+	return m_strImeResult;
+}
+
+void CTachyonInput::GetImeCompositionAttr( BYTE *pAttr, INT *pAttrLength, DWORD *pClause, INT *pClauseLength)
+{
+	if( pAttr && pAttrLength )
+	{
+		*pAttrLength = INT(m_vImeAttr.size());
+
+		if(!m_vImeAttr.empty())
+			memcpy( pAttr, &m_vImeAttr[0], m_vImeAttr.size());
+		else
+			pAttr[0] = 0;
+	}
+
+	if( pClause && pClauseLength )
+	{
+		*pClauseLength = INT(m_vImeClause.size());
+
+		if(!m_vImeClause.empty())
+			memcpy( pClause, &m_vImeClause[0], m_vImeClause.size() * sizeof(DWORD));
+		else
+			pClause[0] = 0;
+	}
+}
+
+const VECTORSTRING& CTachyonInput::GetImeCandidates()
+{
+	return m_vImeCandidate;
+}
+
+int CTachyonInput::GetImeCandidateSelection()
+{
+	return m_nImeSelection;
+}
+
+void CTachyonInput::CompleteImeComposition()
+{
+	m_strImeResult = m_strImeComposition;
+	CancelImeComposition();
+}
+
+void CTachyonInput::CancelImeComposition()
+{
+	m_strImeComposition.Empty();
+	m_vImeAttr.clear();
+	m_vImeClause.clear();
+
+	SDL_Window *pWindow = SDL_GetKeyboardFocus();
+	if(pWindow)
+		SDL_ClearComposition(pWindow);
+}
+
+BOOL CTachyonInput::IsImeNativeMode()
+{
+	BOOL bResult = FALSE;
+
+	if(!m_hWND)
+		return FALSE;
+
+	HIMC hIMC = ::ImmGetContext(m_hWND);
+	DWORD dwConv = 0;
+	DWORD dwSent = 0;
+
+	if( hIMC && ::ImmGetConversionStatus( hIMC, &dwConv, &dwSent) )
+		bResult = (dwConv & IME_CMODE_NATIVE) ? TRUE : FALSE;
+	::ImmReleaseContext( m_hWND, hIMC);
+
+	return bResult;
+}
+
+void CTachyonInput::SetImeNativeMode( BOOL bNative)
+{
+	if(!m_hWND)
+		return;
+
+	HIMC hIMC = ::ImmGetContext(m_hWND);
+	DWORD dwConv = 0;
+	DWORD dwSent = 0;
+
+	if( hIMC && ::ImmGetConversionStatus( hIMC, &dwConv, &dwSent) )
+	{
+		dwConv &= ~IME_CMODE_LANGUAGE;
+		if(bNative)
+			dwConv |= IME_CMODE_NATIVE;
+
+		::ImmSetConversionStatus( hIMC, dwConv, dwSent);
+	}
+	::ImmReleaseContext( m_hWND, hIMC);
 }

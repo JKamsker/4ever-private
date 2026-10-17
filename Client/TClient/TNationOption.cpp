@@ -168,6 +168,8 @@ void CTNationOption::SetNation( INT nNation )
 		CTNationOption::UNITEDKINGDOM = TRUE;
 		CTNationOption::MODIFY_WORD_BREAK = TRUE;
 		CTNationOption::CAMERA_QUAKE = TRUE;
+		// The edits take the French list of accented letters (Windows-1252), not only ASCII.
+		TEdit::m_nCountryFlag = TEdit::COUNTRY_FLAG_FRANCE;
 		CTNationOption::INSTALL_HACKSHIELD = TRUE;
 		CTNationOption::USE_WEB_CASHSHOP = TRUE;
 		break;

@@ -1352,47 +1352,12 @@ void CTClientApp::SaveStdProfileSettings()
 
 void CTClientApp::ToggleImeLocalMode()
 {
-	HWND hWnd = TSAFE_HWND(CTachyonApp::GetApp()->m_pMainWnd);
-	if(!hWnd)
-		return;
-
-	HIMC hIMC = ::ImmGetContext(hWnd);
-    DWORD dwConv;
-	DWORD dwSent;
-	DWORD dwTemp;
-
-	::ImmGetConversionStatus(hIMC, &dwConv, &dwSent);
-	if(dwConv & IME_CMODE_NATIVE)
-	{
-		dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-	    dwConv = dwTemp;
-	}
-	else
-	{
-		dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-		dwTemp |= IME_CMODE_NATIVE;
-		dwConv = dwTemp;
-	}
-
-	::ImmSetConversionStatus( hIMC, dwConv, dwSent);
-	::ImmReleaseContext( hWnd, hIMC);
+	CTachyonInput::SetImeNativeMode(!CTachyonInput::IsImeNativeMode());
 }
 
 BOOL CTClientApp::IsImeLocalMode()
 {
-	HWND hWnd = TSAFE_HWND(CTachyonApp::GetApp()->m_pMainWnd);
-	if(!hWnd)
-		return FALSE;
-
-	HIMC hIMC = ::ImmGetContext(hWnd);
-    DWORD dwConv;
-	DWORD dwSent;
-
-	::ImmGetConversionStatus( hIMC, &dwConv, &dwSent);
-	BOOL bResult = ( dwConv & IME_CMODE_NATIVE);
-	::ImmReleaseContext(hWnd, hIMC);
-
-	return bResult;
+	return CTachyonInput::IsImeNativeMode();
 }
 
 DWORD WINAPI CTClientApp::_LoadThread( LPVOID lpParam)

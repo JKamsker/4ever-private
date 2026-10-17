@@ -5,10 +5,13 @@
 // messages, MK_ flags and client coordinates. The handlers' default does nothing more, SDL has
 // already given the message its default processing.
 //
-// On Windows, the window's text input (WM_CHAR and the IME messages), its cursor, the caption
-// drag and the engine's own posted messages still take the Win32 path: a subclass of SDL's
-// window procedure sends them to WindowProc, and posted ones go through SDL's event queue so
-// they keep their order with the key events.
+// SDL's text events become OnChar (a character per byte, in the game's ANSI code page, with
+// the control characters of Enter, Esc, Backspace, Tab and Ctrl+letter that Windows sends),
+// OnImeComposition (GCS_ flags; the strings are in CTachyonInput) and OnImeNotify (candidates).
+//
+// On Windows, the cursor, the caption drag, the IME's mode changes and the engine's own posted
+// messages still take the Win32 path: a subclass of SDL's window procedure sends them to
+// WindowProc, and posted ones go through SDL's event queue to keep their order.
 //////////////////////////////////////////////////////////////////////
 
 #if !defined __TWINDOW_H
@@ -109,6 +112,7 @@ public:
 	virtual void OnSysKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
 	virtual void OnChar( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
 	virtual void OnImeComposition( HWND hWnd, WPARAM wParam, LPARAM lParam) { Default(); }
+	virtual void OnImeNotify( HWND hWnd, WPARAM wParam, LPARAM lParam) { Default(); }
 
 	virtual void OnMouseMove( UINT nFlags, CPoint point) { Default(); }
 	virtual void OnLButtonDown( UINT nFlags, CPoint point) { Default(); }
@@ -131,6 +135,7 @@ private:
 	void Dispatch( const SDL_Event& event);
 	void DispatchKey( const SDL_Event& event);
 	void DispatchMouse( const SDL_Event& event);
+	void DispatchText( const SDL_Event& event);
 
 	LRESULT CallWindowProc( UINT message, WPARAM wParam, LPARAM lParam);
 

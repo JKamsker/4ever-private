@@ -7167,93 +7167,33 @@ LRESULT CTClientWnd::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 	if( message == WM_POWERBROADCAST )
 		return BROADCAST_QUERY_DENY;
 
-	if( message == WM_IME_NOTIFY &&
-		TEdit::g_bPassImeNotify )
-		return 0;
-
-	if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
+	// The composition and the candidates come from the window's text events. The mode and
+	// layout changes are checked by the focused edit before SDL gets them.
+	switch(message)
 	{
-		switch(message)
-		{
-		case WM_IME_STARTCOMPOSITION		:
-		case WM_IME_ENDCOMPOSITION			:
+	case WM_IME_NOTIFY				:
+		if(TEdit::g_bPassImeNotify)
 			return 0;
 
-		case WM_IME_COMPOSITION				:
-			{
-				OnImeComposition(
-					GetSafeHwnd(),
-					wParam,
-					lParam);
-			}
+		if( wParam == IMN_SETCONVERSIONMODE )
+			OnImeNotify( GetSafeHwnd(), wParam, lParam);
+
+		break;
+
+	case WM_INPUTLANGCHANGEREQUEST	:
+		if(!OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam))
 			return 0;
 
-		case WM_IME_NOTIFY					:
-			{
-				OnImeNotify(
-					GetSafeHwnd(),
-					wParam,
-					lParam);
+		break;
 
-				if( wParam == IMN_OPENCANDIDATE ||
-					wParam == IMN_CHANGECANDIDATE ||
-					wParam == IMN_CLOSECANDIDATE )
-					return 0;
-			}
-			break;
-
-			case WM_INPUTLANGCHANGEREQUEST	:
-				{
-					if( !OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam ) )
-						return 0;
-				}
-				break;
-
-			case WM_INPUTLANGCHANGE			:
-				{
-					if( !OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam ) )
-					{
-						ActivateKeyboardLayout( TEdit::m_hKL, 0 );
-						return 0;
-					}
-				}
-				break;
-
-		case WM_IME_SETCONTEXT				:
-			return CTachyonWnd::DefWindowProc( message, wParam, 0);
-		}
-	}
-	else
-	{
-		switch(message)
+	case WM_INPUTLANGCHANGE			:
+		if(!OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam))
 		{
-		case WM_IME_STARTCOMPOSITION		: return 0;
-		case WM_IME_NOTIFY					:
-			{
-				OnImeNotify(
-					GetSafeHwnd(),
-					wParam,
-					lParam);
-			}
-			break;
-
-		case WM_INPUTLANGCHANGEREQUEST		:
-			{
-				if( !OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam ) )
-					return 0;
-			}
-			break;
-
-		case WM_INPUTLANGCHANGE				:
-			{
-				if( !OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam ) )
-				{
-					ActivateKeyboardLayout( TEdit::m_hKL, 0 );
-					return 0;
-				}
-			}
-			break;
+			ActivateKeyboardLayout( TEdit::m_hKL, 0);
+			return 0;
 		}
+
+		break;
 	}
 
 	return CTachyonWnd::DefWindowProc( message, wParam, lParam);

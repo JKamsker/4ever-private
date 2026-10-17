@@ -488,128 +488,39 @@ int TEdit::HandleImeComposition(
 
 	if( m_blIsLocked ) return 0;
 
-	HIMC hImc = ImmGetContext(hWnd);				
-
-	BYTE bCompAttr[512];
-	DWORD dwCompAttrLen;
-
-	DWORD dwCompCls[512];
-	DWORD dwCompClsLen;
-
-	WCHAR szCompReadStr[512];
-	DWORD dwCompReadStrLen;
-
-	BYTE bCompReadAttr[512];
-	DWORD dwCompReadAttrLen;
-
-	DWORD dwCompReadCls[512];
-	DWORD dwCompReadClsLen;
-
-	if (lParam & GCS_COMPATTR)
-	{
-		dwCompAttrLen = ImmGetCompositionString(hImc,GCS_COMPATTR,bCompAttr,sizeof(bCompAttr));
-		if( pbAttr && pbAttrLength )
-		{
-			*pbAttrLength = dwCompAttrLen;
-			memcpy( pbAttr, bCompAttr, dwCompAttrLen );
-		}
-	}
+	// The window keeps what the IME composes (CTachyonInput); lParam tells which parts changed.
+	if( lParam & (GCS_COMPATTR|GCS_COMPCLAUSE) )
+		CTachyonInput::GetImeCompositionAttr( pbAttr, pbAttrLength, pbClause, pbClauseLength);
 	else
 	{
-		dwCompAttrLen = 0;
-		bCompAttr[0] = 0;
-
 		if( pbAttr && pbAttrLength )
 		{
-			pbAttr[0] = '\0';
+			pbAttr[0] = ' ';
 			*pbAttrLength = 0;
 		}
-	}
-
-	if (lParam & GCS_COMPCLAUSE)
-	{
-		dwCompClsLen = ImmGetCompositionString(hImc,GCS_COMPCLAUSE,dwCompCls,sizeof(dwCompCls));
-		if( pbClause && pbClauseLength )
-		{
-			*pbClauseLength = dwCompClsLen / sizeof(DWORD);
-			memcpy( pbClause, dwCompCls, dwCompClsLen );
-		}
-	}
-	else
-	{
-		dwCompClsLen = 0;
-		dwCompCls[0] = 0;
-		dwCompCls[1] = 0;
 
 		if( pbClause && pbClauseLength )
 		{
-			pbClause[0] = '\0';
+			pbClause[0] = ' ';
 			*pbClauseLength = 0;
 		}
 	}
 
-	if(!(lParam & GCS_COMPREADSTR))
-		 dwCompReadStrLen = 0;
-	else
-	{
-		dwCompReadStrLen = ImmGetCompositionString(hImc,GCS_COMPREADSTR,szCompReadStr,sizeof(szCompReadStr));
-		dwCompReadStrLen /= sizeof(WCHAR);
-	}
-
-	szCompReadStr[dwCompReadStrLen] = '\0';
-
-	if (lParam & GCS_COMPREADATTR)
-		dwCompReadAttrLen = ImmGetCompositionString(hImc,GCS_COMPREADATTR,bCompReadAttr,sizeof(bCompReadAttr));
-
-	else
-	{
-		dwCompReadAttrLen = 0;
-		bCompReadAttr[0] = 0;
-	}
-
-	if (lParam & GCS_COMPREADCLAUSE)
-		dwCompReadClsLen = ImmGetCompositionString(hImc,GCS_COMPREADCLAUSE,dwCompReadCls,sizeof(dwCompReadCls));
-	else
-	{
-		dwCompReadClsLen = 0;
-		dwCompReadCls[0] = 0;
-		dwCompReadCls[1] = 0;
-	}
-
-	CHAR szCompStr[1024];
-	CHAR szCompResultStr[1024];
-
 	strComp.Empty();
 	if( (lParam & GCS_COMPSTR) == GCS_COMPSTR )
-	{
-		INT nCompSize = ImmGetCompositionString( hImc, GCS_COMPSTR, NULL, 0 );
-		ImmGetCompositionString( hImc, GCS_COMPSTR, szCompStr, nCompSize );
-		szCompStr[nCompSize] = '\0';
-
-		for( INT i=0 ; i < nCompSize ; ++i )
-			strComp.AppendChar( szCompStr[ i ] );
-	}
+		strComp = CTachyonInput::GetImeComposition();
 
 	strResult.Empty();
 	if( (lParam & GCS_RESULTSTR) == GCS_RESULTSTR )
 	{
 		if( m_pCandidate && m_pCandidateOwner == this )
 		{
-			ImmNotifyIME( hImc, NI_COMPOSITIONSTR, CPS_COMPLETE, 0);
 			m_pCandidate->ShowComponent(FALSE);
 			m_pCandidateOwner = NULL;
 		}
 
-		INT nResultSize = ImmGetCompositionString( hImc, GCS_RESULTSTR, NULL, 0 );
-		ImmGetCompositionString(hImc, GCS_RESULTSTR, szCompResultStr, nResultSize );
-		szCompResultStr[ nResultSize ] = '\0';
-
-		for( INT i=0 ; i < nResultSize ; ++i )
-			strResult.AppendChar( szCompResultStr[ i ] );
+		strResult = CTachyonInput::GetImeResult();
 	}
-
-	//TRACE(_T("COMP:%s, RESULT:%s\n"), strComp, strResult);
-	ImmReleaseContext(hWnd, hImc);
 
 	return strResult.GetLength();
 }
@@ -769,42 +680,21 @@ void TEdit::OnImeNotify(HWND hWnd, WPARAM wParam, LPARAM lParam)
 			case IMN_OPENCANDIDATE:
 			case IMN_CHANGECANDIDATE:
 				{
-					HIMC hIMC = ImmGetContext(hWnd);
+					// The window's candidates are the IME's current page.
+					const VECTORSTRING& vIME = CTachyonInput::GetImeCandidates();
+					std::vector<CString> vCANDIDATE;
 
-					int size = ImmGetCandidateList(hIMC, 0, NULL, 0);
-					if( size > 0 )
+					for( size_t i=0; i < vIME.size() && vCANDIDATE.size() < 9; ++i )
+						vCANDIDATE.push_back(vIME[i]);
+
+					if(!vCANDIDATE.empty())
 					{
-						BYTE* pBuf = new BYTE[ size ];
-						ImmGetCandidateList( hIMC, 0, (LPCANDIDATELIST) pBuf, size );
-
-						LPCANDIDATELIST pCandiList = (LPCANDIDATELIST) pBuf;
-
-						// 일어IME 버그. ImmGetCandidateListW함수에서 나온 것임에도 불구하고 pCandi->dwPageStart가 잘못나온다.
-						DWORD dwRealStart = (pCandiList->dwSelection / pCandiList->dwPageSize) * pCandiList->dwPageSize;
-						if(pCandiList->dwPageStart != dwRealStart)
-						{
-							ImmNotifyIME( hIMC, NI_SETCANDIDATE_PAGESTART, 0, dwRealStart );
-							pCandiList->dwPageStart = dwRealStart;
-						}
-
-						std::vector<CString> vCANDIDATE;
-
-						for( INT i=pCandiList->dwPageStart ; (i < pCandiList->dwCount) && (vCANDIDATE.size() < 9)  ; ++i )
-						{
-							CHAR* pCHAR = (CHAR*)(pBuf + pCandiList->dwOffset[ i ]);
-							vCANDIDATE.push_back( CString(pCHAR));
-						}
-
 						m_pCandidate->SetCandidateChar( vCANDIDATE );
-						m_pCandidate->SetSelection( pCandiList->dwSelection % 9 );
-
-						delete [] pBuf;
+						m_pCandidate->SetSelection( CTachyonInput::GetImeCandidateSelection() % 9 );
 
 						m_pCandidate->MoveComponentAdjustText( m_rtCandidateTarget );
 						m_pCandidate->ShowComponent(TRUE);
 					}
-
-					ImmReleaseContext(hWnd,hIMC);
 				}
 				break;
 
@@ -828,16 +718,8 @@ void TEdit::OnImeNotify(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				{
 					TEdit::g_bPassImeNotify = TRUE;
 
-					DWORD dwConv, dwSent, dwTemp;
-					HIMC hIMC = ::ImmGetContext(g_hWnd);
-					::ImmGetConversionStatus(hIMC, &dwConv, &dwSent);
-					if(dwConv & IME_CMODE_NATIVE)
-					{
-						dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-						dwConv = dwTemp;
-						::ImmSetConversionStatus( hIMC, dwConv, dwSent);
-					}
-					::ImmReleaseContext( hWnd, hIMC);
+					if(CTachyonInput::IsImeNativeMode())
+						CTachyonInput::SetImeNativeMode(FALSE);
 
 					TEdit::g_bPassImeNotify = FALSE;
 				}
@@ -845,30 +727,13 @@ void TEdit::OnImeNotify(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				{
 					if( m_strText.IsEmpty() && m_strComposition.IsEmpty() )
 					{
-						// 변경허용
+						// 전경허용
 					}
 					else
 					{
-						// 변경불허 - 다시 원입력상태로 되돌아감.
+						// 전경불허 - 다시 원입력상태로 되돌아감.
 						TEdit::g_bPassImeNotify = TRUE;
-
-						DWORD dwConv, dwSent, dwTemp;
-						HIMC hIMC = ::ImmGetContext(g_hWnd);
-						::ImmGetConversionStatus(hIMC, &dwConv, &dwSent);
-						if(dwConv & IME_CMODE_NATIVE)
-						{
-							dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-							dwConv = dwTemp;
-						}
-						else
-						{
-							dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-							dwTemp |= IME_CMODE_NATIVE;
-							dwConv = dwTemp;
-						}
-						::ImmSetConversionStatus( hIMC, dwConv, dwSent);
-						::ImmReleaseContext( hWnd, hIMC);
-
+						CTachyonInput::SetImeNativeMode(!CTachyonInput::IsImeNativeMode());
 						TEdit::g_bPassImeNotify = FALSE;
 					}
 				}
@@ -885,7 +750,10 @@ void TEdit::ShowComponent( BOOL bVisible)
 
 	if(!bVisible)
 		if(!m_strComposition.IsEmpty())
+		{
+			CTachyonInput::CompleteImeComposition();
 			OnImeComposition( g_hWnd, 0, GCS_RESULTSTR);
+		}
 		else if( m_pCandidate && m_pCandidateOwner == this )
 		{
 			m_pCandidate->ShowComponent(FALSE);
@@ -1040,19 +908,8 @@ void TEdit::OnSetFocus(TComponent *pLoseFocus)
 
 	m_pCandidateOwner = this;
 
-	if( m_style & TES_PASSWORD )
-	{
-		DWORD dwConv, dwSent, dwTemp;
-		HIMC hIMC = ::ImmGetContext(g_hWnd);
-		::ImmGetConversionStatus(hIMC, &dwConv, &dwSent);
-		if(dwConv & IME_CMODE_NATIVE)
-		{
-			dwTemp = dwConv & ~IME_CMODE_LANGUAGE;
-			dwConv = dwTemp;
-			::ImmSetConversionStatus( hIMC, dwConv, dwSent);
-		}
-		::ImmReleaseContext( g_hWnd, hIMC);
-	}
+	if( m_style & TES_PASSWORD && CTachyonInput::IsImeNativeMode() )
+		CTachyonInput::SetImeNativeMode(FALSE);
 }
 
 void TEdit::OnLoseFocus(TComponent *pSetFocus)
@@ -1061,7 +918,10 @@ void TEdit::OnLoseFocus(TComponent *pSetFocus)
 		m_pCaret->ShowComponent(GetFocus());
 
 	if(!m_strComposition.IsEmpty())
+	{
+		CTachyonInput::CompleteImeComposition();
 		OnImeComposition( g_hWnd, 0, GCS_RESULTSTR);
+	}
 	else if( m_pCandidate && m_pCandidateOwner == this )
 	{
 		m_pCandidate->ShowComponent(FALSE);

@@ -130,9 +130,7 @@ void CTNumberEdit::OnImeComposition(HWND hWnd, WPARAM wParam, LPARAM lParam)
 		{
 			strORG = strComposition;
 
-			HIMC hImc = ImmGetContext( hWnd );
-			ImmNotifyIME( hImc, NI_COMPOSITIONSTR, CPS_CANCEL, 0 );
-			ImmReleaseContext( hWnd, hImc);
+			CTachyonInput::CancelImeComposition();
 		}
 		else if( !strResult.IsEmpty() )
 		{

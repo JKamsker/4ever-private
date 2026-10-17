@@ -82,6 +82,7 @@ static const SDL_Scancode s_vWINSCAN[256] = {
 static WORD s_vSCANCODE[SDL_SCANCODE_COUNT];
 static Uint32 s_dwMSGEVENT = 0;
 static WORD s_wPROCESSKEY = 0;
+static UINT s_nCHARFLAGS = 0;
 static BOOL s_bQUIT = FALSE;
 
 
@@ -208,8 +209,7 @@ static UINT GetMouseFlags( DWORD dwButtons)
 	return nFlags;
 }
 
-// Posted messages of the window that the engine handles itself go through SDL's queue, in order
-// with the key events: the characters, the IME composition and the engine's own messages.
+// The engine's own posted messages go through SDL's queue, in order with the other events.
 static bool SDLCALL WindowsMessageHook( void *pUserData, MSG *pMSG)
 {
 	if( pMSG->message == WM_QUIT )
@@ -237,40 +237,6 @@ static bool SDLCALL WindowsMessageHook( void *pUserData, MSG *pMSG)
 		// A key the IME takes: the key event says VK_PROCESSKEY, like Windows.
 		s_wPROCESSKEY = pMSG->wParam == VK_PROCESSKEY ? HIWORD(pMSG->lParam) & 0x1FF : 0;
 		return true;
-
-	case WM_CHAR				:
-		{
-			// SDL's window is a Unicode window: the engine reads the characters as an ANSI
-			// window would, in the code page of the keyboard layout.
-			WCHAR wChar = WCHAR(pMSG->wParam);
-			CHAR vCHAR[4];
-			int nCount = 1;
-
-			if( wChar < 0x80 )
-				vCHAR[0] = CHAR(wChar);
-			else
-			{
-				char szCodePage[8];
-				UINT nCodePage = CP_ACP;
-
-				if(::GetLocaleInfoA( MAKELCID( LOWORD(::GetKeyboardLayout(0)), SORT_DEFAULT), LOCALE_IDEFAULTANSICODEPAGE, szCodePage, sizeof(szCodePage)))
-					nCodePage = UINT(atoi(szCodePage));
-
-				nCount = ::WideCharToMultiByte( nCodePage, 0, &wChar, 1, vCHAR, sizeof(vCHAR), NULL, NULL);
-			}
-
-			for( int i=0; i<nCount; i++)
-			{
-				event.user.data1 = (void *) WPARAM(BYTE(vCHAR[i]));
-				SDL_PushEvent(&event);
-			}
-		}
-
-		return false;
-
-	case WM_IME_COMPOSITION		:
-		SDL_PushEvent(&event);
-		return false;
 	}
 
 	if( pMSG->message >= WM_USER && pMSG->message < 0x8000 )
@@ -282,24 +248,13 @@ static bool SDLCALL WindowsMessageHook( void *pUserData, MSG *pMSG)
 	return true;
 }
 
-// The Win32 messages the window handles itself instead of SDL.
+// The Win32 messages the window handles itself instead of SDL. The IME's mode changes and the
+// keyboard layout changes are the edits' to check, then SDL gets them (see DefWindowProc).
 static BOOL IsWindowMessage( UINT message)
 {
 	switch(message)
 	{
-	case WM_CHAR					:
-	case WM_IME_STARTCOMPOSITION	:
-	case WM_IME_ENDCOMPOSITION		:
-	case WM_IME_COMPOSITION			:
-	case WM_IME_SETCONTEXT			:
 	case WM_IME_NOTIFY				:
-	case WM_IME_CONTROL				:
-	case WM_IME_COMPOSITIONFULL		:
-	case WM_IME_SELECT				:
-	case WM_IME_CHAR				:
-	case WM_IME_REQUEST				:
-	case WM_IME_KEYDOWN				:
-	case WM_IME_KEYUP				:
 	case WM_INPUTLANGCHANGEREQUEST	:
 	case WM_INPUTLANGCHANGE			:
 	case WM_SETCURSOR				:
@@ -331,7 +286,9 @@ CTWindow::~CTWindow()
 BOOL CTWindow::InitPlatform()
 {
 	// Win32 behavior: Alt+F4 is the game's key, a click that activates the window counts.
+	// The game draws the IME's composition and candidates itself.
 	SDL_SetHint( SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "0");
+	SDL_SetHint( SDL_HINT_IME_IMPLEMENTED_UI, "composition,candidates");
 	SDL_SetHint( SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 	SDL_SetHint( SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
 
@@ -440,7 +397,7 @@ BOOL CTWindow::CreateEx( DWORD dwExStyle,
 	::SetPropW( m_hWnd, TWINDOW_PROPW, this);
 	m_pSDLProc = (WNDPROC) ::SetWindowLongPtrW( m_hWnd, GWLP_WNDPROC, (LONG_PTR) SubclassProc);
 
-	// SDL keeps the IME off until text input starts. The window reads it itself.
+	// SDL keeps the IME off until text input starts.
 	SDL_StartTextInput(m_pSDL);
 	SDL_SetWindowPosition( m_pSDL, rect.left - rcFRAME.left, rect.top - rcFRAME.top);
 
@@ -519,6 +476,13 @@ LRESULT CTWindow::Default()
 
 LRESULT CTWindow::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 {
+	switch(message)
+	{
+	case WM_IME_NOTIFY				:
+	case WM_INPUTLANGCHANGEREQUEST	:
+	case WM_INPUTLANGCHANGE			: return ::CallWindowProcW( m_pSDLProc, m_hWnd, message, wParam, lParam);
+	}
+
 	return ::DefWindowProcW( m_hWnd, message, wParam, lParam);
 }
 
@@ -528,7 +492,6 @@ LRESULT CTWindow::WindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch(message)
 	{
-	case WM_CHAR			: OnChar( UINT(wParam), LOWORD(lParam), HIWORD(lParam)); return 0;
 	case WM_SETCURSOR		: return OnSetCursor( (HWND) wParam, LOWORD(lParam), HIWORD(lParam));
 	case WM_NCHITTEST		: return OnNcHitTest(point);
 	case WM_NCLBUTTONDOWN	: OnNcLButtonDown( UINT(wParam), point); return 0;
@@ -545,22 +508,15 @@ void CTWindow::Dispatch( const SDL_Event& event)
 	ZeroMemory( &m_vCURRENT, sizeof(MSG));
 
 	if( event.type == s_dwMSGEVENT )
-	{
-		UINT message = UINT(event.user.code);
-		WPARAM wParam = (WPARAM) event.user.data1;
-		LPARAM lParam = (LPARAM) event.user.data2;
-
-		switch(message)
-		{
-		case WM_CHAR				: OnChar( UINT(wParam), LOWORD(lParam), HIWORD(lParam)); break;
-		case WM_IME_COMPOSITION		: OnImeComposition( m_hWnd, wParam, lParam); break;
-		default						: WindowProc( message, wParam, lParam); break;
-		}
-	}
+		WindowProc( UINT(event.user.code), (WPARAM) event.user.data1, (LPARAM) event.user.data2);
 	else switch(event.type)
 	{
 	case SDL_EVENT_KEY_DOWN					:
 	case SDL_EVENT_KEY_UP					: DispatchKey(event); break;
+
+	case SDL_EVENT_TEXT_INPUT				:
+	case SDL_EVENT_TEXT_EDITING				:
+	case SDL_EVENT_TEXT_EDITING_CANDIDATES	: DispatchText(event); break;
 
 	case SDL_EVENT_MOUSE_MOTION				:
 	case SDL_EVENT_MOUSE_BUTTON_DOWN		:
@@ -605,15 +561,88 @@ void CTWindow::DispatchKey( const SDL_Event& event)
 	// Windows sends the Alt combinations and F10 as system keys.
 	BOOL bSystem = nChar == VK_MENU || nChar == VK_F10 || ((nMod & SDL_KMOD_ALT) && !(nMod & SDL_KMOD_CTRL));
 
-	if(bDown)
+	if(!bDown)
+	{
 		if(bSystem)
-			OnSysKeyDown( nChar, 1, nFlags);
+			OnSysKeyUp( nChar, 1, nFlags);
 		else
-			OnKeyDown( nChar, 1, nFlags);
-	else if(bSystem)
-		OnSysKeyUp( nChar, 1, nFlags);
-	else
-		OnKeyUp( nChar, 1, nFlags);
+			OnKeyUp( nChar, 1, nFlags);
+
+		return;
+	}
+
+	if(bSystem)
+	{
+		OnSysKeyDown( nChar, 1, nFlags);
+		return;
+	}
+
+	OnKeyDown( nChar, 1, nFlags);
+	s_nCHARFLAGS = nFlags;
+
+	// The control characters Windows sends after the key: SDL's text has none.
+	UINT nControl = 0;
+
+	switch(nChar)
+	{
+	case VK_BACK	: nControl = 0x08; break;
+	case VK_TAB		: nControl = 0x09; break;
+	case VK_ESCAPE	: nControl = 0x1B; break;
+	case VK_RETURN	: nControl = (nMod & SDL_KMOD_CTRL) ? 0x0A : 0x0D; break;
+	default			:
+		if( (nMod & SDL_KMOD_CTRL) && nChar >= 'A' && nChar <= 'Z' )
+			nControl = nChar - 'A' + 1;
+
+		break;
+	}
+
+	if(nControl)
+		OnChar( nControl, 1, nFlags);
+}
+
+void CTWindow::DispatchText( const SDL_Event& event)
+{
+	switch(event.type)
+	{
+	case SDL_EVENT_TEXT_EDITING				:
+		CTachyonInput::SetImeComposition( event.edit.text, event.edit.start, event.edit.length);
+		OnImeComposition( m_hWnd, 0, CTachyonInput::GetImeComposition().IsEmpty() ? 0 : GCS_COMPSTR|GCS_COMPATTR|GCS_COMPCLAUSE);
+
+		break;
+
+	case SDL_EVENT_TEXT_EDITING_CANDIDATES	:
+		CTachyonInput::SetImeCandidates(
+			event.edit_candidates.candidates,
+			event.edit_candidates.num_candidates,
+			event.edit_candidates.selected_candidate);
+
+		OnImeNotify( m_hWnd, event.edit_candidates.num_candidates ? IMN_CHANGECANDIDATE : IMN_CLOSECANDIDATE, 0);
+		break;
+
+	case SDL_EVENT_TEXT_INPUT				:
+		{
+			BOOL bComposing = !CTachyonInput::GetImeComposition().IsEmpty();
+			CString strText = CTachyonInput::FromUTF8(event.text.text);
+			BOOL bDBCS = FALSE;
+
+			for( int i=0; i<strText.GetLength() && !bDBCS; i++)
+				bDBCS = IsDBCSLeadByte(BYTE(strText[i]));
+
+			// What the IME made is its result; a key's own character is a WM_CHAR per byte.
+			if( bComposing || bDBCS )
+			{
+				CTachyonInput::SetImeResult(event.text.text);
+				OnImeComposition( m_hWnd, 0, GCS_RESULTSTR);
+			}
+			else
+			{
+				for( int i=0; i<strText.GetLength(); i++)
+					OnChar( BYTE(strText[i]), 1, s_nCHARFLAGS);
+			}
+		}
+
+		break;
+	}
 }
 
 void CTWindow::DispatchMouse( const SDL_Event& event)
