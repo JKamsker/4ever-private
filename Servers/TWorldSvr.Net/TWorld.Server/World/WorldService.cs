@@ -174,6 +174,9 @@ public sealed partial class WorldService
 
         // Phase 4d: hand the newly-connected map the current tournament bracket config (TournamentInfo).
         if (_state.Tournament is not null) TournamentInfoBroadcast(session);
+
+        // Where every war stands, and the castle applicant counts (C++ OnMW_CONNECT_ACK, WorldService.Battle.cs).
+        SendBattleStateTo(session);
     }
 
     private void OnMW_ADDCHAR_ACK(ServerSession session, PacketReader r)
@@ -346,6 +349,7 @@ public sealed partial class WorldService
                 if (!string.IsNullOrEmpty(mem.Name)) ch.Name = mem.Name; // world learns the name from the roster
             }
         }
+        if (_state.FindTacticsGuild(charId)?.FindTactics(charId) is { } tm) { tm.OnlineChar = ch; tm.Level = level; }
 
         var main = _state.FindMapSvr(ch.MainId);
         if (main is null) { session.Send(BuildInvalidChar(charId, key, false)); return; }
@@ -465,6 +469,10 @@ public sealed partial class WorldService
 
     // ===== Phase 2: guild handlers =====
 
+    private const int MaxGuildName = 50;                                   // NetCode.h MAX_NAME
+
+    /// <summary>C++ <c>OnMW_GUILDESTABLISH_ACK</c> + <c>OnDM_GUILDESTABLISH_REQ/ACK</c> (SSHandler.cpp:3027-3170): the proc's own
+    /// result goes back to the founder, who joins through <see cref="GuildMemberAdd"/> like any member.</summary>
     private async Task OnGuildEstablish(PacketReader r)
     {
         uint charId = r.ReadUInt32();
@@ -472,76 +480,131 @@ public sealed partial class WorldService
         string name = r.ReadString();
 
         var ch = _state.FindChar(charId, key);
-        if (ch is null) return;
-        if (ch.Guild is not null) { SendToChar(ch, BuildGuildEstablishReq(charId, key, (byte)GuildResult.HaveGuild, 0, name)); return; }
+        if (ch is null || ch.Guild is not null) { SendToCharId(charId, key, BuildGuildEstablishReq(charId, key, (byte)GuildResult.HaveGuild, 0, name)); return; }
+        if (name.Length > MaxGuildName) return;
 
-        int ret = 0;
-        uint guildId;
+        byte ret = (byte)GuildResult.EstablishErr;
+        uint guildId = 0;
         if (_guildDb is not null)
         {
             try
             {
                 var row = await _guildDb.EstablishAsync(name, charId, DateTime.UtcNow);
-                ret = row.Ret; guildId = row.GuildId;
+                ret = (byte)row.Ret; guildId = row.GuildId;
             }
-            catch (Exception ex) { _log.LogWarning(ex, "TGuildEstablish failed."); SendToChar(ch, BuildGuildEstablishReq(charId, key, (byte)GuildResult.EstablishErr, 0, name)); return; }
+            catch (Exception ex) { _log.LogWarning(ex, "TGuildEstablish failed."); }
         }
         else
         {
-            guildId = ++_fakeGuildSeq; // no DB (tests)
+            ret = 0; guildId = ++_fakeGuildSeq; // no DB (tests)
         }
 
-        if (ret != 0 || guildId == 0)
+        if (ret == 0)
         {
-            SendToChar(ch, BuildGuildEstablishReq(charId, key, (byte)GuildResult.EstablishErr, 0, name));
-            return;
+            var guild = new Guild
+            {
+                Id = guildId, Name = name, Chief = charId, ChiefName = ch.Name, Level = 1,
+                Country = ch.Country, TimeEstablish = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                LevelChart = _state.GuildLevelOf(1),
+            };
+            _state.Guilds[guildId] = guild;
+            var mem = NewGuildMember(ch, (byte)GuildDuty.Chief);
+            await GuildMemberAdd(guild, mem);
+            NotifyAddGuildMember(mem, guild);
+            _log.LogInformation("Guild '{Name}' (id {Id}) established by char {Char}.", name, guildId, charId);
         }
-
-        var guild = new Guild
-        {
-            Id = guildId, Name = name, Chief = charId, ChiefName = ch.Name, Level = 1,
-            Country = ch.Country, TimeEstablish = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-            LevelChart = _state.GuildLevelOf(1),
-        };
-        guild.Members[charId] = new GuildMember
-        {
-            CharId = charId, Name = ch.Name, Level = ch.Level, Class = ch.Class,
-            Duty = (byte)GuildDuty.Chief, OnlineChar = ch,
-        };
-        _state.Guilds[guildId] = guild;
-        _state.CharGuild[charId] = guildId;
-        ch.Guild = guild;
-
-        SendToChar(ch, BuildGuildEstablishReq(charId, key, (byte)GuildResult.Success, guildId, name));
-        _log.LogInformation("Guild '{Name}' (id {Id}) established by char {Char}.", name, guildId, charId);
+        SendToChar(ch, BuildGuildEstablishReq(charId, key, ret, guildId, name));
     }
 
+    /// <summary>A member made from an online character (C++ <c>new TGUILDMEMBER()</c> in the establish/answer handlers).</summary>
+    private GuildMember NewGuildMember(Character ch, byte duty) => new()
+    {
+        CharId = ch.CharId, Name = ch.Name, Level = ch.Level, Class = ch.Class, Duty = duty, OnlineChar = ch,
+        Tactics = _state.FindTacticsGuild(ch.CharId)?.Id ?? 0, WarCountry = GetWarCountry(ch),
+    };
+
+    /// <summary>C++ <c>GuildMemberAdd</c> (TWorldSvr.cpp:5301): saved, its member application dropped, then <c>CTGuild::AddMember</c>
+    /// (which updates the level).</summary>
+    private async Task GuildMemberAdd(Guild guild, GuildMember mem)
+    {
+        await Persist("memberAdd", db => db.MemberAddAsync(guild.Id, mem.CharId, mem.Level, mem.Duty));
+        await DelGuildWantedAppSaved(mem.CharId);
+        _state.CharGuild[mem.CharId] = guild.Id;
+        guild.Members[mem.CharId] = mem;
+        UpdateGuildLevel(guild);
+    }
+
+    /// <summary>C++ <c>DelGuildWantedApp</c> (TWorldSvr.cpp:4856): the application and its row (only when there was one).</summary>
+    private async Task DelGuildWantedAppSaved(uint charId)
+    {
+        if (FindWantedApp(charId) is null) return;
+        DelGuildWantedApp(charId);
+        await Persist("volunteeringDel", db => db.VolunteeringDelAsync((byte)GuildRelation.Alliance, charId));   // GUILDAPP_MEMBER
+    }
+
+    /// <summary>C++ <c>NotifyAddGuildMember</c> (TWorldSvr.cpp:5034): the newcomer, if online, and the chief (unless they are the
+    /// same) are sent JOIN_SUCCESS.</summary>
+    private void NotifyAddGuildMember(GuildMember mem, Guild guild)
+    {
+        if (_state.CharactersByName.TryGetValue(mem.Name, out var ch))
+        {
+            mem.OnlineChar = ch;
+            ch.Guild = guild;
+            SendToChar(ch, BuildGuildJoinReq(ch.CharId, ch.Key, (byte)GuildResult.JoinSuccess, guild.Id, guild.Fame, guild.FameColor, guild.Name, mem.CharId, mem.Name, 0));
+        }
+        if (guild.FindMember(guild.Chief) is not { } chief || chief.CharId == mem.CharId) return;
+        if (_state.CharactersByName.TryGetValue(chief.Name, out var chiefChar))
+            SendToChar(chiefChar, BuildGuildJoinReq(chiefChar.CharId, chiefChar.Key, (byte)GuildResult.JoinSuccess, guild.Id, guild.Fame, guild.FameColor, guild.Name, mem.CharId, mem.Name, 0));
+    }
+
+    /// <summary>C++ <c>GuildMemberDel</c> (TWorldSvr.cpp:5316): <c>TGuildLeave</c> with the reason and the time, then
+    /// <c>CTGuild::DelMember</c>.</summary>
+    private async Task GuildMemberDel(Guild guild, GuildMember mem, GuildResult reason)
+    {
+        await Persist("leave", db => db.LeaveAsync(guild.Id, mem.CharId, (byte)reason, (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+        _state.CharGuild.Remove(mem.CharId);
+        guild.Members.Remove(mem.CharId);
+        UpdateGuildLevel(guild);
+    }
+
+    /// <summary>C++ <c>OnMW_GUILDDISORGANIZATION_ACK</c> (SSHandler.cpp:3171): ignored when the guild is already in that state.</summary>
     private async Task OnGuildDisorg(PacketReader r)
     {
         uint charId = r.ReadUInt32();
         uint key = r.ReadUInt32();
         byte disorg = r.ReadByte();
 
-        var guild = _state.FindGuildByChar(charId);
-        if (guild is null || !guild.IsChief(charId)) return;
+        var guild = _state.FindChar(charId, key)?.Guild;
+        if (guild is null || guild.Disorg == disorg) return;
         guild.Disorg = disorg;
         guild.Time = disorg != 0 ? (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds() : 0;
         if (_guildDb is not null) { try { await _guildDb.DisorgAsync(guild.Id, disorg, guild.Time); } catch (Exception ex) { _log.LogWarning(ex, "TGuildDisorg failed."); } }
-        BroadcastToGuild(guild, () => BuildGuildDisorgReq(charId, key, disorg));
+        SendToCharId(charId, key, BuildGuildDisorgReq(charId, key, disorg));   // C++ OnDM_GUILDDISORGANIZATION_REQ: the chief only
     }
 
+    /// <summary>C++ <c>OnMW_GUILDINVITE_ACK</c> (SSHandler.cpp:3745): the inviter's guild must exist, not be disbanding and have
+    /// room; the target must be of the same country, without a guild and not one of its mercenaries.</summary>
     private void OnGuildInvite(PacketReader r)
     {
         uint charId = r.ReadUInt32();
         uint key = r.ReadUInt32();
         string target = r.ReadString();
 
-        var guild = _state.FindGuildByChar(charId);
-        if (guild is null) return;
-        if (_state.CharactersByName.TryGetValue(target, out var tgt))
-            SendToChar(tgt, BuildGuildInviteReq(tgt.CharId, tgt.Key, guild.Name, charId, _state.Characters.TryGetValue(charId, out var inv) ? inv.Name : ""));
+        var ch = _state.FindChar(charId, key);
+        if (ch is null) return;
+        var guild = ch.Guild;
+        byte[] Fail(GuildResult res, byte max = 0) => BuildGuildJoinReq(charId, key, (byte)res, 0, 0, 0, "", 0, "", max);
+        if (guild is null || guild.Disorg != 0) { SendToChar(ch, Fail(GuildResult.NotFound)); return; }
+        if (guild.Members.Count >= guild.MaxMembers) { SendToChar(ch, Fail(GuildResult.MemberFull, (byte)guild.MaxMembers)); return; }
+        if (!_state.CharactersByName.TryGetValue(target, out var tgt)) return;
+        if (ch.Country != tgt.Country) { SendToChar(ch, Fail(GuildResult.Fail)); return; }
+        if (tgt.Guild is not null) { SendToChar(ch, Fail(GuildResult.HaveGuild)); return; }
+        if (guild.FindTactics(target) is not null) return;
+        SendToChar(tgt, BuildGuildInviteReq(tgt.CharId, tgt.Key, guild.Name, charId, ch.Name));
     }
 
+    /// <summary>C++ <c>OnMW_GUILDINVITEANSWER_ACK</c> (SSHandler.cpp:3627): a refusal goes to the inviter (with the invitee's name);
+    /// no guild / full / already in one go to both.</summary>
     private async Task OnGuildInviteAnswer(PacketReader r)
     {
         uint charId = r.ReadUInt32();
@@ -550,69 +613,64 @@ public sealed partial class WorldService
         uint inviter = r.ReadUInt32();
 
         var ch = _state.FindChar(charId, key);
-        if (ch is null) return;
-        var guild = _state.FindGuildByChar(inviter);
-        if (answer != Ask.Yes || guild is null || ch.Guild is not null || guild.Members.Count >= guild.MaxMembers)
+        if (ch is null || !_state.Characters.TryGetValue(inviter, out var chief)) return;
+        void Both(GuildResult res, byte max = 0)
         {
-            SendToChar(ch, BuildGuildJoinReq(charId, key, (byte)GuildResult.JoinDeny, 0, 0, 0, "", 0, "", 0));
-            return;
+            SendToChar(ch, BuildGuildJoinReq(charId, key, (byte)res, 0, 0, 0, "", 0, "", max));
+            SendToChar(chief, BuildGuildJoinReq(chief.CharId, chief.Key, (byte)res, 0, 0, 0, "", 0, "", max));
         }
+        if (answer != Ask.Yes) { SendToChar(chief, BuildGuildJoinReq(chief.CharId, chief.Key, answer, 0, 0, 0, "", 0, ch.Name, 0)); return; }
+        var guild = chief.Guild;
+        if (guild is null) { Both(GuildResult.NotFound); return; }
+        if (guild.FindTactics(charId) is not null) return;
+        if (guild.Members.Count >= guild.MaxMembers) { Both(GuildResult.MemberFull, (byte)guild.MaxMembers); return; }
+        if (ch.Guild is not null) { Both(GuildResult.HaveGuild); return; }
 
-        guild.Members[charId] = new GuildMember
-        {
-            CharId = charId, Name = ch.Name, Level = ch.Level, Class = ch.Class,
-            Duty = (byte)GuildDuty.None, OnlineChar = ch,
-        };
-        _state.CharGuild[charId] = guild.Id;
-        ch.Guild = guild;
-        if (_guildDb is not null) { try { await _guildDb.MemberAddAsync(guild.Id, charId, ch.Level, (byte)GuildDuty.None); } catch (Exception ex) { _log.LogWarning(ex, "TGuildMemberAdd failed."); } }
-
-        byte[] join = BuildGuildJoinReq(charId, key, (byte)GuildResult.JoinSuccess, guild.Id, guild.Fame, guild.FameColor, guild.Name, charId, ch.Name, (byte)guild.MaxMembers);
-        SendToChar(ch, join);
-        var chief = guild.FindMember(guild.Chief)?.OnlineChar;
-        if (chief is not null) SendToChar(chief, join);
+        var mem = NewGuildMember(ch, (byte)GuildDuty.None);
+        await GuildMemberAdd(guild, mem);
+        NotifyAddGuildMember(mem, guild);
         _log.LogInformation("Char {Char} joined guild {Id}.", charId, guild.Id);
     }
 
+    /// <summary>C++ <c>OnMW_GUILDLEAVE_ACK</c> (SSHandler.cpp:3571): only the one leaving is told, with the time (its wait before
+    /// joining again).</summary>
     private async Task OnGuildLeave(PacketReader r)
     {
         uint charId = r.ReadUInt32();
         uint key = r.ReadUInt32();
         var ch = _state.FindChar(charId, key);
-        var guild = _state.FindGuildByChar(charId);
-        if (ch is null || guild is null) return;
+        var guild = ch?.Guild;
+        if (ch is null || guild?.FindMember(charId) is not { } mem) return;
 
-        var mem = guild.FindMember(charId);
-        string name = mem?.Name ?? ch.Name;
-        guild.Members.Remove(charId);
-        _state.CharGuild.Remove(charId);
+        await GuildMemberDel(guild, mem, GuildResult.LeaveSelf);
         ch.Guild = null;
-        if (_guildDb is not null) { try { await _guildDb.LeaveAsync(guild.Id, charId, (byte)GuildResult.LeaveSelf, (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()); } catch (Exception ex) { _log.LogWarning(ex, "TGuildLeave failed."); } }
-        SendToChar(ch, BuildGuildLeaveReq(charId, key, name, (byte)GuildResult.LeaveSelf, 0));
-        BroadcastToGuild(guild, () => BuildGuildLeaveReq(charId, key, name, (byte)GuildResult.LeaveSelf, 0));
+        SendToChar(ch, BuildGuildLeaveReq(charId, key, ch.Name, (byte)GuildResult.LeaveSelf, (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
     }
 
+    /// <summary>C++ <c>OnMW_GUILDKICKOUT_ACK</c> (SSHandler.cpp:3340): a member with a duty can only be kicked by the chief; the
+    /// target (if online) and the one who asked are told.</summary>
     private async Task OnGuildKickout(PacketReader r)
     {
         uint charId = r.ReadUInt32();
         uint key = r.ReadUInt32();
         string target = r.ReadString();
 
-        var guild = _state.FindGuildByChar(charId);
-        if (guild is null) return;
-        var mem = guild.FindMember(target);
-        if (mem is null) return;
+        var guild = _state.FindChar(charId, key)?.Guild;
+        if (guild?.FindMember(target) is not { } mem) return;
+        if (mem.Duty != (byte)GuildDuty.None && guild.Chief != charId) return;
 
-        uint targetId = mem.CharId;
-        var targetChar = mem.OnlineChar;
-        guild.Members.Remove(targetId);
-        _state.CharGuild.Remove(targetId);
-        if (targetChar is not null) targetChar.Guild = null;
-        if (_guildDb is not null) { try { await _guildDb.KickoutAsync(guild.Id, targetId); } catch (Exception ex) { _log.LogWarning(ex, "TGuildKickout failed."); } }
-        if (targetChar is not null) SendToChar(targetChar, BuildGuildLeaveReq(targetId, targetChar.Key, target, (byte)GuildResult.LeaveKick, 0));
-        BroadcastToGuild(guild, () => BuildGuildLeaveReq(targetId, key, target, (byte)GuildResult.LeaveKick, 0));
+        if (_state.CharactersByName.TryGetValue(target, out var tgt))
+        {
+            if (tgt.CharId != mem.CharId) return;
+            tgt.Guild = null;
+            SendToChar(tgt, BuildGuildLeaveReq(tgt.CharId, tgt.Key, tgt.Name, (byte)GuildResult.LeaveKick, 0));
+        }
+        await GuildMemberDel(guild, mem, GuildResult.LeaveKick);
+        SendToCharId(charId, key, BuildGuildLeaveReq(charId, key, target, (byte)GuildResult.LeaveKick, 0));
     }
 
+    /// <summary>C++ <c>OnMW_GUILDDUTY_ACK</c> (SSHandler.cpp:3408): not while disbanding, not to a mercenary, at most two
+    /// vice-chiefs; the target and the one who asked are told — who, handing the guild over, is first told it has no duty.</summary>
     private async Task OnGuildDuty(PacketReader r)
     {
         uint charId = r.ReadUInt32();
@@ -620,27 +678,29 @@ public sealed partial class WorldService
         string target = r.ReadString();
         byte duty = r.ReadByte();
 
-        var guild = _state.FindGuildByChar(charId);
-        if (guild is null || !guild.IsChief(charId)) return;
+        var ch = _state.FindChar(charId, key);
+        var guild = ch?.Guild;
+        if (ch is null || guild is null || guild.Disorg != 0) return;
         var mem = guild.FindMember(target);
-        if (mem is null || mem.CharId == charId || mem.Duty == duty) return;
+        if (mem is null || mem.Duty == duty || mem.CharId == charId || mem.Tactics != 0) return;
+        if (duty == (byte)GuildDuty.ViceChief && guild.Members.Values.Count(m => m.Duty == (byte)GuildDuty.ViceChief) == 2) return;
 
         if (duty == (byte)GuildDuty.Chief)
         {
-            var oldChief = guild.FindMember(guild.Chief);
-            if (oldChief is not null)
-            {
-                oldChief.Duty = (byte)GuildDuty.None;
-                if (_guildDb is not null) { try { await _guildDb.DutyAsync(oldChief.CharId, guild.Id, (byte)GuildDuty.None); } catch (Exception ex) { _log.LogWarning(ex, "TGuildDuty(old chief) failed."); } }
-            }
+            if (guild.FindMember(charId) is { } self) self.Duty = (byte)GuildDuty.None;   // CTGuild::Designate
+            await Persist("duty", db => db.DutyAsync(charId, guild.Id, (byte)GuildDuty.None));
+            SendToCharId(charId, key, BuildGuildDutyReq(charId, key, ch.Name, (byte)GuildDuty.None));
             guild.Chief = mem.CharId;
             guild.ChiefName = mem.Name;
         }
         mem.Duty = duty;
-        if (_guildDb is not null) { try { await _guildDb.DutyAsync(mem.CharId, guild.Id, duty); } catch (Exception ex) { _log.LogWarning(ex, "TGuildDuty failed."); } }
-        BroadcastToGuild(guild, () => BuildGuildDutyReq(mem.CharId, key, target, duty));
+        await Persist("duty", db => db.DutyAsync(mem.CharId, guild.Id, duty));
+        if (mem.OnlineChar is { } tgt) SendToChar(tgt, BuildGuildDutyReq(tgt.CharId, tgt.Key, target, duty));
+        SendToCharId(charId, key, BuildGuildDutyReq(charId, key, target, duty));
     }
 
+    /// <summary>C++ <c>OnMW_GUILDPEER_ACK</c> (SSHandler.cpp:3500): not while disbanding, not to an unknown member or the same
+    /// peerage; <see cref="CheckPeerage"/> refuses with GUILD_FAIL; the target (unless it asked) and the one who asked are told.</summary>
     private async Task OnGuildPeer(PacketReader r)
     {
         uint charId = r.ReadUInt32();
@@ -648,14 +708,29 @@ public sealed partial class WorldService
         string target = r.ReadString();
         byte peer = r.ReadByte();
 
-        var guild = _state.FindGuildByChar(charId);
-        if (guild is null || !guild.IsChief(charId)) return;
+        var ch = _state.FindChar(charId, key);
+        var guild = ch?.Guild;
+        if (ch is null || guild is null || guild.Disorg != 0) return;
         var mem = guild.FindMember(target);
-        if (mem is null) { SendToCharId(charId, key, BuildGuildPeerReq(charId, key, (byte)GuildResult.Fail, target, peer, 0)); return; }
+        if (mem is null || mem.Peer == peer) return;
         byte old = mem.Peer;
-        mem.Peer = peer;
-        if (_guildDb is not null) { try { await _guildDb.PeerAsync(mem.CharId, guild.Id, peer); } catch (Exception ex) { _log.LogWarning(ex, "TGuildPeer failed."); } }
-        BroadcastToGuild(guild, () => BuildGuildPeerReq(charId, key, (byte)GuildResult.Success, target, peer, old));
+        if (!CheckPeerage(guild, mem.Duty, peer)) { SendToCharId(charId, key, BuildGuildPeerReq(charId, key, (byte)GuildResult.Fail, target, peer, old)); return; }
+
+        mem.Peer = peer;                                                   // CTGuild::CreatePeerage
+        await Persist("peer", db => db.PeerAsync(mem.CharId, guild.Id, peer));
+        if (mem.OnlineChar is { } tgt && tgt != ch) SendToChar(tgt, BuildGuildPeerReq(tgt.CharId, tgt.Key, (byte)GuildResult.Success, target, peer, old));
+        SendToCharId(charId, key, BuildGuildPeerReq(charId, key, (byte)GuildResult.Success, target, peer, old));
+    }
+
+    /// <summary>C++ <c>CTGuild::CheckPeerage</c> (TGuild.cpp:205): the level's cap per peerage, and from level 3 the level's top
+    /// peerage is the chief's alone.</summary>
+    public static bool CheckPeerage(Guild guild, byte duty, byte peer)
+    {
+        if (peer == 0) return true;
+        if (peer > Proto.MaxGuildPeer || guild.LevelChart is not { } lv) return false;
+        if (guild.Members.Values.Count(m => m.Peer == peer) >= lv.Peer[peer - 1]) return false;
+        byte chiefOnly = lv.Level switch { 3 or 4 => 1, 5 or 6 => 2, 7 or 8 => 3, 9 => 4, 10 => 5, _ => 0 };   // BARON..DUKE
+        return !(chiefOnly != 0 && duty != (byte)GuildDuty.Chief && peer == chiefOnly);
     }
 
     private void OnGuildInfo(PacketReader r)
@@ -932,6 +1007,7 @@ public sealed partial class WorldService
             if (mem is not null) mem.OnlineChar = null; // keep roster, drop online link
             ch.Guild = null;
         }
+        if (_state.FindTacticsGuild(ch.CharId)?.FindTactics(ch.CharId) is { } tm) tm.OnlineChar = null;
         if (ch.Party is not null) LeaveParty(ch, 0);   // C++ CloseChar → LeaveParty(pTCHAR, 0)
         WarCountryLeave(ch);
         if (ch.TmsIds.Count > 0) TmsLeaveAll(ch);

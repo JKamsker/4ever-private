@@ -49,6 +49,11 @@ enc_temp_folder/
 *.tmp
 *.tmp_proj
 
+# ----- .NET build output (restore/build regenerate it) -----
+**/obj/
+**/bin/
+!/Lib/3rdParty/**/bin/
+
 # ----- MIDL output regenerated from the ATL servers' *.idl on build -----
 **/*_i.c
 **/*_p.c

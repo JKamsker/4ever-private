@@ -174,7 +174,8 @@ public sealed class WorldWorker : BackgroundService
                 Level = m.Level, Class = m.Class, Duty = m.Duty, Peer = m.Peer, ConnectedDate = m.ConnectedDate,
             };
             state.CharGuild[m.CharId] = m.GuildId;
-            if (m.CharId == guild.Chief) guild.ChiefName = m.Name;
+            if (m.Duty == (byte)GuildDuty.Chief)                                 // C++ LoadGuild: the chief gives the guild its country
+                (guild.Chief, guild.ChiefName, guild.Country) = (m.CharId, m.Name, m.Country);
         }
 
         // ---- Phase 2b sub-loads (each best-effort: a missing table/view is non-fatal) ----
@@ -183,8 +184,9 @@ public sealed class WorldWorker : BackgroundService
             foreach (var a in await db.LoadArticlesAsync(ct))
                 if (state.Guilds.TryGetValue(a.GuildId, out var g))
                 {
-                    g.Articles[a.Id] = new GuildArticle { Id = a.Id, Duty = a.Duty, Writer = a.Writer, Title = a.Title, Article = a.Article, Date = a.Time.ToString() };
+                    g.Articles[a.Id] = new GuildArticle { Id = a.Id, Duty = a.Duty, Writer = a.Writer, Title = a.Title, Article = a.Article, Date = WorldService.ArticleDate(a.Time) };
                     if (a.Id > g.ArticleSeq) g.ArticleSeq = a.Id;
+                    g.ArticleTitle = a.Title;                                    // C++ CTGuild::AddArticle (load): the last loaded
                 }
         });
         await TryLoad("tactics", async () =>
@@ -194,7 +196,9 @@ public sealed class WorldWorker : BackgroundService
                 {
                     g.Tactics[t.CharId] = new TacticsMember { CharId = t.CharId, Name = t.Name, Level = t.Level, Class = t.Class, RewardPoint = t.RewardPoint, RewardMoney = t.RewardMoney, GainPoint = t.GainPoint, Day = t.Day, EndTime = t.EndTime };
                     state.CharTactics[t.CharId] = t.GuildId;
+                    state.Expired.Add(new ExpiredBuf((byte)ExpiredType.GuildTactics, t.EndTime, t.GuildId, t.CharId));   // C++ bInitExpired
                 }
+            state.Expired.Sort((x, y) => x.TimeExpired.CompareTo(y.TimeExpired));   // the queue is kept by fire time
         });
         await TryLoad("relations", async () =>
         {
@@ -221,7 +225,9 @@ public sealed class WorldWorker : BackgroundService
                     var pr = new GuildPvpRecord { CharId = rec.CharId, Date = rec.Date, KillCount = rec.KillCount, DieCount = rec.DieCount };
                     Array.Copy(rec.Point, pr.Point, Math.Min(rec.Point.Length, pr.Point.Length));
                     mem.Records.Add(pr);
+                    if (state.RecentRecordDate < rec.Date) state.RecentRecordDate = rec.Date;
                 }
+            foreach (var g in state.Guilds.Values) g.CalcWeekRecord(state.RecentRecordDate);   // C++ LoadData
         });
         await TryLoad("stats", async () =>
         {
@@ -233,7 +239,8 @@ public sealed class WorldWorker : BackgroundService
             foreach (var it in await db.LoadCabinetAsync(ct))
                 if (state.Guilds.TryGetValue(it.OwnerId, out var g))
                 {
-                    var item = new GuildItem { ItemDbId = it.ItemDbId, StorageId = it.StorageId, ItemId = it.ItemId, Level = it.Level, Count = it.Count, GLevel = it.GLevel, DuraMax = it.DuraMax, DuraCur = it.DuraCur, RefineCur = it.RefineCur, EndTime = it.EndTime, GradeEffect = it.GradeEffect };
+                    var item = new GuildItem { ItemDbId = it.ItemDbId, StorageId = it.StorageId, ItemId = it.ItemId, Level = it.Level, Count = it.Count, GLevel = it.GLevel, DuraMax = it.DuraMax, DuraCur = it.DuraCur, RefineCur = it.RefineCur, EndTime = it.EndTime, GradeEffect = it.GradeEffect,
+                        Gem = it.Gem, MoggItemId = it.MoggItemId, ItemSlot = it.ItemSlot };
                     Array.Copy(it.Magic, item.Magic, 6); Array.Copy(it.Value, item.Value, 6); Array.Copy(it.ExtValue, item.ExtValue, 6);
                     g.Cabinet.Add(item);
                 }
@@ -242,15 +249,15 @@ public sealed class WorldWorker : BackgroundService
         {
             foreach (var w in await db.LoadWantedAsync(ct))
             {
-                var name = state.FindGuild(w.GuildId)?.Name ?? "";
-                state.GuildWanted[w.GuildId] = new GuildWanted { GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Name = name };
+                var guild = state.FindGuild(w.GuildId);                           // C++ AddGuildWanted: the guild's name and country
+                state.GuildWanted[w.GuildId] = new GuildWanted { GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Name = guild?.Name ?? "", Country = guild?.Country ?? 0 };
             }
         });
         await TryLoad("tactics-wanted", async () =>
         {
             foreach (var w in await db.LoadTacticsWantedAsync(ct))
             {
-                state.TacticsWanted[w.Id] = new GuildTacticsWanted { Id = w.Id, GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Day = w.Day, Gold = w.Gold, Silver = w.Silver, Cooper = w.Cooper, Point = w.PvPoint, Name = state.FindGuild(w.GuildId)?.Name ?? "" };
+                state.TacticsWanted[w.Id] = new GuildTacticsWanted { Id = w.Id, GuildId = w.GuildId, MinLevel = w.MinLevel, MaxLevel = w.MaxLevel, EndTime = w.EndTime, Title = w.Title, Text = w.Text, Day = w.Day, Gold = w.Gold, Silver = w.Silver, Cooper = w.Cooper, Point = w.PvPoint, Name = state.FindGuild(w.GuildId)?.Name ?? "", Country = state.FindGuild(w.GuildId)?.Country ?? 0 };
                 if (w.Id > state.TacticsWantedSeq) state.TacticsWantedSeq = w.Id;
             }
         });
@@ -258,11 +265,15 @@ public sealed class WorldWorker : BackgroundService
         {
             foreach (var v in await db.LoadVolunteersAsync(ct))
             {
-                // type 1 = guild-wanted applicant, type 2 = tactics-wanted applicant (best-effort attach by id)
-                if (state.GuildWanted.TryGetValue(v.Id, out var gw))
-                    gw.Apps[v.CharId] = new GuildWantedApp { CharId = v.CharId, WantedId = v.Id, Class = v.Class, Level = v.Level, Name = v.Name };
+                // C++ LoadData: bType GUILDAPP_MEMBER (1) applies to a guild's ad (by guild id), else to a tactics ad (by its id)
+                if (v.Type == (byte)GuildRelation.Alliance)
+                {
+                    if (state.GuildWanted.TryGetValue(v.Id, out var gw))
+                        gw.Apps[v.CharId] = new GuildWantedApp { CharId = v.CharId, WantedId = v.Id, Class = v.Class, Level = v.Level, Name = v.Name };
+                }
                 else if (state.TacticsWanted.TryGetValue(v.Id, out var tw))
-                    tw.Apps[v.CharId] = new GuildTacticsWantedApp { CharId = v.CharId, WantedId = v.Id, Class = v.Class, Level = v.Level, Name = v.Name };
+                    tw.Apps[v.CharId] = new GuildTacticsWantedApp { CharId = v.CharId, WantedId = v.Id, WantedGuildId = tw.GuildId, Class = v.Class, Level = v.Level, Name = v.Name,
+                        Day = tw.Day, Point = tw.Point, Gold = tw.Gold, Silver = tw.Silver, Cooper = tw.Cooper };
             }
         });
 

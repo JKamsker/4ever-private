@@ -166,7 +166,7 @@ public class LoopSkillTests
         await h.Service.DispatchWorldAsync(w.ToArray());
 
         var mail = Assert.Single(db.Mails);
-        Assert.Equal(("Operator", "You won", (byte)1 /* POST_PACKAGE */), (mail.Sender, mail.Title, mail.Type));
+        Assert.Equal(("Operator", MapService.NetString("You won"), (byte)1 /* POST_PACKAGE */), (mail.Sender, mail.Title, mail.Type));   // as the C++ BuildNetString
         var item = Assert.Single(mail.Items);
         Assert.Equal((Prize, (byte)2, 1_000_000 + 24 * 3600L), (item.TemplateId, item.Count, item.EndTime));
         Assert.True(c.Has(Msg.CS_POSTRECV_ACK));
