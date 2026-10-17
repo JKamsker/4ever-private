@@ -105,5 +105,13 @@ $RECYCLE.BIN/
 *_LOCAL_[0-9]*
 *_REMOTE_[0-9]*
 
+
+/OLD SOURCES/*
+/OLDER SOURCES/*
+/CLASSIC/*
+
 # CMake build output (Client/CMakePresets.json)
 /build/
+/4Genesis/*
+/4Genesis-installer/*
+/4Revelation/*
