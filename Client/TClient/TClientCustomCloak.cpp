@@ -1,7 +1,9 @@
 #include "Stdafx.h"
 #include "TClientCustomCloak.h"
 #include "TClientWnd.h"
-#include "afxinet.h"
+#include <urlmon.h>
+
+#pragma comment(lib, "urlmon.lib")
 
 DWORD CTClientCustomCloak::m_dwLEFTTICK = TMAXGUILDMARK_MAKETICK;
 

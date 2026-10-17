@@ -471,7 +471,6 @@ BOOL CTClientApp::InitInstance()
 */
 #endif
 
-	AfxEnableControlContainer();
 	CoInitialize(NULL);
 
 	if( GdiplusStartup( &m_pGDI, &vGDIInput, NULL) != Ok )

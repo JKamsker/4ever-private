@@ -10,9 +10,7 @@
 
 #pragma warning( disable : 4312 4091)
 
-#include <afx.h>
-#include <afxwin.h>
-#include <afxsock.h>
+#include "../../Engine Lib/Engine Lib/TAfx.h"
 
 // STL
 #include <vector>

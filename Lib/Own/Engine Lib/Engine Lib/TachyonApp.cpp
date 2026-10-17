@@ -59,10 +59,6 @@ int CTachyonApp::Main( HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow)
 	if(!m_pApp)
 		return -1;
 
-	// MFC's core classes (CString, CFile) still need their module state.
-	if(!AfxWinInit( hInstance, NULL, lpCmdLine, nCmdShow))
-		return -1;
-
 	m_pApp->m_hInstance = hInstance;
 	m_pApp->m_lpCmdLine = lpCmdLine;
 	m_pApp->m_nCmdShow = nCmdShow;

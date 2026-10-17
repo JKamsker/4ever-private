@@ -5,7 +5,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+// The client has no MFC (GameConfig.h then takes CString from TAfx.h); the launcher does.
+#ifndef TCLIENT_NO_MFC
 #include <afx.h>
+#endif
 #include <tchar.h>
 #include "GameConfig.h"
 

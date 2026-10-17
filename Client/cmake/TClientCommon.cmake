@@ -1,5 +1,5 @@
 # Settings shared by every client target. They mirror the Release|Win32 configuration of the
-# .vcxproj files (static MFC, MBCS, /MT, CP949 execution charset), so the CMake build produces
+# .vcxproj files (MBCS, /MT, CP949 execution charset), so the CMake build produces
 # the same code as the MSBuild one.
 
 set(TCLIENT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../..")
@@ -9,11 +9,9 @@ set(TCLIENT_LIB_OWN "${TCLIENT_ROOT}/Lib/Own")
 set(TCLIENT_LIB_3RD "${TCLIENT_ROOT}/Lib/3rdParty")
 set(TCLIENT_DXSDK "${TCLIENT_LIB_3RD}/DirectX9 (June 2010)")
 
-# Static MFC (UseOfMfc=Static). Only the Visual Studio generators read this; with Ninja the
-# MFC headers pick the static libraries themselves through #pragma comment(lib).
-set(CMAKE_MFC_FLAG 1)
+# No MFC: TAfx.h (Engine Lib) gives its core classes, on top of ATL's CString/CRect/CTime.
 
-# /MT everywhere (RuntimeLibrary=MultiThreaded), static MFC requires it.
+# /MT everywhere (RuntimeLibrary=MultiThreaded).
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # With Ninja, CMake scans .rc dependencies by running the C compiler with the RC flags, and
@@ -33,7 +31,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "/Od /RTC1")
 set(CMAKE_C_FLAGS_DEBUG "/Od /RTC1")
 
 add_library(tclient_options INTERFACE)
-target_compile_definitions(tclient_options INTERFACE _MBCS)
+target_compile_definitions(tclient_options INTERFACE _MBCS TCLIENT_NO_MFC)
 target_compile_options(tclient_options INTERFACE
     /source-charset:utf-8
     /W3

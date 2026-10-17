@@ -6,22 +6,12 @@
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS	// some CString constructors will be explicit
 
-// turns off MFC's hiding of some common and often safely ignored warning messages
-#define _AFX_ALL_WARNINGS
-
 #define _WIN32_DCOM 
 
 // Global Include
 #include "..\global\globalinc.h"
 
-#include <afxwin.h>         // MFC core and standard components
-#include <afxext.h>         // MFC extensions
-#include <afxdisp.h>        // MFC Automation classes
-
-#include <afxdtctl.h>		// MFC support for Internet Explorer 4 Common Controls
-#ifndef _AFX_NO_AFXCMN_SUPPORT
-#include <afxcmn.h>			// MFC support for Windows Common Controls
-#include <afxsock.h>
+#include <TAfx.h>			// MFC's core classes without MFC
 #include <direct.h>
 #include <dbghelp.h>
 
@@ -65,4 +55,3 @@
 #include <iterator>
 
 #pragma comment(lib, "Rpcrt4.lib")
-#endif // _AFX_NO_AFXCMN_SUPPORT

@@ -46,19 +46,8 @@ inline T* TTEMP( T&& vTEMP )
 	return &vTEMP;
 }
 
-// MFC's GetSafeHwnd()/GetSafeHdc()/GetSafeHandle() return NULL by testing this == NULL. Standard
-// C++ says this is never NULL, so clang removes that test and p->GetSafeHwnd() crashes on a NULL
-// p (MSVC keeps it). These test the pointer instead: use them whenever the pointer may be NULL.
-inline HWND TSAFE_HWND( const CWnd* pWnd )
-{
-	return pWnd ? pWnd->m_hWnd : NULL;
-}
-
-inline HDC TSAFE_HDC( const CDC* pDC )
-{
-	return pDC ? pDC->m_hDC : NULL;
-}
-
+// The handle of a GDI object that may be NULL (MFC's GetSafeHandle() tested this == NULL,
+// which clang removes). TSAFE_HWND for windows is in TWindow.h.
 inline HANDLE TSAFE_HANDLE( const CGdiObject* pObject )
 {
 	return pObject ? (HANDLE) pObject->m_hObject : NULL;

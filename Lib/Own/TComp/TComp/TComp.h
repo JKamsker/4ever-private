@@ -1,11 +1,7 @@
 #ifndef _INC_TCOMP_H
 #define _INC_TCOMP_H
 
-#include <afx.h>
-#include <afxwin.h>
-#include <afxsock.h>
-#include <afxdisp.h>
-#include <afxdhtml.h>
+#include <TAfx.h>
 
 #include <imm.h>
 

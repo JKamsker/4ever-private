@@ -221,6 +221,9 @@
     <ClInclude Include="TWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TAfx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="TachyonSession.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -419,7 +419,7 @@ CPacket& CPacket::operator >> ( WORD& param)
 	return *this;
 }
 
-#ifdef _AFX
+#if defined(_AFX) || defined(__TAFX_H)
 CPacket& CPacket::operator >> ( CString& param)
 #else
 CPacket& CPacket::operator >> ( LPCTSTR& param)
@@ -436,7 +436,7 @@ CPacket& CPacket::operator >> ( LPCTSTR& param)
 		Read( buff, nLength);
 		param = buff;
 
-#ifdef _AFX
+#if defined(_AFX) || defined(__TAFX_H)
 		delete[] buff;
 #endif
 	}
