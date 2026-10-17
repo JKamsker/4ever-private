@@ -1,0 +1,4 @@
+v1.161.9510-579 (2026-09-22) https://github.com/bkaradzic/bgfx.cmake/releases/tag/v1.161.9510-579 - trimmed: bgfx/examples (except common), bgfx/tools/bin, bgfx/bindings, bgfx/docs removed
+
+Local patches:
+- bx/include/bx/macros.h: do not #define __stdcall away in 32-bit builds (clang-cl x86 + MSVC STL).

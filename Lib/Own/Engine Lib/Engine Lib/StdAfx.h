@@ -17,9 +17,7 @@
 #endif
 #endif
 
-#include <afx.h>
-#include <afxwin.h>
-#include <afxsock.h>
+#include <TAfx.h>
 #include "T3D.h"
 #include <zlib.h>
 #include <shlwapi.h>

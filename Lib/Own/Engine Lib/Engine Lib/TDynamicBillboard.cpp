@@ -1,7 +1,7 @@
 #include "stdafx.h"
 
 
-LPDIRECT3DSURFACE9 CTDynamicBillboard::m_pZBUF = NULL;
+LPTSURFACE CTDynamicBillboard::m_pZBUF = NULL;
 
 BYTE CTDynamicBillboard::m_bLevel = TDBB_LEVEL_HI;
 FLOAT CTDynamicBillboard::m_fMinDIST = 7.0f;
@@ -143,7 +143,7 @@ BYTE CTDynamicBillboard::CanUSE( CD3DDevice *pDevice,
 	if( !pDevice || !pCamera || !pTPOS || fRadius == 0.0f || fHeight == 0.0f )
 		return FALSE;
 
-	FLOAT fDIST = D3DXVec3Length(&(pCamera->m_vPosition - (*pTPOS)));
+	FLOAT fDIST = D3DXVec3Length(TTEMP((pCamera->m_vPosition - (*pTPOS))));
 	if( fDIST < m_fMinDIST )
 		return FALSE;
 
@@ -216,8 +216,8 @@ void CTDynamicBillboard::UpdateBUF( CD3DDevice *pDevice,
 		return;
 	}
 
-	LPDIRECT3DSURFACE9 pRTARGET = NULL;
-	LPDIRECT3DSURFACE9 pZBUF = NULL;
+	LPTSURFACE pRTARGET = NULL;
+	LPTSURFACE pZBUF = NULL;
 	D3DVIEWPORT9 vVIEW;
 
 	pDevice->m_pDevice->GetRenderTarget( 0, &pRTARGET);
@@ -239,7 +239,7 @@ void CTDynamicBillboard::UpdateBUF( CD3DDevice *pDevice,
 
 		if( m_vTUPDATE[i]->m_pTOBJ && m_vTUPDATE[i]->m_pTEX && fDIST != 0.0f )
 		{
-			LPDIRECT3DSURFACE9 pTEX = NULL;
+			LPTSURFACE pTEX = NULL;
 
 			m_vTUPDATE[i]->m_pTEX->GetSurfaceLevel( 0, &pTEX);
 			if(pTEX)

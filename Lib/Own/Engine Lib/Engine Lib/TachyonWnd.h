@@ -13,7 +13,7 @@
 
 #define ON_GM_COMMAND(x)			case x	: nERROR = On##x(); break;
 
-class CTachyonWnd : public CWnd
+class CTachyonWnd : public CTWindow
 {
 public:
 	CTachyonWnd();
@@ -122,17 +122,17 @@ public:
 	HANDLE m_hINIT;
 	BYTE m_bRUN;
 
-	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
-	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
-	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
-	afx_msg void OnDestroy();
-	afx_msg LRESULT OnNcHitTest(CPoint point);
-	afx_msg void OnNcLButtonDown(UINT nHitTest, CPoint point);
-	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg void OnNcRButtonDown(UINT nHitTest, CPoint point);
+	virtual void OnActivate(UINT nState, HWND hWndOther, BOOL bMinimized);
+	virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+	virtual void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
+	virtual void OnDestroy();
+	virtual void OnNcDestroy();
+	virtual LRESULT OnNcHitTest(CPoint point);
+	virtual void OnNcLButtonDown(UINT nHitTest, CPoint point);
+	virtual void OnLButtonUp(UINT nFlags, CPoint point);
+	virtual void OnMouseMove(UINT nFlags, CPoint point);
+	virtual void OnNcRButtonDown(UINT nHitTest, CPoint point);
 };
 
 

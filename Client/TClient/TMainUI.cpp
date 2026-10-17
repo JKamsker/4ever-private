@@ -378,7 +378,7 @@ void CTMainUI::CheckMSGCTRL()
 	}
 }
 
-void CTMainUI::ResetChapterMSG( CString& strTEXT)
+void CTMainUI::ResetChapterMSG( const CString& strTEXT)
 {
 	CTGaugePannel* pTGAUGE = static_cast<CTGaugePannel*>(CTClientGame::GetInstance()->GetFrame(TFRAME_GAUGE));
 	pTGAUGE->RemoveKid(m_pTCHAPTERMSG);
@@ -428,7 +428,7 @@ void CTMainUI::ResetQuestMSG( CString& strTITLE,
 	if(pImageset->m_dwCurTick > pImageset->m_dwTotalTick/2.0f)
 		m_pTQUESTMSG->ResetTotalTick( pImageset->m_dwTotalTick-pImageset->m_dwCurTick);
 
-	m_pTQUESTMSG->m_strText = CTChart::Format( TSTR_FMT_QUEST_STATUS, strTITLE, strRESULT);
+	m_pTQUESTMSG->m_strText = CTChart::Format( TSTR_FMT_QUEST_STATUS, (LPCTSTR)strTITLE, (LPCTSTR)strRESULT);
 	m_pTQUESTMSG->ShowComponent(TRUE);
 
 	pTGAUGE->AddKid(m_pTQUESTMSG);
@@ -916,7 +916,7 @@ HRESULT CTMainUI::Render( DWORD dwTickCount)
 
 			if( m_pNOTIFYMAIL )
 			{
-				LPDIRECT3DDEVICE9 pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
+				LPTRENDERDEVICE pDevice = CTachyonRes::m_pDEVICE->m_pDevice;
 
 				pDevice->SetTextureStageState( 0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_COUNT2);
 

@@ -278,7 +278,7 @@ BOOL TFrame::DoMouseWheel( UINT nFlags, short zDelta, CPoint pt)
 	return TComponent::DoMouseWheel( nFlags, zDelta, pt);
 }
 
-BOOL TFrame::OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message, CPoint pt)
+BOOL TFrame::OnSetCursor( HWND pWnd, UINT nHitTest, UINT message, CPoint pt)
 {
 	if(!CanProcess())
 		return FALSE;

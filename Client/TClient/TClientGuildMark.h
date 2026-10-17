@@ -3,8 +3,8 @@
 class CTClientGuildMarkTexture
 {
 public:
-	LPDIRECT3DTEXTURE9 m_pSYMBOL;
-	LPDIRECT3DTEXTURE9 m_pMANTLE;
+	LPTTEXTURE m_pSYMBOL;
+	LPTTEXTURE m_pMANTLE;
 
 	CTClientGuildMarkTexture()
 		: m_pSYMBOL(NULL), m_pMANTLE(NULL) {}
@@ -56,7 +56,7 @@ typedef std::map< CTMantleTextureKey, LPTEXTURESET> MAPTMANTLETEXTURE, *LPMAPTMA
 class CTClientGuildMark
 {
 public:
-	typedef std::map<CTClientGuildMark, LPDIRECT3DTEXTURE9>	MAPGMARKTEXTURE;
+	typedef std::map<CTClientGuildMark, LPTTEXTURE>	MAPGMARKTEXTURE;
 
 protected:
 	static VECTORIMAGE m_vFRONTIMG;
@@ -73,7 +73,7 @@ public:
 	static VECTORTEXTURESET m_vBACKTEX;
 
 protected:
-	static LPDIRECT3DTEXTURE9 MCreateTexture(const CTClientGuildMark& r);
+	static LPTTEXTURE MCreateTexture(const CTClientGuildMark& r);
 
 public:
 	static BOOL OnDeviceReset( BOOL bRelease );
@@ -87,7 +87,7 @@ public:
 	static void MReset();
 	static void MRelease();
 
-	static LPDIRECT3DTEXTURE9 MGetTexture(const CTClientGuildMark& r);
+	static LPTTEXTURE MGetTexture(const CTClientGuildMark& r);
 	static void SetMantleTexture( CTClientChar*, CTClientGuildMark* pMark );
 	static void SetMantleColor( CTClientChar*, TCOLOR color );
 
@@ -116,7 +116,7 @@ public:
 	bool operator < ( const CTClientGuildMark& r) const;
 	CTClientGuildMark& operator = ( const CTClientGuildMark& r);
 
-	LPDIRECT3DTEXTURE9 GetTexture();
+	LPTTEXTURE GetTexture();
 
 	void SetFront(BYTE bFront, BYTE bFrontColor)	
 	{

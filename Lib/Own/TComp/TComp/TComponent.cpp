@@ -32,7 +32,7 @@ TComponent::TextLine::~TextLine()
 		m_pVB->Release();
 }
 
-void TComponent::TextLine::MakeLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor )
+void TComponent::TextLine::MakeLine( LPTRENDERDEVICE pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor )
 {
 	if( m_nStartX != StartX ||
 		m_nStartY != StartY ||
@@ -81,7 +81,7 @@ void TComponent::TextLine::MakeLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT 
 	}
 }
 
-void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength)
+void TComponent::TextLine::MakeDotLine( LPTRENDERDEVICE pDevice, INT StartX, INT StartY, INT EndX, INT EndY, DWORD dwColor, INT DotLength, INT SpaceLength)
 {
 	if( m_nStartX != StartX ||
 		m_nStartY != StartY ||
@@ -104,7 +104,7 @@ void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, I
 		D3DXVECTOR2 vStart( (FLOAT) (StartX), (FLOAT) (StartY));
 		D3DXVECTOR2 vEnd( (FLOAT) (EndX), (FLOAT) (EndY));
 
-		FLOAT fLength = D3DXVec2Length( &D3DXVECTOR2(vEnd-vStart) );
+		FLOAT fLength = D3DXVec2Length( TTEMP(D3DXVECTOR2(vEnd-vStart)) );
 		INT nCount = (INT) (fLength / (DotLength+SpaceLength) );
 
 		D3DXVECTOR2 vDir(vEnd-vStart);
@@ -142,12 +142,12 @@ void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, I
 		{
 			// vCur°? vEnd를 lNl載?지 lElN큊면 lS머지 컍캪도 그려핾큊.	
 			D3DXVECTOR2 vDir1, vDir2;
-			D3DXVec2Normalize( &vDir1, &(vCur-vStart));
-			D3DXVec2Normalize( &vDir2, &(vEnd-vCur));
+			D3DXVec2Normalize( &vDir1, TTEMP((vCur-vStart)));
+			D3DXVec2Normalize( &vDir2, TTEMP((vEnd-vCur)));
 
-			if( D3DXVec2Length( &(vDir1-vDir2)) < 0.00001f )
+			if( D3DXVec2Length( TTEMP((vDir1-vDir2))) < 0.00001f )
 			{
-				D3DXVECTOR2 vEndDot = D3DXVec2Length( &(vEnd-vCur) ) < D3DXVec2Length( &(vDot) ) ? vEnd : vCur + vDot;
+				D3DXVECTOR2 vEndDot = D3DXVec2Length( TTEMP((vEnd-vCur)) ) < D3DXVec2Length( &(vDot) ) ? vEnd : vCur + vDot;
 
 				TNLPOINT pt;
 				pt.m_fPosZ = 0.0f;
@@ -184,7 +184,7 @@ void TComponent::TextLine::MakeDotLine( LPDIRECT3DDEVICE9 pDevice, INT StartX, I
 	}
 }
 
-void TComponent::TextLine::Draw( LPDIRECT3DDEVICE9 pDevice )
+void TComponent::TextLine::Draw( LPTRENDERDEVICE pDevice )
 {
 	if( m_pVB )
 	{
@@ -209,7 +209,7 @@ void TComponent::TextLine::Draw( LPDIRECT3DDEVICE9 pDevice )
 	}
 }
 
-void TComponent::TextLine::_CreateVB( LPDIRECT3DDEVICE9 pDevice, INT nCount )
+void TComponent::TextLine::_CreateVB( LPTRENDERDEVICE pDevice, INT nCount )
 {
 	if( m_pVB )
 		m_pVB->Release();
@@ -1112,7 +1112,7 @@ BOOL TComponent::DoMouseWheel( UINT nFlags, short zDelta, CPoint pt)
 	return FALSE;
 }
 
-BOOL TComponent::OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message, CPoint pt)
+BOOL TComponent::OnSetCursor( HWND pWnd, UINT nHitTest, UINT message, CPoint pt)
 {
 	return FALSE;
 }
@@ -1313,7 +1313,7 @@ void TComponent::GetTextExtentPoint( LPCTSTR strText, CSize &size)
 			PointF(
 			0.0f,
 			0.0f),
-			&StringFormat(StringFormatFlagsMeasureTrailingSpaces),
+			TTEMP(StringFormat(StringFormatFlagsMeasureTrailingSpaces)),
 			&vRECT);
 		vRECT.Width -= 3.0f;
 	}

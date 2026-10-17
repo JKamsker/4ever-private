@@ -17,9 +17,9 @@ public:
 	static int m_nRenderingHint;
 
 protected:
-	LPDIRECT3DVERTEXBUFFER9 *m_pVB3D;
-	LPDIRECT3DVERTEXBUFFER9 *m_pVB;
-	LPDIRECT3DTEXTURE9 *m_pTEX[2];
+	LPTVERTEXBUFFER *m_pVB3D;
+	LPTVERTEXBUFFER *m_pVB;
+	LPTTEXTURE *m_pTEX[2];
 
 	CString m_strTEXT;
 	CFont *m_pFont;
@@ -57,14 +57,14 @@ public:
 	void Release();
 
 	void MakeText(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString strText,
 		CRect& rect,
 		UINT nFormat = 0,
 		CPoint Hide = CPoint(0,0));
 
 	void TextOut(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString strText,
 		CRect& rect,
 		UINT nFormat = 0,
@@ -72,7 +72,7 @@ public:
 		CPoint Hide = CPoint(0,0));
 
 	void TextOut(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString strText,
 		int nPosX,
 		int nPosY,
@@ -80,8 +80,8 @@ public:
 		CPoint Hide = CPoint(0,0));
 
 	void TextOut(
-		LPDIRECT3DDEVICE9 pDevice,
-		D3DXMATRIX& vWorld,
+		LPTRENDERDEVICE pDevice,
+		const D3DXMATRIX& vWorld,
 		CString strText,
 		FLOAT fTextHeight = 0.3f,
 		UINT nFormat = 0);

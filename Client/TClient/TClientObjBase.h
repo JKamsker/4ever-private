@@ -578,12 +578,12 @@ public:
 	virtual void ApplyMatrix( CD3DDevice *pDevice);
 	virtual void CalcSUBFrame();
 	virtual void CalcSUBTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual CString GetDefaultTALK();
 	virtual void ActivateTALK(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString strTALK,
 		DWORD dwCOLOR);
 
@@ -612,7 +612,7 @@ public:
 		DWORD dwTick);
 
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual THIDEPART FindHidePart(
@@ -794,8 +794,8 @@ public:
 	virtual FLOAT GetPositionY();
 	virtual FLOAT GetPositionZ();
 
-	virtual void SetPosition( D3DXMATRIX& matPOS);
-	virtual void SetPosition( D3DXVECTOR3& vPOS);
+	virtual void SetPosition( const D3DXMATRIX& matPOS);
+	virtual void SetPosition( const D3DXVECTOR3& vPOS);
 	
 	virtual void SetPositionX(FLOAT fX);
 	virtual void SetPositionY(FLOAT fY);

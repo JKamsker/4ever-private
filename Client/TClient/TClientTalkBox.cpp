@@ -25,7 +25,7 @@ void CTClientTalkBox::ReleaseTalkBox()
 	m_pFONT = NULL;
 }
 
-void CTClientTalkBox::InitTalkBox( LPDIRECT3DDEVICE9 pDevice,
+void CTClientTalkBox::InitTalkBox( LPTRENDERDEVICE pDevice,
 								   CTachyonRes *pRES)
 {
 	static WPVERTEX vMESH[16] = {
@@ -81,7 +81,7 @@ void CTClientTalkBox::InitTalkBox( LPDIRECT3DDEVICE9 pDevice,
 	m_pFONT = pGDIFont->m_pFont;
 }
 
-void CTClientTalkBox::SetTALK( LPDIRECT3DDEVICE9 pDevice, CString& strTALK)
+void CTClientTalkBox::SetTALK( LPTRENDERDEVICE pDevice, CString& strTALK)
 {
 	CRect rect;
 	rect.SetRectEmpty();
@@ -89,7 +89,7 @@ void CTClientTalkBox::SetTALK( LPDIRECT3DDEVICE9 pDevice, CString& strTALK)
 	MakeText( pDevice, strTALK, rect, DT_CALCRECT);
 }
 
-void CTClientTalkBox::Render( LPDIRECT3DDEVICE9 pDevice,
+void CTClientTalkBox::Render( LPTRENDERDEVICE pDevice,
 							  LPD3DXVECTOR3 pPOS)
 {
 	m_vWORLD = D3DXMATRIX(
@@ -160,7 +160,7 @@ void CTClientTalkBox::Render( LPDIRECT3DDEVICE9 pDevice,
 		vLOCAL._41 = vCORNER[i][0];
 		vLOCAL._42 = vCORNER[i][1];
 
-		pDevice->SetTransform( D3DTS_WORLDMATRIX(i), &(vLOCAL * m_vWORLD));
+		pDevice->SetTransform( D3DTS_WORLDMATRIX(i), TTEMP((vLOCAL * m_vWORLD)));
 	}
 
 	pDevice->DrawIndexedPrimitive(

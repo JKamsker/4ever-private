@@ -144,7 +144,7 @@ void CTachyonHUGEMAP::InitVB( CD3DDevice *pDevice)
 
 	for(auto i=0; i<m_nDiffuseCount; i++)
 	{
-		LPDIRECT3DVERTEXBUFFER9 pVB = NULL;
+		LPTVERTEXBUFFER pVB = NULL;
 
 		pDevice->m_pDevice->CreateVertexBuffer(
 			nCount * sizeof(DWORD),
@@ -375,11 +375,11 @@ void CTachyonHUGEMAP::InitForNULLTILE()
 	memset( LPWORD(m_vBLENDTILE[0]), 0xFFFF, nLength * sizeof(WORD));
 }
 
-void CTachyonHUGEMAP::ResetTEX( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonHUGEMAP::ResetTEX( LPTRENDERDEVICE pDevice,
 								LPIPOINT pCENTER)
 {
-	LPDIRECT3DSURFACE9 pTTILE = NULL;
-	LPDIRECT3DSURFACE9 pTIMG = NULL;
+	LPTSURFACE pTTILE = NULL;
+	LPTSURFACE pTIMG = NULL;
 
 	if( m_bDrawShadow && !m_pSHADOWTEX )
 	{
@@ -661,7 +661,7 @@ void CTachyonHUGEMAP::Render( CD3DDevice *pDevice)
 	{
 		if(m_vDETAIL[i])
 			m_vDETAIL[i]->m_dwCurTick = 0;
-		LPDIRECT3DTEXTURE9 pTexture = m_vDETAIL[i] ? m_vDETAIL[i]->GetTexture() : NULL;
+		LPTTEXTURE pTexture = m_vDETAIL[i] ? m_vDETAIL[i]->GetTexture() : NULL;
 
 		pDevice->m_pDevice->SetStreamSource( 1, m_vDIFFUSE[m_vDIFFUSEID[i]], 0, sizeof(DWORD));
 		pDevice->m_pDevice->SetRenderState( D3DRS_DEPTHBIAS, *((LPDWORD) &fDepthBias));
@@ -1402,7 +1402,7 @@ void CTachyonHUGEMAP::ResetVB16( CD3DDevice *pDevice,
 	}
 }
 
-void CTachyonHUGEMAP::CheckVB( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonHUGEMAP::CheckVB( LPTRENDERDEVICE pDevice,
 							   LPIPOINT pPIVOT)
 {
 	int nCellX = pPIVOT->m_nX * m_nCellCount / m_nUnitLength - (pPIVOT->m_nX < 0 ? 2 : 1);
@@ -1709,9 +1709,9 @@ void CTachyonHUGEMAP::BuildBLOCK( CRect rect)
 		CPoint center = rect.CenterPoint();
 		LPBLOCK pBLOCK = new BLOCK();
 
-		pBLOCK->m_fDIST = D3DXVec2Length( &D3DXVECTOR2(
+		pBLOCK->m_fDIST = D3DXVec2Length( TTEMP(D3DXVECTOR2(
 			FLOAT(center.x),
-			FLOAT(center.y)));
+			FLOAT(center.y))));
 		pBLOCK->m_vRECT.m_nLEFT = SHORT(rect.left);
 		pBLOCK->m_vRECT.m_nTOP = SHORT(rect.top);
 		pBLOCK->m_vRECT.m_nRIGHT = SHORT(rect.right);
@@ -1754,12 +1754,12 @@ void CTachyonHUGEMAP::BuildBLOCKDIR( LPBLOCK pBLOCK)
 int CTachyonHUGEMAP::GetLODLevel( CRect rect)
 {
 	CPoint center = rect.CenterPoint();
-	FLOAT fDist = D3DXVec2Length(&D3DXVECTOR2(
+	FLOAT fDist = D3DXVec2Length(TTEMP(D3DXVECTOR2(
 		FLOAT(center.x),
-		FLOAT(center.y))) -
-		D3DXVec2Length(&D3DXVECTOR2(
+		FLOAT(center.y)))) -
+		D3DXVec2Length(TTEMP(D3DXVECTOR2(
 		FLOAT(rect.Width()),
-		FLOAT(rect.Height()))) / 2.0f;
+		FLOAT(rect.Height())))) / 2.0f;
 	fDist = max( 0.0f, fDist);
 
 	return min( m_nMaxLevel, INT(fDist) / m_nLODBound);
@@ -1946,8 +1946,8 @@ BYTE CTachyonHUGEMAP::HitTest( LPD3DXVECTOR3 pResult,
 
 				D3DXPlaneFromPoints(
 					&vCUTTERV,
-					&(vPOS + (*pDIR)),
-					&(vPOS + vUP),
+					TTEMP((vPOS + (*pDIR))),
+					TTEMP((vPOS + vUP)),
 					&vPOS);
 
 				D3DXVec3Cross(
@@ -1957,8 +1957,8 @@ BYTE CTachyonHUGEMAP::HitTest( LPD3DXVECTOR3 pResult,
 
 				D3DXPlaneFromPoints(
 					&vCUTTERH,
-					&(vPOS + (*pDIR)),
-					&(vPOS + vUP),
+					TTEMP((vPOS + (*pDIR))),
+					TTEMP((vPOS + vUP)),
 					&vPOS);
 
 				for( int j=0; j<m_nUnitLength; j++)
@@ -2097,9 +2097,9 @@ WORD CTachyonHUGEMAP::FindDetailID( int nTileX,
 	return m_pUNIT[nIndex] ? m_pUNIT[nIndex]->FindDetailID( nResX, nResZ) : TILE_NULL;
 }
 
-BYTE CTachyonHUGEMAP::FindFreeDIFFUSE( LPDIRECT3DDEVICE9 pDevice)
+BYTE CTachyonHUGEMAP::FindFreeDIFFUSE( LPTRENDERDEVICE pDevice)
 {
-	LPDIRECT3DVERTEXBUFFER9 pVB = NULL;
+	LPTVERTEXBUFFER pVB = NULL;
 
 	int nLength = m_nUnitLength / m_nCellCount;
 	int nCount = nLength + 1;
@@ -2152,7 +2152,7 @@ BYTE CTachyonHUGEMAP::FindFreeUNIT()
 	return 0xFF;
 }
 
-void CTachyonHUGEMAP::BuildDIFFUSE( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonHUGEMAP::BuildDIFFUSE( LPTRENDERDEVICE pDevice,
 									BYTE bCELL,
 									int nCellX,
 									int nCellZ)
@@ -2230,9 +2230,9 @@ void CTachyonHUGEMAP::BuildDIFFUSE( LPDIRECT3DDEVICE9 pDevice,
 						{
 							BlendTILE(
 								pDevice,
-								&IPOINT(
+								TTEMP(IPOINT(
 								nCellX + j,
-								nCellZ + i),
+								nCellZ + i)),
 								vBLEND[0][k],
 								wBLEND);
 						}
@@ -2240,9 +2240,9 @@ void CTachyonHUGEMAP::BuildDIFFUSE( LPDIRECT3DDEVICE9 pDevice,
 						{
 							BlendTILE(
 								pDevice,
-								&IPOINT(
+								TTEMP(IPOINT(
 								nCellX + j + nBLEND[k][0],
-								nCellZ + i + nBLEND[k][1]),
+								nCellZ + i + nBLEND[k][1])),
 								vBLEND[1][k],
 								wTileID);
 						}
@@ -2265,7 +2265,7 @@ void CTachyonHUGEMAP::BuildDIFFUSE( LPDIRECT3DDEVICE9 pDevice,
 		}
 }
 
-void CTachyonHUGEMAP::BlendTILE( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonHUGEMAP::BlendTILE( LPTRENDERDEVICE pDevice,
 								 LPIPOINT pPOINT,
 								 LPDWORD pDIFFUSE,
 								 WORD wTileID)
@@ -2316,7 +2316,7 @@ void CTachyonHUGEMAP::BlendTILE( LPDIRECT3DDEVICE9 pDevice,
 	}
 }
 
-LPDWORD CTachyonHUGEMAP::GetDIFFUSEBUF( LPDIRECT3DDEVICE9 pDevice,
+LPDWORD CTachyonHUGEMAP::GetDIFFUSEBUF( LPTRENDERDEVICE pDevice,
 									    BYTE bCELL,
 										WORD wTileID)
 {
@@ -2403,7 +2403,7 @@ void CTachyonHUGEMAP::ResetUV()
 	m_pUVVB->Unlock();
 }
 
-void CTachyonHUGEMAP::LoadUNIT( LPDIRECT3DDEVICE9 pDevice,
+void CTachyonHUGEMAP::LoadUNIT( LPTRENDERDEVICE pDevice,
 							    CTachyonEXTMAP *pUNIT,
 								int nUnitID)
 {
@@ -2658,7 +2658,7 @@ void CTachyonHUGEMAP::LoadUNIT( LPDIRECT3DDEVICE9 pDevice,
 
 	for(auto i=0; i<nSIZE; i++)
 	{
-		LPDIRECT3DSURFACE9 pTIMG = NULL;
+		LPTSURFACE pTIMG = NULL;
 		D3DXIMAGE_INFO vTINFO;
 
 		dwCount = *((LPDWORD) pDATA);

@@ -14,7 +14,7 @@ public:
 	static void EndDraw( CD3DCamera *pCamera);
 
 protected:
-	LPDIRECT3DVERTEXBUFFER9 m_pVB;
+	LPTVERTEXBUFFER m_pVB;
 	VECTORBYTE m_vDIGIT;
 
 	DWORD m_dwColor;

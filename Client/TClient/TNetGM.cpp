@@ -33,7 +33,7 @@ int CTClientWnd::OnGM_TOGGLE_SCREEN_MODE()
 
 
 	DWORD dwStyle = WS_POPUP|WS_VISIBLE|WS_CLIPCHILDREN; 
-	CWnd *pWND = (CWnd *) &wndTopMost;
+	HWND pWND = HWND_TOPMOST;
 	CRect rect(
 		0, 0,
 		m_Device.m_option.m_dwScreenX,
@@ -57,7 +57,7 @@ int CTClientWnd::OnGM_TOGGLE_SCREEN_MODE()
 			dwStyle |= WS_OVERLAPPED | WS_CAPTION;
 		}
 
-		pWND = (CWnd*)&wndNoTopMost;
+		pWND = HWND_NOTOPMOST;
 	}
 
 

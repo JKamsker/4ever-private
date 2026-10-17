@@ -4,7 +4,7 @@
 class CTDynamicBillboard
 {
 protected:
-	static LPDIRECT3DSURFACE9 m_pZBUF;
+	static LPTSURFACE m_pZBUF;
 
 	static MAPTDBB m_mapTACTIVE;
 	static VTDBB m_vTUPDATE;
@@ -54,7 +54,7 @@ public:
 		FLOAT fHeight);
 
 protected:
-	LPDIRECT3DTEXTURE9 m_pTEX;
+	LPTTEXTURE m_pTEX;
 
 	CTachyonObject *m_pTOBJ;
 	DWORD m_dwTick;

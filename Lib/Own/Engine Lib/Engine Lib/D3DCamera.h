@@ -17,14 +17,14 @@ public:
 	BOOL IsOrthoCamera();
 
 	BOOL InitOrthoCamera(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		FLOAT fNearPlane,
 		FLOAT fFarPlane,
 		FLOAT fWidth,
 		FLOAT fHeight);
 
 	BOOL InitCamera(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		FLOAT fNearPlane,
 		FLOAT fFarPlane,
 		FLOAT fFovV,
@@ -32,9 +32,9 @@ public:
 		int nHeight);
 
 	void SetPosition(
-		D3DXVECTOR3& vPosition,
-		D3DXVECTOR3& vTarget,
-		D3DXVECTOR3& vUp,
+		const D3DXVECTOR3& vPosition,
+		const D3DXVECTOR3& vTarget,
+		const D3DXVECTOR3& vUp,
 		BOOL bMove = TRUE);
 
 	void ZoomOrthoCamera( FLOAT fZoom);
@@ -106,7 +106,7 @@ public:
 	D3DXVECTOR3 m_vAxisY;
 	D3DXVECTOR3 m_vAxisX;
 
-	LPDIRECT3DDEVICE9 m_pDevice;
+	LPTRENDERDEVICE m_pDevice;
 
 public:
 	CD3DCamera();

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "THtmlDocWnd.h"
 
 
 CTachyonRes*	g_pImagePool = NULL;
@@ -73,7 +72,6 @@ void InitTachyonComponent(CTachyonRes * pImagePool,
 						  CTachyonRes * pMenuPool,
 						  TCMLParser * pParser)
 {
-	THtmlDocWnd::InitHook();
 
 	g_pImagePool = pImagePool;
 	g_pMenuPool = pMenuPool;
@@ -163,7 +161,7 @@ LPIMAGESET FindSprite(DWORD id)
 	return NULL;
 }
 
-CString BuildMBCSInfo( CString& strTEXT)
+CString BuildMBCSInfo( const CString& strTEXT)
 {
 	CString strRESULT(_T(""));
 

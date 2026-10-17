@@ -325,9 +325,9 @@ void CD3DDevice::ReleaseBACK()
 	}
 }
 
-BOOL CD3DDevice::InitDevices( CWnd *pWnd)
+BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 {
-	if( !pWnd || !pWnd->GetSafeHwnd() )
+	if( !pWnd || !TSAFE_HWND(pWnd) )
 		return FALSE;
 
 	m_pD3D = Direct3DCreate9(D3D_SDK_VERSION);
@@ -459,13 +459,32 @@ BOOL CD3DDevice::InitDevices( CWnd *pWnd)
 	dwBehavior = D3DCREATE_HARDWARE_VERTEXPROCESSING;
 #endif
 
-	hr = m_pD3D->CreateDevice(
-		iAdapter,
-		devType,
-		pWnd->GetSafeHwnd(),
-		dwBehavior,
-		&m_vPRESENT,
-		&m_pDevice);
+#ifndef TCLIENT_BGFX
+	m_option.m_bBGFX = FALSE;
+#endif
+
+	if(m_option.m_bBGFX)
+	{
+		// bgfx draws with the fixed-function emulation of the render layer: the
+		// engine's D3D9 shaders stay off. m_pD3D still lists the display modes.
+		m_option.m_bUseSHADER = FALSE;
+		m_pDevice = CreateRenderDeviceBGFX( TSAFE_HWND(pWnd), &m_vPRESENT, &m_vCAPS);
+		hr = m_pDevice ? D3D_OK : E_FAIL;
+	}
+	else
+	{
+		LPDIRECT3DDEVICE9 pD3D9 = NULL;
+		hr = m_pD3D->CreateDevice(
+			iAdapter,
+			devType,
+			TSAFE_HWND(pWnd),
+			dwBehavior,
+			&m_vPRESENT,
+			&pD3D9);
+
+		if(SUCCEEDED(hr))
+			m_pDevice = CreateRenderDeviceD3D9(pD3D9);
+	}
 
 	if(FAILED(hr))
 	{
@@ -798,11 +817,11 @@ void CD3DDevice::ReleaseDevice()
 	ZeroMemory( &m_vCAPS, sizeof(D3DCAPS9));
 }
 
-LPDIRECT3DTEXTURE9 CD3DDevice::LoadTexture( LPBYTE pResData,
+LPTTEXTURE CD3DDevice::LoadTexture( LPBYTE pResData,
 										    UINT nLength,
 											UINT nMipLevels)
 {
-	LPDIRECT3DTEXTURE9 pResult = NULL;
+	LPTTEXTURE pResult = NULL;
 
 	if( !pResData || nLength <= 0 )
 		return pResult;

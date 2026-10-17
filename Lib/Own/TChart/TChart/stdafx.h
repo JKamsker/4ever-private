@@ -10,9 +10,7 @@
 
 #pragma warning( disable : 4312 4091)
 
-#include <afx.h>
-#include <afxwin.h>
-#include <afxsock.h>
+#include "../../Engine Lib/Engine Lib/TAfx.h"
 
 // STL
 #include <vector>
@@ -22,6 +20,8 @@
 using namespace std;
 
 #include <NetCode.h>
+#include <d3d9.h>
+#include "../../Engine Lib/Engine Lib/TD3DXMath.h"
 #include <d3dx9.h>
 
 #include "TChartType.h"

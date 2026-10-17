@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -84,6 +84,12 @@
     <ClCompile Include="TachyonRes.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TachyonInput.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="TachyonSession.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -96,7 +102,7 @@
     <ClCompile Include="TachyonWnd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TBitStream.cpp">
+    <ClCompile Include="TMiniAudio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TBSPNode.cpp">
@@ -118,6 +124,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TNICEventSink.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TRenderD3D9.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TProfile.cpp">
@@ -200,6 +209,21 @@
     <ClInclude Include="TachyonRes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TRenderDevice.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TD3DXMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TachyonInput.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TAfx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="TachyonSession.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -212,7 +236,7 @@
     <ClInclude Include="TachyonWnd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TBitStream.h">
+    <ClInclude Include="TMiniAudio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TBSPNode.h">

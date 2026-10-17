@@ -14,10 +14,10 @@
 class CD3DLight
 {
 public:
-	static void SetDevice( LPDIRECT3DDEVICE9 pDevice);
+	static void SetDevice( LPTRENDERDEVICE pDevice);
 
 protected:
-	static LPDIRECT3DDEVICE9 m_pDevice;
+	static LPTRENDERDEVICE m_pDevice;
 	static QUEUEDWORD m_queueFreeLight;
 	static MAPDWORD m_mapUsedLight;
 	static DWORD m_dwNextIndex;

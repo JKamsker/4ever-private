@@ -24,8 +24,8 @@ protected:
 	IMediaEventEx* m_pME;
 	IVideoWindow* m_pVW;
 
-	CWnd *m_pHost;
-	CWnd *m_pWnd;
+	CTWindow *m_pHost;
+	CTWindow *m_pWnd;
 
 public:
 	CString m_strFILE;
@@ -48,8 +48,8 @@ public:
 
 public:
 	void InitDShow(
-		CWnd *pHost,
-		CWnd *pWnd,
+		CTWindow *pHost,
+		CTWindow *pWnd,
 		LPTSTR szFile,
 		DWORD dwMessage);
 

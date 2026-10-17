@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "TTournamentResult.h"
 #include "TClientGame.h"
+#include "TClientWnd.h"
 
 
 CTTournamentResult::CTTournamentResult( TComponent *pParent, CD3DDevice *pDevice, FRAMEDESC_SHAREDPTR pDesc)
@@ -652,7 +653,7 @@ void CTTournamentResult::SetCharacter(
 	if( pTCHAR == NULL || pTARGET == NULL )
 		return ;
 
-	pTARGET->m_pHost = (CWnd*) CTClientGame::GetInstance()->GetMainWnd();
+	pTARGET->m_pHost = CTClientGame::GetInstance()->GetMainWnd();
 	pTARGET->m_bRaceID_ = pTCHAR->m_bRaceID_;
 	pTARGET->m_bSex = pTCHAR->m_bSex;
 

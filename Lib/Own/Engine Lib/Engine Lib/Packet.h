@@ -108,7 +108,7 @@ public:
 	CPacket& operator << ( __int64 param);
 
 	void Read( LPVOID param, int nLength);
-#ifdef _AFX
+#if defined(_AFX) || defined(__TAFX_H)
 	CPacket& operator >> ( CString& param);
 #else
 	CPacket& operator >> ( LPCTSTR& param);

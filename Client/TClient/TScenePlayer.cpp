@@ -146,7 +146,7 @@ BYTE CTSpCode::CalcTick( CTClientGame *pTGAME, DWORD dwTick)
 				D3DXVec3Lerp(
 					&pCAM->m_vTOFFSET,
 					&vDIR,
-					&D3DXVECTOR3( 0.0f, 0.0f, 0.0f),
+					TTEMP(D3DXVECTOR3( 0.0f, 0.0f, 0.0f)),
 					fTIME);
 			}
 		}
@@ -442,7 +442,7 @@ DWORD CTSpCode::CalcTexTick( BYTE bINDEX, DWORD dwTick)
 
 void CTSpCode::Fill(
 	CTClientGame *pTGAME,
-	LPDIRECT3DTEXTURE9 pTEX,
+	LPTTEXTURE pTEX,
 	DWORD dwCOLOR,
 	DWORD dwUV )
 {
@@ -497,8 +497,8 @@ void CTSpCode::Fill(
 
 void CTSpCode::Fill(
 	CTClientGame *pTGAME,
-	LPDIRECT3DTEXTURE9 pTEX1,
-	LPDIRECT3DTEXTURE9 pTEX2,
+	LPTTEXTURE pTEX1,
+	LPTTEXTURE pTEX2,
 	DWORD dwCOLOR1,
 	DWORD dwCOLOR2,
 	DWORD dwUV1,
@@ -561,8 +561,8 @@ void CTSpCode::Fill(
 
 void CTSpCode::FillFade(
 	CTClientGame *pTGAME,
-	LPDIRECT3DTEXTURE9 pTEX1,
-	LPDIRECT3DTEXTURE9 pTEX2,
+	LPTTEXTURE pTEX1,
+	LPTTEXTURE pTEX2,
 	BYTE bAlpha,
 	DWORD dwUV1,
 	DWORD dwUV2 )

@@ -18,7 +18,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#include <afx.h>      // CString
+#include "../Engine Lib/Engine Lib/TAfx.h"      // CString
 #include <windows.h>  // LPCTSTR / MAX_PATH
 
 class CGameConfig

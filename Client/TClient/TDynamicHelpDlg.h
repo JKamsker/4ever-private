@@ -4,8 +4,8 @@
 class CTDynamicHelpDlg : public CTClientUIBase
 {
 protected:
-	LPDIRECT3DVERTEXBUFFER9 m_pVB;
-	LPDIRECT3DTEXTURE9 *m_pTEX;
+	LPTVERTEXBUFFER m_pVB;
+	LPTTEXTURE *m_pTEX;
 
 	LPWORD m_pHEIGHT;
 	LPWORD m_pWIDTH;
@@ -23,7 +23,7 @@ public:
 	DWORD m_dwTSPEED;
 
 public:
-	void InitTEXT( CString& strTEXT);
+	void InitTEXT( const CString& strTEXT);
 	void Release();
 
 public:

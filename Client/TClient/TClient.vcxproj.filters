@@ -1020,9 +1020,6 @@
     <ClCompile Include="TNationOption.cpp">
       <Filter>Client</Filter>
     </ClCompile>
-    <ClCompile Include="TClientWebCtrl.cpp">
-      <Filter>Client\Web</Filter>
-    </ClCompile>
     <ClCompile Include="md5.cpp">
       <Filter>Client\MD5</Filter>
     </ClCompile>
@@ -1034,12 +1031,6 @@
     </ClCompile>
     <ClCompile Include="TSystemInfo.cpp">
       <Filter>Client\Error Handler</Filter>
-    </ClCompile>
-    <ClCompile Include="PacketSpyAcks.cpp">
-      <Filter>Client\Packet Spy</Filter>
-    </ClCompile>
-    <ClCompile Include="PacketSpyDlg.cpp">
-      <Filter>Client\Packet Spy</Filter>
     </ClCompile>
     <ClCompile Include="SHA1.cpp">
       <Filter>Client\SHA1</Filter>
@@ -1065,7 +1056,6 @@
     <ClCompile Include="TClientSpolecnik.cpp">
       <Filter>Interface\Companion\New</Filter>
     </ClCompile>
-    <ClCompile Include="IPDialog.cpp" />
     <ClCompile Include="TClientPath.cpp" />
     <ClCompile Include="BRPannels.cpp">
       <Filter>Interface\BR</Filter>
@@ -1783,9 +1773,6 @@
     <ClInclude Include="TNationOption.h">
       <Filter>Client</Filter>
     </ClInclude>
-    <ClInclude Include="TClientWebCtrl.h">
-      <Filter>Client\Web</Filter>
-    </ClInclude>
     <ClInclude Include="md5.h">
       <Filter>Client\MD5</Filter>
     </ClInclude>
@@ -1797,12 +1784,6 @@
     </ClInclude>
     <ClInclude Include="TSystemInfo.h">
       <Filter>Client\Error Handler</Filter>
-    </ClInclude>
-    <ClInclude Include="PacketSpyAcks.h">
-      <Filter>Client\Packet Spy</Filter>
-    </ClInclude>
-    <ClInclude Include="PacketSpyDlg.h">
-      <Filter>Client\Packet Spy</Filter>
     </ClInclude>
     <ClInclude Include="SHA1.h">
       <Filter>Client\SHA1</Filter>
@@ -1834,7 +1815,6 @@
     <ClInclude Include="TClientSpolecnik.h">
       <Filter>Interface\Companion\New</Filter>
     </ClInclude>
-    <ClInclude Include="IPDialog.h" />
     <ClInclude Include="TClientPath.h" />
     <ClInclude Include="constant.hpp">
       <Filter>Global</Filter>

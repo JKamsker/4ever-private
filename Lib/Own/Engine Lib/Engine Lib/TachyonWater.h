@@ -4,12 +4,12 @@
 class CTachyonWater
 {
 public:
-	void RenderREF( LPDIRECT3DDEVICE9 pDevice);
-	void Render( LPDIRECT3DDEVICE9 pDevice);
+	void RenderREF( LPTRENDERDEVICE pDevice);
+	void Render( LPTRENDERDEVICE pDevice);
 
 	void Release();
 	void Init(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPTEXTURESET pSPEC,
 		FLOAT fLENGTH,
 		FLOAT fSCALE,
@@ -29,11 +29,11 @@ public:
 		CD3DCamera *pCamera);
 
 	void ResetREF(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		D3DXVECTOR3 vPOS);
 
 	void ResetVB(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		VECTORBLOCK& vBlock);
 
 	FLOAT GetHeight(
@@ -59,8 +59,8 @@ protected:
 		CRect rect);
 
 public:
-	LPDIRECT3DVERTEXBUFFER9 m_pREF;
-	LPDIRECT3DVERTEXBUFFER9 m_pVB;
+	LPTVERTEXBUFFER m_pREF;
+	LPTVERTEXBUFFER m_pVB;
 	MAPDWORD m_mapUSED;
 
 	LPTEXTURESET m_pSPEC;

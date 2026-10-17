@@ -118,7 +118,7 @@ void CD3DFont::SetFont( CFont *pFont)
 	m_pFont = pFont;
 }
 
-void CD3DFont::MakeText( LPDIRECT3DDEVICE9 pDevice,
+void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 						 CString strText,
 						 CRect& rect,
 						 UINT nFormat,
@@ -140,7 +140,7 @@ void CD3DFont::MakeText( LPDIRECT3DDEVICE9 pDevice,
 	HDC hDC = CreateCompatibleDC(NULL);
 	HFONT hOLDFONT = (HFONT) SelectObject(
 		hDC,
-		m_pFont->GetSafeHandle());
+		TSAFE_HANDLE(m_pFont));
 	Font vFONT(hDC);
 
 	if(nFormat&DT_CALCRECT)
@@ -184,20 +184,20 @@ void CD3DFont::MakeText( LPDIRECT3DDEVICE9 pDevice,
 	}
 	m_nPartCount = nPartCountX * nPartCountY;
 
-	m_pVB3D = new LPDIRECT3DVERTEXBUFFER9[m_nPartCount];
-	m_pVB = new LPDIRECT3DVERTEXBUFFER9[m_nPartCount];
+	m_pVB3D = new LPTVERTEXBUFFER[m_nPartCount];
+	m_pVB = new LPTVERTEXBUFFER[m_nPartCount];
 
-	m_pTEX[0] = new LPDIRECT3DTEXTURE9[m_nPartCount];
-	m_pTEX[1] = new LPDIRECT3DTEXTURE9[m_nPartCount];
+	m_pTEX[0] = new LPTTEXTURE[m_nPartCount];
+	m_pTEX[1] = new LPTTEXTURE[m_nPartCount];
 
 	m_ppPosBufX = new float*[m_nPartCount];
 	m_ppPosBufY = new float*[m_nPartCount];
 
-	ZeroMemory( m_pVB3D, m_nPartCount * sizeof(LPDIRECT3DVERTEXBUFFER9));
-	ZeroMemory( m_pVB, m_nPartCount * sizeof(LPDIRECT3DVERTEXBUFFER9));
+	ZeroMemory( m_pVB3D, m_nPartCount * sizeof(LPTVERTEXBUFFER));
+	ZeroMemory( m_pVB, m_nPartCount * sizeof(LPTVERTEXBUFFER));
 
-	ZeroMemory( m_pTEX[0], m_nPartCount * sizeof(LPDIRECT3DTEXTURE9));
-	ZeroMemory( m_pTEX[1], m_nPartCount * sizeof(LPDIRECT3DTEXTURE9));
+	ZeroMemory( m_pTEX[0], m_nPartCount * sizeof(LPTTEXTURE));
+	ZeroMemory( m_pTEX[1], m_nPartCount * sizeof(LPTTEXTURE));
 
 	ZeroMemory( m_ppPosBufX, m_nPartCount * sizeof(float *));
 	ZeroMemory( m_ppPosBufY, m_nPartCount * sizeof(float *));
@@ -247,7 +247,7 @@ void CD3DFont::MakeText( LPDIRECT3DDEVICE9 pDevice,
 			FLOAT(m_nWidth),
 			FLOAT(m_nHeight - 1.0f)),
 			&vFORMAT,
-			&SolidBrush( Color( 0xFF, 0xFF, 0xFF)));
+			TTEMP(SolidBrush( Color( 0xFF, 0xFF, 0xFF))));
 	}
 
 	int nIndex = 0;
@@ -521,7 +521,7 @@ WORD CD3DFont::GetColorByLinePixel( LPDWORD pBits, int nPosX, int nPosY)
 	return 0x0000;
 }
 
-void CD3DFont::TextOut( LPDIRECT3DDEVICE9 pDevice,
+void CD3DFont::TextOut( LPTRENDERDEVICE pDevice,
 					    CString strText,
 					    CRect& rect,
 						UINT nFormat,
@@ -635,18 +635,19 @@ void CD3DFont::TextOut( LPDIRECT3DDEVICE9 pDevice,
 	pDevice->SetRenderState( D3DRS_ZENABLE, TRUE);
 }
 
-void CD3DFont::TextOut( LPDIRECT3DDEVICE9 pDevice,
+void CD3DFont::TextOut( LPTRENDERDEVICE pDevice,
 					    CString strText,
 					    int nPosX,
 						int nPosY,
 						BOOL bOpaque,
 						CPoint Hide)
 {
-	TextOut( pDevice, strText, CRect( nPosX, nPosY, 0, 0), DT_CALCRECT, bOpaque, Hide);
+	CRect rect( nPosX, nPosY, 0, 0);
+	TextOut( pDevice, strText, rect, DT_CALCRECT, bOpaque, Hide);
 }
 
-void CD3DFont::TextOut( LPDIRECT3DDEVICE9 pDevice,
-					    D3DXMATRIX& vWorld,
+void CD3DFont::TextOut( LPTRENDERDEVICE pDevice,
+					    const D3DXMATRIX& vWorld,
 					    CString strText,
 						FLOAT fTextHeight,
 						UINT nFormat)
@@ -660,7 +661,8 @@ void CD3DFont::TextOut( LPDIRECT3DDEVICE9 pDevice,
 	if(!pDevice)
 		return;
 
-	MakeText( pDevice, strText, CRect( 0, 0, m_nWidth, m_nHeight), DT_CALCRECT|nFormat);
+	CRect rect( 0, 0, m_nWidth, m_nHeight);
+	MakeText( pDevice, strText, rect, DT_CALCRECT|nFormat);
 	if(m_strTEXT.IsEmpty())
 		return;
 

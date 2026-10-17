@@ -5,7 +5,10 @@
 //
 //////////////////////////////////////////////////////////////////////
 
+// The client has no MFC (GameConfig.h then takes CString from TAfx.h); the launcher does.
+#ifndef TCLIENT_NO_MFC
 #include <afx.h>
+#endif
 #include <tchar.h>
 #include "GameConfig.h"
 
@@ -74,6 +77,7 @@ static const TConfigDefaultStr s_DefaultStrs[] =
 	// [Settings]
 	{ _T("Settings"), _T("WindowedMode"),  _T("FALSE") },
 	{ _T("Settings"), _T("UseShader"),     _T("TRUE")  },
+	{ _T("Settings"), _T("Renderer"),      _T("BGFX")  },  // BGFX or D3D9
 	{ _T("Settings"), _T("OBJRange"),      _T("1.0")   },
 	{ _T("Settings"), _T("GroupMonNamesNear"),  _T("20.0") },
 	{ _T("Settings"), _T("GroupMonNamesRatio"), _T("0.5")  },

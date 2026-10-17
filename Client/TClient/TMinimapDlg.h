@@ -4,8 +4,8 @@
 class CTMinimapDlg : public CTClientUIBase
 {
 public:
-	static LPDIRECT3DTEXTURE9 m_pTMINIMAP;
-	static LPDIRECT3DTEXTURE9 m_pTMASK;
+	static LPTTEXTURE m_pTMINIMAP;
+	static LPTTEXTURE m_pTMASK;
 
 public:
 	TComponent *m_vTCOMP[TMINIMAPCOMP_COUNT];

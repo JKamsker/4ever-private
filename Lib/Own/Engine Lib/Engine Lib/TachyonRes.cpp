@@ -15,7 +15,7 @@ CD3DFont CTachyonRes::m_vTEXT;
 CFont CTachyonRes::m_vFONT;
 
 BOOL CTachyonRes::m_bUseNullTex = FALSE;
-LPDIRECT3DTEXTURE9 CTachyonRes::m_pNULLTEX = NULL;
+LPTTEXTURE CTachyonRes::m_pNULLTEX = NULL;
 
 CTachyonRes::CTachyonRes()
 {
@@ -299,7 +299,7 @@ void CTachyonRes::RenderBACK( BYTE bSTEP,
 
 	m_pDEVICE->m_pDevice->EndScene();
 
-	if( !AfxGetApp()->m_pMainWnd->IsIconic() && !m_pDEVICE->GetResetFlag() &&
+	if( !CTachyonApp::GetApp()->m_pMainWnd->IsIconic() && !m_pDEVICE->GetResetFlag() &&
 		FAILED(m_pDEVICE->m_pDevice->Present( NULL, NULL, NULL, NULL)) )
 		m_pDEVICE->ResetHost();
 }
@@ -386,7 +386,7 @@ void CTachyonRes::StartPrefetch( CString strGroupID,
 
 	if( nTextureDetail >= 0 && nTextureDetail < TEXTURE_DETAIL_COUNT )
 	{
-		strINDEX.Format( ".\\Index\\%u_%sS.IDX", nTextureDetail, strGroupID);
+		strINDEX.Format( ".\\Index\\%u_%sS.IDX", nTextureDetail, (LPCTSTR)strGroupID);
 		PrefetchIndexFiles( strINDEX, *pFIRST);
 	}
 
@@ -850,7 +850,7 @@ void CTachyonRes::LoadTEX( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%u_%sS.IDX", m_pDEVICE->m_option.m_nTextureDetail, strGroupID);
+	strINDEX.Format( ".\\Index\\%u_%sS.IDX", m_pDEVICE->m_option.m_nTextureDetail, (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -894,7 +894,7 @@ void CTachyonRes::LoadTEX( CString strGroupID)
 
 		if(!m_bUseNullTex)
 			for( it = pTRESDATA[i].begin(); it != pTRESDATA[i].end(); it++)
-				((LPDIRECT3DTEXTURE9) (*it).second)->Release();
+				((LPTTEXTURE) (*it).second)->Release();
 		pTRESDATA[i].clear();
 
 		for( it = pTRES[i].begin(); it != pTRES[i].end(); it++)
@@ -914,7 +914,7 @@ void CTachyonRes::LoadIMGBUF( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%sList.LST", strGroupID);
+	strINDEX.Format( ".\\Index\\%sList.LST", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -933,7 +933,7 @@ void CTachyonRes::LoadIMG( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%sI.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sI.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -999,7 +999,7 @@ void CTachyonRes::LoadMEDIA( CString strGroupID)
 	int nTotal = 0;
 	int nCount = 0;
 
-	strINDEX.Format( ".\\Index\\%sW.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sW.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -1035,7 +1035,7 @@ void CTachyonRes::LoadANI( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%sA.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sA.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -1101,7 +1101,7 @@ void CTachyonRes::LoadMESH( CString strGroupID)
 	int nIndex = 0;
 	CString strINDEX;
 
-	strINDEX.Format( ".\\Index\\%sM.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sM.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -1156,7 +1156,7 @@ void CTachyonRes::LoadOBJ( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%sO.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sO.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -1209,7 +1209,7 @@ void CTachyonRes::LoadSFX( CString strGroupID)
 	int nCount = 0;
 	int nIndex = 0;
 
-	strINDEX.Format( ".\\Index\\%sX.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sX.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));
@@ -1257,7 +1257,7 @@ void CTachyonRes::LoadMAP( CString strGroupID)
 	int nTotal = 0;
 	int nCount = 0;
 
-	strINDEX.Format( ".\\Index\\%sP.IDX", strGroupID);
+	strINDEX.Format( ".\\Index\\%sP.IDX", (LPCTSTR)strGroupID);
 	CTBufferedFile file( strINDEX, CFile::modeRead|CFile::typeBinary);
 
 	file.Read( &nCount, sizeof(int));

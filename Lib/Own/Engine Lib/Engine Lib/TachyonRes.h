@@ -11,7 +11,7 @@ public:
 	static CFont m_vFONT;
 
 	static BOOL m_bUseNullTex;
-	static LPDIRECT3DTEXTURE9 m_pNULLTEX;
+	static LPTTEXTURE m_pNULLTEX;
 
 public:
 	static void RenderBACK(

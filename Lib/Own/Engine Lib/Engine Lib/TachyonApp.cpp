@@ -35,18 +35,39 @@ BOOL CTachyonApp::WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPC
 	return TRUE;
 }
 
-BEGIN_MESSAGE_MAP(CTachyonApp, CWinApp)
-	//{{AFX_MSG_MAP(CTachyonApp)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
 /////////////////////////////////////////////////////////////////////////////
 // CTachyonApp construction
+
+CTachyonApp *CTachyonApp::m_pApp = NULL;
 
 CTachyonApp::CTachyonApp()
 {
 	m_pTachyonWnd = NULL;
+	m_pMainWnd = NULL;
 	m_dwSLEEP = 0;
+	m_hAccel = NULL;
+
+	m_hInstance = NULL;
+	m_lpCmdLine = NULL;
+	m_nCmdShow = SW_SHOWNORMAL;
+
+	m_pApp = this;
+}
+
+int CTachyonApp::Main( HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow)
+{
+	if(!m_pApp)
+		return -1;
+
+	m_pApp->m_hInstance = hInstance;
+	m_pApp->m_lpCmdLine = lpCmdLine;
+	m_pApp->m_nCmdShow = nCmdShow;
+
+	// Like MFC: a failed InitInstance still gets its ExitInstance, and Run returns the exit code.
+	if(!m_pApp->InitInstance())
+		return m_pApp->ExitInstance();
+
+	return m_pApp->Run();
 }
 
 CTachyonApp::~CTachyonApp()
@@ -61,7 +82,6 @@ void CTachyonApp::LoadStdProfileSettings()
 	CString strValue;
 	DWORD dwValue;
 
-	CWinApp::LoadStdProfileSettings();
 	strValue = GetProfileString(
 		_T("Settings"),
 		_T("WindowedMode"),
@@ -99,6 +119,13 @@ void CTachyonApp::LoadStdProfileSettings()
 	}
 	else
 		m_pTachyonWnd->m_Device.m_option.m_bUseSHADER = strValue == _T("TRUE");
+
+	// BGFX (default) or D3D9: the backend of the render layer. Builds without
+	// TCLIENT_BGFX (MSBuild) always draw with D3D9.
+	m_pTachyonWnd->m_Device.m_option.m_bBGFX = GetProfileString(
+		_T("Settings"),
+		_T("Renderer"),
+		_T("BGFX")).CompareNoCase(_T("BGFX")) == 0;
 
 	dwValue = GetProfileInt(
 		_T("Settings"),
@@ -264,6 +291,8 @@ BYTE CTachyonApp::MainProc()
 {
 	MSG msg;
 
+	CTachyonSession::PollAll();
+
 	if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
 	{
 		if( WM_QUIT == msg.message )
@@ -278,7 +307,7 @@ BYTE CTachyonApp::MainProc()
 		}
 
 		int nHotCommand = TranslateAccelerator(
-			m_pTachyonWnd->GetSafeHwnd(),
+			TSAFE_HWND(m_pTachyonWnd),
 			m_hAccel,
 			&msg);
 
@@ -288,27 +317,8 @@ BYTE CTachyonApp::MainProc()
 		{
 			switch(msg.message)
 			{
-			case WM_SESSION_MSG		:
-				{
-					CTachyonSession *pSession = CTachyonSession::GetSession(msg.wParam);
-
-					if(pSession)
-					{
-						int nError = WSAGETSELECTERROR(msg.lParam);
-
-						switch(WSAGETSELECTEVENT(msg.lParam))
-						{
-						case FD_CONNECT	: pSession->OnConnect(nError); break;
-						case FD_READ	: pSession->OnReceive(nError); break;
-						case FD_CLOSE	: pSession->OnClose(nError); break;
-						}
-					}
-				}
-
-				break;
-
 			case WM_CHAR			:
-				if( msg.hwnd == m_pTachyonWnd->GetSafeHwnd() )
+				if( msg.hwnd == TSAFE_HWND(m_pTachyonWnd) )
 				{
 					UINT nFlag = HIWORD(msg.lParam);
 					UINT nRep = LOWORD(msg.lParam);
@@ -326,7 +336,7 @@ BYTE CTachyonApp::MainProc()
 			case WM_IME_COMPOSITION	:
 				{
 					m_pTachyonWnd->OnImeComposition(
-						m_pTachyonWnd->GetSafeHwnd(),
+						TSAFE_HWND(m_pTachyonWnd),
 						msg.wParam,
 						msg.lParam);
 				}
@@ -345,17 +355,18 @@ BYTE CTachyonApp::MainProc()
 	}
 	else if(!m_pTachyonWnd->m_bActivate)
 	{
-		WaitMessage();
+		// Wake up for a window message or after a short delay, so the sessions are still polled.
+		MsgWaitForMultipleObjects( 0, NULL, FALSE, TSESSION_IDLE_WAIT, QS_ALLINPUT);
 	
 #ifndef TEST_MODE
-		if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 			m_dwSLEEP = 100;
 #endif
 	}
 	else if(!m_pTachyonWnd->m_bOnMovie)
 	{
 #ifndef TEST_MODE
-		if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 			m_dwSLEEP = 10;
 #endif
 

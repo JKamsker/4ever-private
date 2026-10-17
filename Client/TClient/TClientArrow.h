@@ -30,7 +30,7 @@ public:
 	virtual void Release();
 
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 	virtual void Render(

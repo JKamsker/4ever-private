@@ -29,7 +29,7 @@ public:
 		DWORD dwAniID = -1);
 
 	virtual void CalcTick(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		DWORD dwTick);
 
 public:

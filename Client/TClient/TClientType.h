@@ -2582,7 +2582,6 @@ struct TOP3
 // TClient class type
 
 class CTClientMaintain;
-class CTClientWebCtrl;
 class CTClientSession;
 class CTClientObjBase;
 class CTClientMoveObj;
@@ -2639,7 +2638,6 @@ class CTMessengerChat;
 class CTMessengerChatFrame;
 class CTMailListFrame;
 class CTClientApp;
-class CPacketSpyDlg;
 class CTGodBall;
 class CTGodTower;
 class CTSiegeManager;
@@ -2714,7 +2712,7 @@ typedef map< DWORD, LPTEXTURESET>	                    MAPCUSTOMTEX, *LPMAPCUSTOM
 
 typedef map< BYTE, WORD>								MAPPREMIUMSKILL, *LPMAPPREMIUMSKILL;
 typedef map< DWORD, LPBRTPLAYER>						MAPBRTPLAYER, *LPMAPBRTPLAYER;
-typedef map<CTClientCustomCloak, LPDIRECT3DTEXTURE9>	MAPCUSTOMCLOAKTEX;
+typedef map<CTClientCustomCloak, LPTTEXTURE>	MAPCUSTOMCLOAKTEX;
 
 ///////////////////////////////////////////////////////////////////////////
 // TClient vector type
@@ -3587,8 +3585,8 @@ struct tagTFRAMEOFFSET
 	BYTE m_bBasisPoint;
 	CPoint m_vOffset;
 
-	struct tagTFRAMEOFFSET() {}
-	struct tagTFRAMEOFFSET( DWORD dwFrame, BYTE bBasisPoint, CPoint vOffset )
+	tagTFRAMEOFFSET() {}
+	tagTFRAMEOFFSET( DWORD dwFrame, BYTE bBasisPoint, CPoint vOffset )
 		: m_dwFRAME(dwFrame), m_bBasisPoint(bBasisPoint), m_vOffset(vOffset) {}
 };
 
@@ -3606,7 +3604,7 @@ struct tagTRESOLUTIONMODE
 
 struct tagTSCRCAPTURE_PARAM
 {
-	LPDIRECT3DSURFACE9 m_pIMAGE;
+	LPTSURFACE m_pIMAGE;
 	CString m_strFileName;
 
 	tagTSCRCAPTURE_PARAM()
@@ -4120,7 +4118,6 @@ struct SmoothData
 ///////////////////////////////////////////////////////////////////////////
 // TClient base class define
 
-#include "TClientWebCtrl.h"
 #include "TClientSession.h"
 #include "TClientTalkBox.h"
 #include "TClientObjBase.h"

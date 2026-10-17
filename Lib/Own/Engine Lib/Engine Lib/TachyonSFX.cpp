@@ -211,7 +211,7 @@ BOOL CSFX::IsDead()
 	return m_dwLife == 0;
 }
 
-void CSFX::CalcTick( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CSFX::CalcTick( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	m_fTime += CTMath::GetTimeValue(dwTick + m_dwERRTime);
 	m_dwTexTick += dwTick;
@@ -569,7 +569,7 @@ void CSFX::Render( CD3DDevice *pDevice, CD3DCamera *pCamera, BYTE bMaxAlpha, DWO
 		case SFXSRC_SFX	:
 			{
 				CTMath::Transform(
-					&(vRotX * vRotY * vRotZ),
+					TTEMP((vRotX * vRotY * vRotZ)),
 					&vLocalP);
 
 				m_SRC.m_pSFX->m_vGlobal = vRotX * vRotY * vRotZ;
@@ -590,7 +590,7 @@ void CSFX::Render( CD3DDevice *pDevice, CD3DCamera *pCamera, BYTE bMaxAlpha, DWO
 				D3DXMatrixScaling( &vSize, m_SRC_VB_X, m_SRC_VB_Y, 1.0f);
 
 				CTMath::Transform(
-					&(vRotX * vRotY * vRotZ),
+					TTEMP((vRotX * vRotY * vRotZ)),
 					&vLocalP);
 
 				vLocalP.x += m_vCurP.x * m_vPFactor.x;
@@ -867,7 +867,7 @@ void CTachyonSFX::ClearDead()
 	}
 }
 
-void CTachyonSFX::CalcTick( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTachyonSFX::CalcTick( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	if( m_dwInitTick != INVALID_INIT_TICK )
 	{
@@ -993,7 +993,7 @@ void CTachyonSFX::Generate( CD3DDevice *pDevice, CD3DCamera *pCamera)
 
 	if( pCamera )
 	{
-		FLOAT fCamDist = D3DXVec3Length(&(vPOS - pCamera->m_vTarget));
+		FLOAT fCamDist = D3DXVec3Length(TTEMP((vPOS - pCamera->m_vTarget)));
 
 		float fDiv = m_fDistMAX / LODLEVEL_6;
 		int nDistLevel = (int)(fCamDist / fDiv);
@@ -1409,7 +1409,7 @@ BYTE CTachyonSFX::IsVisible( CD3DCamera *pCamera,
 
 	D3DXPLANE vPLANE;
 
-	FLOAT fCamDist = D3DXVec3Length(&(vPOS - pCamera->m_vTarget));
+	FLOAT fCamDist = D3DXVec3Length(TTEMP((vPOS - pCamera->m_vTarget)));
 	FLOAT fRadius = 10.0f;
 
 	if( fCamDist - fRadius > fDistMAX )
@@ -1435,14 +1435,14 @@ BYTE CTachyonSFX::IsVisible( CD3DCamera *pCamera,
 
 	if(pCamera->IsOrthoCamera())
 	{
-		FLOAT fWIDTH = D3DXVec3Length(&(vPOS - (pCamera->m_vPosition - fDOT * vDIR)));
+		FLOAT fWIDTH = D3DXVec3Length(TTEMP((vPOS - (pCamera->m_vPosition - fDOT * vDIR))));
 
 		if( fWIDTH - fRadius > pCamera->m_fWidth )
 			return FALSE;
 	}
 	else
 	{
-		FLOAT fWIDTH = D3DXVec3Length(&(vPOS - (pCamera->m_vPosition - fDOT * vDIR)));
+		FLOAT fWIDTH = D3DXVec3Length(TTEMP((vPOS - (pCamera->m_vPosition - fDOT * vDIR))));
 		FLOAT fFOV = pCamera->m_fFOV * pCamera->m_fWidth / pCamera->m_fHeight;
 		fFOV = max( fFOV, pCamera->m_fFOV);
 
@@ -1467,7 +1467,7 @@ void CTachyonSFX::Release( DWORD dwID)
 		ReleaseCommon();
 }
 
-void CTachyonSFX::CalcBUF( LPDIRECT3DDEVICE9 pDevice, DWORD dwTick)
+void CTachyonSFX::CalcBUF( LPTRENDERDEVICE pDevice, DWORD dwTick)
 {
 	MAPTSFX::iterator it = m_mapINST.begin();
 

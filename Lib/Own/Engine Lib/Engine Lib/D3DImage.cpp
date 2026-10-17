@@ -195,7 +195,7 @@ void CD3DImage::SetScaleY( float fScale)
 	m_fScaleY = fScale;
 }
 
-LPT3DDATA CD3DImage::BuildImageData( LPDIRECT3DDEVICE9 pDevice, BYTE bFormat)
+LPT3DDATA CD3DImage::BuildImageData( LPTRENDERDEVICE pDevice, BYTE bFormat)
 {
 	LPTVERTEX *pVert = new LPTVERTEX[m_nPartCount];
 	LPT3DDATA *pDXT = new LPT3DDATA[m_nPartCount];
@@ -205,7 +205,7 @@ LPT3DDATA CD3DImage::BuildImageData( LPDIRECT3DDEVICE9 pDevice, BYTE bFormat)
 
 	for( int i=0; i<m_nPartCount; i++)
 	{
-		LPDIRECT3DVERTEXBUFFER9 pVB = m_pT3DVB[i]->GetVB();
+		LPTVERTEXBUFFER pVB = m_pT3DVB[i]->GetVB();
 		LPTVERTEX pBuf = NULL;
 
 		pDXT[i] = CreateDXT( pDevice, m_pT3DTEX[i] ? m_pT3DTEX[i]->GetTEX() : NULL, bFormat);
@@ -272,11 +272,11 @@ LPT3DDATA CD3DImage::BuildImageData( LPDIRECT3DDEVICE9 pDevice, BYTE bFormat)
 	return pResult;
 }
 
-BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
+BYTE CD3DImage::LoadImageFile( LPTRENDERDEVICE pDevice,
 							   LPBYTE pResData,
 							   UINT nLength)
 {
-	LPDIRECT3DSURFACE9 pImage = NULL;
+	LPTSURFACE pImage = NULL;
 	D3DXIMAGE_INFO info;
 	D3DLOCKED_RECT lr;
 
@@ -328,7 +328,7 @@ BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
 	hr = D3DXLoadSurfaceFromFileInMemory(
 		pImage,
 		NULL,
-		&CRect( 0, 0, info.Width, info.Height),
+		TTEMP(CRect( 0, 0, info.Width, info.Height)),
 		pResData,
 		nLength,
 		NULL,
@@ -405,12 +405,12 @@ BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
 		{
 			int nLocalW = CTMath::GetNearPow(info.Width - nWidth);
 			int vPoint[4][4] = {
-				{ nWidth, nHeight, 0, 0},
-				{ nWidth + nLocalW, nHeight, 1, 0},
-				{ nWidth, nHeight + nLocalH, 0, 1},
-				{ nWidth + nLocalW, nHeight + nLocalH, 1, 1}};
+				{ int(nWidth), int(nHeight), 0, 0},
+				{ int(nWidth + nLocalW), int(nHeight), 1, 0},
+				{ int(nWidth), int(nHeight + nLocalH), 0, 1},
+				{ int(nWidth + nLocalW), int(nHeight + nLocalH), 1, 1}};
 
-			LPDIRECT3DVERTEXBUFFER9 pVB = NULL;
+			LPTVERTEXBUFFER pVB = NULL;
 			LPTVERTEX pData = NULL;
 
 			hr = pDevice->CreateVertexBuffer(
@@ -458,8 +458,8 @@ BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
 			m_pT3DVB[nIndex]->m_pTDATA = (LPBYTE) pVB;
 			m_pT3DVB[nIndex]->m_bEnabled = TRUE;
 
-			LPDIRECT3DSURFACE9 pLevel = NULL;
-			LPDIRECT3DTEXTURE9 pTEX = NULL;
+			LPTSURFACE pLevel = NULL;
+			LPTTEXTURE pTEX = NULL;
 
 			hr = D3DXCreateTexture(
 				pDevice,
@@ -494,11 +494,11 @@ BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
 				NULL,
 				pImage,
 				NULL,
-				&CRect(
+				TTEMP(CRect(
 				vPoint[0][0],
 				vPoint[0][1],
 				vPoint[3][0],
-				vPoint[3][1]),
+				vPoint[3][1])),
 				D3DX_FILTER_NONE,
 				NULL);
 
@@ -529,9 +529,9 @@ BYTE CD3DImage::LoadImageFile( LPDIRECT3DDEVICE9 pDevice,
 	return TRUE;
 }
 
-LPDIRECT3DSURFACE9 CD3DImage::CreateOffscreenPlainSurface( LPDIRECT3DDEVICE9 pDevice)
+LPTSURFACE CD3DImage::CreateOffscreenPlainSurface( LPTRENDERDEVICE pDevice)
 {
-	LPDIRECT3DSURFACE9 pRESULT = NULL;
+	LPTSURFACE pRESULT = NULL;
 
 	if(!m_nPartCount)
 		return pRESULT;
@@ -546,12 +546,12 @@ LPDIRECT3DSURFACE9 CD3DImage::CreateOffscreenPlainSurface( LPDIRECT3DDEVICE9 pDe
 
 	for( int i=0; i<m_nPartCount; i++)
 	{
-		LPDIRECT3DVERTEXBUFFER9 pVB = m_pT3DVB[i]->GetVB();
-		LPDIRECT3DTEXTURE9 pTEX = m_pT3DTEX[i]->GetTEX();
+		LPTVERTEXBUFFER pVB = m_pT3DVB[i]->GetVB();
+		LPTTEXTURE pTEX = m_pT3DTEX[i]->GetTEX();
 
 		if( pTEX && pVB )
 		{
-			LPDIRECT3DSURFACE9 pSRC = NULL;
+			LPTSURFACE pSRC = NULL;
 			LPTVERTEX pData = NULL;	
 			CRect rcDEST;
 
@@ -582,9 +582,9 @@ LPDIRECT3DSURFACE9 CD3DImage::CreateOffscreenPlainSurface( LPDIRECT3DDEVICE9 pDe
 	return pRESULT;
 }
 
-void CD3DImage::SaveImageFile( LPDIRECT3DDEVICE9 pDevice, LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat)
+void CD3DImage::SaveImageFile( LPTRENDERDEVICE pDevice, LPCSTR strFileName, D3DXIMAGE_FILEFORMAT destFormat)
 {
-	LPDIRECT3DSURFACE9 pIMG = CreateOffscreenPlainSurface(pDevice);
+	LPTSURFACE pIMG = CreateOffscreenPlainSurface(pDevice);
 
 	if(pIMG)
 	{
@@ -664,7 +664,7 @@ BOOL CD3DImage::IsEnable()
 	return m_pT3DTEX && m_pT3DVB && m_pMask;
 }
 
-void CD3DImage::Render( LPDIRECT3DDEVICE9 pDevice,
+void CD3DImage::Render( LPTRENDERDEVICE pDevice,
 					    DWORD dwColor,
 						int nPosX,
 						int nPosY,
@@ -718,7 +718,7 @@ void CD3DImage::Render( LPDIRECT3DDEVICE9 pDevice,
 
 			for( int i=0; i<m_nPartCount; i++)
 			{
-				LPDIRECT3DVERTEXBUFFER9 pVB = m_pT3DVB[i]->GetVB();
+				LPTVERTEXBUFFER pVB = m_pT3DVB[i]->GetVB();
 
 				if( !pVB || FAILED(pVB->Lock( 0, 4 * sizeof(TVERTEX), (LPVOID *) &pData, 0)) )
 					return;
@@ -798,8 +798,8 @@ void CD3DImage::Render( LPDIRECT3DDEVICE9 pDevice,
 
 	for( int i=0; i<m_nPartCount; i++)
 	{
-		LPDIRECT3DVERTEXBUFFER9 pVB = m_pT3DVB[i]->GetVB();
-		LPDIRECT3DTEXTURE9 pTEX = m_pT3DTEX[i]->GetTEX();
+		LPTVERTEXBUFFER pVB = m_pT3DVB[i]->GetVB();
+		LPTTEXTURE pTEX = m_pT3DTEX[i]->GetTEX();
 
 		if( pTEX && pVB )
 		{
@@ -816,11 +816,11 @@ void CD3DImage::Render( LPDIRECT3DDEVICE9 pDevice,
 	pDevice->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE);
 }
 
-LPT3DDATA CD3DImage::CreateDXT( LPDIRECT3DDEVICE9 pDevice,
-							    LPDIRECT3DSURFACE9 pImage,
+LPT3DDATA CD3DImage::CreateDXT( LPTRENDERDEVICE pDevice,
+							    LPTSURFACE pImage,
 								BYTE bDXT)
 {
-	LPDIRECT3DSURFACE9 pMEM = NULL;
+	LPTSURFACE pMEM = NULL;
 	D3DSURFACE_DESC desc;
 	D3DFORMAT format;
 
@@ -870,11 +870,11 @@ LPT3DDATA CD3DImage::CreateDXT( LPDIRECT3DDEVICE9 pDevice,
 	return pResult;
 }
 
-LPT3DDATA CD3DImage::CreateDXT( LPDIRECT3DDEVICE9 pDevice,
-							    LPDIRECT3DTEXTURE9 pTexture,
+LPT3DDATA CD3DImage::CreateDXT( LPTRENDERDEVICE pDevice,
+							    LPTTEXTURE pTexture,
 								BYTE bDXT)
 {
-	LPDIRECT3DSURFACE9 pImage = NULL;
+	LPTSURFACE pImage = NULL;
 	pTexture->GetSurfaceLevel( 0, &pImage);
 
 	LPT3DDATA pResult = CreateDXT( pDevice, pImage, bDXT);

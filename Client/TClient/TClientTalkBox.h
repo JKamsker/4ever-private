@@ -16,16 +16,16 @@ public:
 public:
 	static void ReleaseTalkBox();
 	static void InitTalkBox(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CTachyonRes *pRES);
 
 public:
 	void SetTALK(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		CString& strTALK);
 
 	void Render(
-		LPDIRECT3DDEVICE9 pDevice,
+		LPTRENDERDEVICE pDevice,
 		LPD3DXVECTOR3 pPOS);
 
 	CRect GetRect();

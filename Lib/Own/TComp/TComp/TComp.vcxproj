@@ -43,37 +43,37 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    <UseOfMfc>Static</UseOfMfc>
+    <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -359,14 +359,11 @@
     <ClCompile Include="TEdit.cpp" />
     <ClCompile Include="TFrame.cpp" />
     <ClCompile Include="TGauge.cpp" />
-    <ClCompile Include="THtmlDocWnd.cpp" />
-    <ClCompile Include="THttpCtrl.cpp" />
     <ClCompile Include="TImageList.cpp" />
     <ClCompile Include="TList.cpp" />
     <ClCompile Include="TListItem.cpp" />
     <ClCompile Include="TMeter.cpp" />
     <ClCompile Include="TMultiLineEdit.cpp" />
-    <ClCompile Include="TOccManager.cpp" />
     <ClCompile Include="TScroll.cpp" />
     <ClCompile Include="TTabCtrl.cpp" />
     <ClCompile Include="TToolTip.cpp" />
@@ -382,14 +379,11 @@
     <ClInclude Include="TEdit.h" />
     <ClInclude Include="TFrame.h" />
     <ClInclude Include="TGauge.h" />
-    <ClInclude Include="THtmlDocWnd.h" />
-    <ClInclude Include="THttpCtrl.h" />
     <ClInclude Include="TImageList.h" />
     <ClInclude Include="TList.h" />
     <ClInclude Include="TListItem.h" />
     <ClInclude Include="TMeter.h" />
     <ClInclude Include="TMultiLineEdit.h" />
-    <ClInclude Include="TOccManager.h" />
     <ClInclude Include="TScroll.h" />
     <ClInclude Include="TTabCtrl.h" />
     <ClInclude Include="TToolTip.h" />

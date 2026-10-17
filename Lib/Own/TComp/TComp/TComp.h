@@ -1,11 +1,7 @@
 #ifndef _INC_TCOMP_H
 #define _INC_TCOMP_H
 
-#include <afx.h>
-#include <afxwin.h>
-#include <afxsock.h>
-#include <afxdisp.h>
-#include <afxdhtml.h>
+#include <TAfx.h>
 
 #include <imm.h>
 
@@ -43,7 +39,6 @@ typedef list<TComponent *>				TCOMP_LIST;
 #include "TListItem.h"
 #include "TComponent.h"
 #include "TImageList.h"
-#include "THttpCtrl.h"
 #include "TTabCtrl.h"
 #include "TButton.h"
 #include "TScroll.h"
@@ -68,6 +63,6 @@ void FinishTachyonComponent();
 
 LPIMAGESET FindSprite(DWORD id);
 CGDIFont *FindFont(DWORD id);
-CString BuildMBCSInfo( CString& strTEXT);
+CString BuildMBCSInfo( const CString& strTEXT);
 
 #endif

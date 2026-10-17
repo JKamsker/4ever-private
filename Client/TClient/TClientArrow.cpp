@@ -42,7 +42,7 @@ void CTClientArrow::Release()
 	CTachyonObject::Release();
 }
 
-void CTClientArrow::CalcTick( LPDIRECT3DDEVICE9 pDevice,
+void CTClientArrow::CalcTick( LPTRENDERDEVICE pDevice,
 							  DWORD dwTick)
 {
 	m_vTSLASH.CalcTick(dwTick);

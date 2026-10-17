@@ -2,7 +2,7 @@
 #define __TCML_PARSER__
 
 #include "cinterf.h"
-#include <Afx.h>
+#include "../../Engine Lib/Engine Lib/TAfx.h"
 
 #include <map>
 #include <memory>

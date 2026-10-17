@@ -158,7 +158,7 @@ LONG WINAPI CTMiniDump::TopLevelExceptionFilter(_EXCEPTION_POINTERS *pException)
 	if( g_hWnd )
 		::ShowWindow(g_hWnd, FALSE);
 
-	if( ::DialogBox(AfxGetInstanceHandle(), MAKEINTRESOURCE(ID_ERROR_DIALOG), NULL, ErrorDlgProc) == IDCANCEL )
+	if( ::DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ERROR_DIALOG), NULL, ErrorDlgProc) == IDCANCEL )
 	{
 		Sleep( 1000 );
 	//	return EXCEPTION_EXECUTE_HANDLER;
@@ -218,7 +218,7 @@ LONG WINAPI CTMiniDump::TopLevelExceptionFilter(_EXCEPTION_POINTERS *pException)
 	LogPlayerInfo(strMailMsg);
 
 	if( GetExceptionDetail(pException, strErrInfo, strFirstStack) )
-		strSubject.Format("[%.4u][%s] %s\n\n", DWORD(TBUILD_NUMBER), strFirstStack, szFilename);
+		strSubject.Format("[%.4u][%s] %s\n\n", DWORD(TBUILD_NUMBER), (LPCTSTR)strFirstStack, szFilename);
 	else
 		strSubject.Format("[%.4u][0x00000000] %s\n\n", DWORD(TBUILD_NUMBER), szFilename);
 
@@ -254,7 +254,7 @@ void CTMiniDump::LogPlayerInfo(CString& outResult)
 	CString strType; unsigned int nID;
 	if( CTClientGame::GetSafeMainTarget(strType, nID) )
 	{
-		strTEMP.Format("Target: Type=%s, ID=%u\n", strType,nID);
+		strTEMP.Format("Target: Type=%s, ID=%u\n", (LPCTSTR)strType,nID);
 		outResult += strTEMP;
 	}
 
@@ -498,7 +498,7 @@ void CTMiniDump::SnapMemoryDump()
 	MiniDumpWithPrivateReadWriteMemory     = 0x0200,
 	} MINIDUMP_TYPE;
 	*/
-#ifndef _WIN64
+#if !defined(_WIN64) && !defined(__clang__)	// OnMemoryDump is MSVC x86 inline asm
 	MINIDUMP_TYPE ePreDumpType = g_eDumpType;
 	g_eDumpType = MiniDumpWithFullMemory;
 	g_bSaveMessage = FALSE;
@@ -663,7 +663,7 @@ BOOL CalculateBeginningOfCallInstruction ( UINT_PTR & dwRetAddr )
 	return ( bRet ) ;
 }
 
-#ifndef _WIN64
+#if !defined(_WIN64) && !defined(__clang__)	// naked function with __LOCAL_SIZE: MSVC only
 BSUMDRET __declspec ( naked ) OnMemoryDump()
 {
 	_EXCEPTION_POINTERS sDumpInfo;
