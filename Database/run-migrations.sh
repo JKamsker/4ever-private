@@ -23,6 +23,16 @@ done
 echo "== Restore (idempotent) =="
 sql -i /Database/restore.sql
 
+# The server answers SELECT 1 before user databases finish recovery (e.g. right after an mssql restart),
+# so `-d TGlobal_gsp` would fail with "Cannot open database". Wait for both to come ONLINE.
+echo "Waiting for databases to come online..."
+for i in $(seq 1 60); do
+  online=$(sql -h -1 -W -Q "SET NOCOUNT ON; SELECT COUNT(*) FROM sys.databases WHERE name IN (N'TGlobal_gsp', N'TGame_gsp') AND state_desc = N'ONLINE';" 2>/dev/null | tr -d '[:space:]' || true)
+  if [ "$online" = "2" ]; then echo "Databases are online."; break; fi
+  echo "  waiting ($i)..."; sleep 2
+  if [ "$i" -eq 60 ]; then echo "Databases did not come online." >&2; exit 1; fi
+done
+
 echo "== Migration tracking table =="
 sql -d TGlobal_gsp -Q "IF OBJECT_ID('dbo._SchemaMigrations') IS NULL CREATE TABLE dbo._SchemaMigrations (Id NVARCHAR(260) NOT NULL PRIMARY KEY, AppliedUtc DATETIME2 NOT NULL CONSTRAINT DF_SchemaMigrations_AppliedUtc DEFAULT SYSUTCDATETIME());"
 
