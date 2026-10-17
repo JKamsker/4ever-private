@@ -1407,15 +1407,18 @@ BYTE CTClientApp::MainProc()
 	DWORD dwServiceCurTick = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
 
 	static DWORD dwMSGTick = 0;
-	MSG msg;
+	BYTE bEVENT = TWINDOW_NOEVENT;
 
 	CTachyonSession::PollAll();
 
-	if( dwMSGTick < TTICK_INTERVAL && PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE) )
-	{
-		DWORD dwPREV = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
+	// Events for up to TTICK_INTERVAL, then a frame. A closed window only waits for its quit.
+	DWORD dwPREV = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
+	if( dwMSGTick < TTICK_INTERVAL || !m_pTachyonWnd->GetSafeHwnd() )
+		bEVENT = CTWindow::PeekEvent();
 
-		if( WM_QUIT == msg.message )
+	if( bEVENT != TWINDOW_NOEVENT )
+	{
+		if( bEVENT == TWINDOW_QUIT )
 		{
 			switch(m_bHackMSG)
 			{
@@ -1448,80 +1451,21 @@ BYTE CTClientApp::MainProc()
 			return FALSE;
 		}
 
-		int nHotCommand = TranslateAccelerator(
-			TSAFE_HWND(m_pTachyonWnd),
-			m_hAccel,
-			&msg);
+		// The window's handlers took the event: count the time they took.
+		DWORD dwTICK = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
 
-		if(nHotCommand)
-			m_pTachyonWnd->ProcessHotCommand(msg.wParam);
-		else
-		{
-			switch(msg.message)
-			{
-			case WM_CHAR			:
-				if( !msg.hwnd || msg.hwnd == TSAFE_HWND(m_pTachyonWnd) )
-				{
-					UINT nFlag = HIWORD(msg.lParam);
-					UINT nRep = LOWORD(msg.lParam);
-
-					m_pTachyonWnd->OnChar( msg.wParam, nRep, nFlag);
-				}
-
-				break;
-
-			case WM_IME_COMPOSITION			:
-				if( !msg.hwnd || msg.hwnd == TSAFE_HWND(m_pTachyonWnd) )
-					if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
-					{
-						TranslateMessage(&msg);
-						DispatchMessage(&msg);
-					}
-					else
-					{
-						m_pTachyonWnd->OnImeComposition(
-							TSAFE_HWND(m_pTachyonWnd),
-							msg.wParam,
-							msg.lParam);
-					}
-
-				break;
-			case WM_SYSKEYDOWN		:
-			case WM_SYSKEYUP		:
-			case WM_KEYDOWN			:
-			case WM_KEYUP			:
-				if( msg.hwnd && msg.hwnd != TSAFE_HWND(m_pTachyonWnd) )
-					msg.hwnd = TSAFE_HWND(m_pTachyonWnd);
-
-			default					:
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-
-				break;
-			}
-		}
-
-		if( msg.message != WM_SYSCOMMAND || msg.hwnd != TSAFE_HWND(m_pTachyonWnd) )
-		{
-			DWORD dwTICK = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
-
-			if( dwTICK > dwPREV )
-				dwMSGTick += dwTICK - dwPREV;
-		}
-		else
-			dwMSGTick = 0;
+		if( dwTICK > dwPREV )
+			dwMSGTick += dwTICK - dwPREV;
 	}
-	else
+	else if(m_pTachyonWnd->GetSafeHwnd())
 	{
 		dwMSGTick = 0;
 
 		if(!m_pTachyonWnd->m_bActivate)
 		{
-			// Wake up for a window message or after a short delay, so the sessions are still polled.
+			// Wake up for an event or after a short delay, so the sessions are still polled.
 			LeaveCriticalSection(&m_cs);
-			MsgWaitForMultipleObjects( 0, NULL, FALSE, TSESSION_IDLE_WAIT, QS_ALLINPUT);
+			CTWindow::WaitEvent(TSESSION_IDLE_WAIT);
 			EnterCriticalSection(&m_cs);
 
 #ifndef TEST_MODE

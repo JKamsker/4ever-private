@@ -250,7 +250,7 @@ void CTachyonWnd::OnNcDestroy()
 	CTWindow::OnNcDestroy();
 
 	if( CTachyonApp::GetApp() && CTachyonApp::GetApp()->m_pMainWnd == this )
-		PostQuitMessage(0);
+		CTWindow::PostQuit();
 }
 
 BOOL CTachyonWnd::InitDevices()

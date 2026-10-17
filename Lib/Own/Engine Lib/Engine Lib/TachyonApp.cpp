@@ -63,11 +63,14 @@ int CTachyonApp::Main( HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow)
 	m_pApp->m_lpCmdLine = lpCmdLine;
 	m_pApp->m_nCmdShow = nCmdShow;
 
-	// Like MFC: a failed InitInstance still gets its ExitInstance, and Run returns the exit code.
-	if(!m_pApp->InitInstance())
-		return m_pApp->ExitInstance();
+	if(!CTWindow::InitPlatform())
+		return -1;
 
-	return m_pApp->Run();
+	// Like MFC: a failed InitInstance still gets its ExitInstance, and Run returns the exit code.
+	int nResult = m_pApp->InitInstance() ? m_pApp->Run() : m_pApp->ExitInstance();
+	CTWindow::QuitPlatform();
+
+	return nResult;
 }
 
 CTachyonApp::~CTachyonApp()
@@ -289,92 +292,46 @@ int CTachyonApp::Run()
 
 BYTE CTachyonApp::MainProc()
 {
-	MSG msg;
-
 	CTachyonSession::PollAll();
 
-	if( PeekMessage( &msg, NULL, 0U, 0U, PM_REMOVE ) )
+	BYTE bEVENT = CTWindow::PeekEvent();
+	if( bEVENT == TWINDOW_QUIT )
 	{
-		if( WM_QUIT == msg.message )
-		{
-			SaveStdProfileSettings();
-			m_pTachyonWnd->DestroyWindow();
+		SaveStdProfileSettings();
+		m_pTachyonWnd->DestroyWindow();
 
-			delete m_pTachyonWnd;
-			m_pTachyonWnd = NULL;
+		delete m_pTachyonWnd;
+		m_pTachyonWnd = NULL;
 
-			return FALSE;
-		}
-
-		int nHotCommand = TranslateAccelerator(
-			TSAFE_HWND(m_pTachyonWnd),
-			m_hAccel,
-			&msg);
-
-		if(nHotCommand)
-			m_pTachyonWnd->ProcessHotCommand(msg.wParam);
-		else
-		{
-			switch(msg.message)
-			{
-			case WM_CHAR			:
-				if( msg.hwnd == TSAFE_HWND(m_pTachyonWnd) )
-				{
-					UINT nFlag = HIWORD(msg.lParam);
-					UINT nRep = LOWORD(msg.lParam);
-
-					m_pTachyonWnd->OnChar( msg.wParam, nRep, nFlag);
-				}
-				else
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-
-				break;
-
-			case WM_IME_COMPOSITION	:
-				{
-					m_pTachyonWnd->OnImeComposition(
-						TSAFE_HWND(m_pTachyonWnd),
-						msg.wParam,
-						msg.lParam);
-				}
-
-				break;
-
-			default							:
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-
-				break;
-			}
-		}
+		return FALSE;
 	}
-	else if(!m_pTachyonWnd->m_bActivate)
+
+	// One event per pass; a frame when none is waiting.
+	if( bEVENT == TWINDOW_NOEVENT && m_pTachyonWnd->GetSafeHwnd() )
 	{
-		// Wake up for a window message or after a short delay, so the sessions are still polled.
-		MsgWaitForMultipleObjects( 0, NULL, FALSE, TSESSION_IDLE_WAIT, QS_ALLINPUT);
-	
+		if(!m_pTachyonWnd->m_bActivate)
+		{
+			// Wake up for an event or after a short delay, so the sessions are still polled.
+			CTWindow::WaitEvent(TSESSION_IDLE_WAIT);
+
 #ifndef TEST_MODE
-		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
-			m_dwSLEEP = 100;
+			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+				m_dwSLEEP = 100;
 #endif
-	}
-	else if(!m_pTachyonWnd->m_bOnMovie)
-	{
+		}
+		else if(!m_pTachyonWnd->m_bOnMovie)
+		{
 #ifndef TEST_MODE
-		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
-			m_dwSLEEP = 10;
+			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+				m_dwSLEEP = 10;
 #endif
 
-		m_pTachyonWnd->Render();
+			m_pTachyonWnd->Render();
 
 #ifdef TEST_MODE
-		CTProfileManager::Increment_Frame_Counter();
+			CTProfileManager::Increment_Frame_Counter();
 #endif
+		}
 	}
 
 	while(!m_pTachyonWnd->m_vCOMMAND.empty())

@@ -1,9 +1,14 @@
-// TWindow.h: a Win32 window without MFC.
+// TWindow.h: the engine's window, an SDL3 window.
 //
-// The window procedure sends the messages the engine handles to virtual
-// handlers named like MFC's (OnKeyDown, OnLButtonDown...), so the windows
-// derived from it keep their handlers. Each handler's default, like MFC's,
-// passes the message on to DefWindowProc.
+// SDL's events go to virtual handlers named like MFC's (OnKeyDown, OnLButtonDown...) with the
+// Win32 parameters the engine always had: virtual key codes, the scan code word of the key
+// messages, MK_ flags and client coordinates. The handlers' default does nothing more, SDL has
+// already given the message its default processing.
+//
+// On Windows, the window's text input (WM_CHAR and the IME messages), its cursor, the caption
+// drag and the engine's own posted messages still take the Win32 path: a subclass of SDL's
+// window procedure sends them to WindowProc, and posted ones go through SDL's event queue so
+// they keep their order with the key events.
 //////////////////////////////////////////////////////////////////////
 
 #if !defined __TWINDOW_H
@@ -14,11 +19,32 @@
 #endif // _MSC_VER > 1000
 
 
+struct SDL_Window;
+union SDL_Event;
+
+// What CTWindow::PeekEvent found.
+#define TWINDOW_NOEVENT				0
+#define TWINDOW_EVENT				1
+#define TWINDOW_QUIT				2
+
+
 class CTWindow
 {
 public:
 	CTWindow();
 	virtual ~CTWindow();
+
+public:
+	// SDL for the whole application: before the first window, after the last one.
+	static BOOL InitPlatform();
+	static void QuitPlatform();
+
+	// Handles one pending event. TWINDOW_QUIT once after PostQuit (or a posted WM_QUIT).
+	static BYTE PeekEvent();
+
+	// Waits for an event, at most dwTimeout ms. The event stays queued.
+	static void WaitEvent( DWORD dwTimeout);
+	static void PostQuit();
 
 public:
 	BOOL CreateEx(
@@ -31,6 +57,7 @@ public:
 	BOOL DestroyWindow();
 
 	HWND GetSafeHwnd() const { return m_hWnd; }
+	SDL_Window *GetSDLWindow() const { return m_pSDL; }
 
 	void SetWindowText( LPCTSTR lpszText) { ::SetWindowText( m_hWnd, lpszText); }
 	void GetWindowText( CString& strText) const;
@@ -69,17 +96,19 @@ public:
 	virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam);
 	virtual LRESULT DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam);
 
-	// DefWindowProc of the message being handled.
+	// DefWindowProc of the Win32 message being handled; 0 for an SDL event.
 	LRESULT Default();
 
 	virtual void OnActivate( UINT nState, HWND hWndOther, BOOL bMinimized) { Default(); }
-	virtual void OnDestroy() { Default(); }
-	virtual void OnNcDestroy() { Default(); }
+	virtual void OnDestroy() {}
+	virtual void OnNcDestroy() {}
 
 	virtual void OnKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
 	virtual void OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
 	virtual void OnSysKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
 	virtual void OnSysKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
+	virtual void OnChar( UINT nChar, UINT nRepCnt, UINT nFlags) { Default(); }
+	virtual void OnImeComposition( HWND hWnd, WPARAM wParam, LPARAM lParam) { Default(); }
 
 	virtual void OnMouseMove( UINT nFlags, CPoint point) { Default(); }
 	virtual void OnLButtonDown( UINT nFlags, CPoint point) { Default(); }
@@ -99,13 +128,22 @@ public:
 	virtual void OnNcRButtonDown( UINT nHitTest, CPoint point) { Default(); }
 
 private:
-	static LRESULT CALLBACK WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	static LPCTSTR GetWndClass();
+	void Dispatch( const SDL_Event& event);
+	void DispatchKey( const SDL_Event& event);
+	void DispatchMouse( const SDL_Event& event);
+
+	LRESULT CallWindowProc( UINT message, WPARAM wParam, LPARAM lParam);
+
+	static LRESULT CALLBACK SubclassProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	static CTWindow *FromSDLWindow( SDL_Window *pSDL);
 
 public:
 	HWND m_hWnd;
 
 private:
+	SDL_Window *m_pSDL;
+	WNDPROC m_pSDLProc;
+	DWORD m_dwButtons;
 	MSG m_vCURRENT;
 };
 

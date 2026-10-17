@@ -34,6 +34,19 @@ if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(bgfx PRIVATE -Wno-c++11-narrowing)
 endif()
 
+# SDL3 for the window, its events and the text input (Lib/3rdParty/SDL3/VERSION.txt). A static
+# library with only the subsystems the client uses: audio is miniaudio, rendering is bgfx.
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
+foreach(_SDL_SUB AUDIO GPU RENDER CAMERA JOYSTICK HAPTIC HIDAPI SENSOR DIALOG TRAY)
+    set(SDL_${_SDL_SUB} OFF CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory("${TCLIENT_LIB_3RD}/SDL3" SDL3 EXCLUDE_FROM_ALL)
+
 add_subdirectory("${TCLIENT_LIB_OWN}/TCML/TCML" TCML)
 add_subdirectory("${TCLIENT_LIB_OWN}/Engine Lib/Engine Lib" EngineLib)
 add_subdirectory("${TCLIENT_LIB_OWN}/TComp/TComp" TComp)

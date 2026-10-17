@@ -80,6 +80,7 @@ target_link_libraries(EngineLib
         tclient_dxsdk
         TCML
         zlibstatic
+        SDL3::SDL3-static
     PRIVATE
         tclient_options
         TRenderBGFX
