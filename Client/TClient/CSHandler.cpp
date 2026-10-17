@@ -975,7 +975,7 @@ if (bInBOWMap)
 //	}
 //	catch(...)
 //	{
-//		AfxMessageBox("__CharInfo|0xFF0A000FF");
+//		::MessageBox( NULL, "__CharInfo|0xFF0A000FF", NULL, MB_OK);
 //	}
 	return TERR_NONE;
 }

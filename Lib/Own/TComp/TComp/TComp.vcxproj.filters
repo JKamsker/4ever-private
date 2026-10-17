@@ -38,12 +38,6 @@
     <ClCompile Include="TGauge.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="THtmlDocWnd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="THttpCtrl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TImageList.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -57,9 +51,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TMultiLineEdit.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TOccManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TScroll.cpp">
@@ -103,12 +94,6 @@
     <ClInclude Include="TGauge.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="THtmlDocWnd.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="THttpCtrl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TImageList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -122,9 +107,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TMultiLineEdit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TOccManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TScroll.h">

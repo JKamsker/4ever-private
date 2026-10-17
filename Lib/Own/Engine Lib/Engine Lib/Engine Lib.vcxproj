@@ -389,6 +389,7 @@
     <ClCompile Include="TachyonObject.cpp" />
     <ClCompile Include="TachyonRes.cpp" />
     <ClCompile Include="TachyonInput.cpp" />
+    <ClCompile Include="TWindow.cpp" />
     <ClCompile Include="TachyonSession.cpp" />
     <ClCompile Include="TachyonSFX.cpp" />
     <ClCompile Include="TachyonSlashSFX.cpp" />
@@ -432,6 +433,7 @@
     <ClInclude Include="TachyonObject.h" />
     <ClInclude Include="TachyonRes.h" />
     <ClInclude Include="TachyonInput.h" />
+    <ClInclude Include="TWindow.h" />
     <ClInclude Include="TD3DXMath.h" />
     <ClInclude Include="TRenderDevice.h" />
     <ClInclude Include="TachyonSession.h" />

@@ -167,7 +167,7 @@ CTClientMAP::~CTClientMAP()
 
 void CTClientMAP::ReleaseMAP()
 {
-	CTClientApp *pTAPP = (CTClientApp *) AfxGetApp();
+	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 	MAPTGATE::iterator itTGATE;
 
 	if( pTAPP->m_hLoadThread && pTAPP->m_hLoadEvent )
@@ -726,7 +726,7 @@ void CTClientMAP::LoadMAP( CD3DDevice *pDevice,
 		pMainWnd->Render();
 	}
 
-	CTClientApp *pTAPP = (CTClientApp *) AfxGetApp();
+	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 
 	LPTMAPINFO pTMAPINFO = CTChart::GetTMAPINFO(wMapID);
 	CTClientFlag::InitTPATH();
@@ -759,7 +759,7 @@ void CTClientMAP::LoadMAP( CD3DDevice *pDevice,
 void CTClientMAP::LoadMAPOBJ( CD3DDevice *pDevice,
 							  BYTE bLoadNOW)
 {
-	CTClientApp *pTAPP = (CTClientApp *) AfxGetApp();
+	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 	LPTLOADOBJ pTLOAD = NULL;
 	MAPMAPOBJ::iterator itMAPOBJ;
 

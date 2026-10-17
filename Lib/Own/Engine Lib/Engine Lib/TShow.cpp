@@ -32,8 +32,8 @@ CTShow::~CTShow()
 	Release();
 }
 
-void CTShow::InitDShow( CWnd *pHost,
-					    CWnd *pWnd,
+void CTShow::InitDShow( CTWindow *pHost,
+					    CTWindow *pWnd,
 						LPTSTR szFile,
 						DWORD dwMessage)
 {

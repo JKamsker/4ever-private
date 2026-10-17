@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "THtmlDocWnd.h"
 
 
 CTachyonRes*	g_pImagePool = NULL;
@@ -73,7 +72,6 @@ void InitTachyonComponent(CTachyonRes * pImagePool,
 						  CTachyonRes * pMenuPool,
 						  TCMLParser * pParser)
 {
-	THtmlDocWnd::InitHook();
 
 	g_pImagePool = pImagePool;
 	g_pMenuPool = pMenuPool;

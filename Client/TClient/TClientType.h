@@ -2582,7 +2582,6 @@ struct TOP3
 // TClient class type
 
 class CTClientMaintain;
-class CTClientWebCtrl;
 class CTClientSession;
 class CTClientObjBase;
 class CTClientMoveObj;
@@ -2639,7 +2638,6 @@ class CTMessengerChat;
 class CTMessengerChatFrame;
 class CTMailListFrame;
 class CTClientApp;
-class CPacketSpyDlg;
 class CTGodBall;
 class CTGodTower;
 class CTSiegeManager;
@@ -4120,7 +4118,6 @@ struct SmoothData
 ///////////////////////////////////////////////////////////////////////////
 // TClient base class define
 
-#include "TClientWebCtrl.h"
 #include "TClientSession.h"
 #include "TClientTalkBox.h"
 #include "TClientObjBase.h"

@@ -47,7 +47,6 @@
 #include "TMailAskMoneyDlg.h"
 #include "TPetMakeDlg.h"
 #include "TPetManageDlg.h"
-#include "PacketSpyDlg.h"
 #include "TGUIPosition.h"
 #include "TMailSender.h"
 #include "TCandidateFrame.h"
@@ -93,8 +92,6 @@
 #include "TRpcDlg.h"
 #include "TRpcRewardDlg.h"
 #include "TRpsRewardList.h"
-#include "THtmlDocWnd.h"
-#include "THttpCtrl.h"
 #include "TAidCountry.h"
 #include "TSelectCountry.h"
 #include "TLimitEdit.h"
@@ -161,26 +158,13 @@
 #define ID_SERVERS_GROUP        (0x000068F0)
 #define ID_SERVERS_CHANNEL       (0x000068F2)
 
-BEGIN_MESSAGE_MAP(CTClientWnd, CTachyonWnd)
-	ON_MESSAGE( WM_TOBJMSG, &CTClientWnd::OnOBJMessage)
-	ON_WM_DESTROY()
-	ON_WM_KEYDOWN()
-	ON_WM_KEYUP()
-	ON_WM_LBUTTONDOWN()
-	ON_WM_LBUTTONUP()
-	ON_WM_MBUTTONDOWN()
-	ON_WM_MBUTTONUP()
-	ON_WM_RBUTTONDOWN()
-	ON_WM_RBUTTONUP()
-	ON_WM_RBUTTONDBLCLK()
-	ON_WM_MBUTTONDBLCLK()
-	ON_WM_LBUTTONDBLCLK()
-	ON_WM_MOUSEWHEEL()
-	ON_WM_MOUSEMOVE()
-	ON_WM_SETCURSOR()
-	ON_WM_SYSKEYDOWN()
-	ON_WM_SYSKEYUP()
-END_MESSAGE_MAP()
+LRESULT CTClientWnd::WindowProc( UINT message, WPARAM wParam, LPARAM lParam)
+{
+	if( message == WM_TOBJMSG )
+		return OnOBJMessage( wParam, lParam);
+
+	return CTachyonWnd::WindowProc( message, wParam, lParam);
+}
 
 CTClientWnd* CTClientWnd::m_pINSTANCE = NULL;
 CTClientWnd* CTClientWnd::GetInstance() { return m_pINSTANCE; }
@@ -1531,7 +1515,6 @@ void CTClientWnd::InitResource( CString strGroupID,
 	m_MessageBox.m_pTParser = m_pTParser;
 	m_TNet.m_pTParser = m_pTParser;
 	m_MainGame.m_pTParser = m_pTParser;
-	m_vWebCtrl.m_pActHost = this;
 
 	if( CTNationOption::JAPAN_IME  || CTNationOption::TAIWAN_IME )
 	{
@@ -4638,16 +4621,6 @@ void CTClientWnd::ReleaseChart()
 
 void CTClientWnd::OnDestroy()
 {
-	m_vWebCtrl.m_pActHost = NULL;
-	if(m_vWebCtrl.GetSafeHwnd())
-		m_vWebCtrl.DestroyWindow();
-
-	if(theApp.m_pPacketSpy)
-	{
-		delete theApp.m_pPacketSpy;
-		theApp.m_pPacketSpy = NULL;
-	}
-
 	if(!theApp.m_bLoaded)
 	{
 		theApp.ExitLoadThread(TRUE);
@@ -5406,11 +5379,13 @@ BOOL CTClientWnd::SetGamma(float fGamma, int nOverBright, float fContrast)
     WORD wRamp[3*256];
     float f;
 	   
-	CDC* pDC = GetDC();
-	HDC hDC = TSAFE_HDC(pDC);
+	HDC hDC = ::GetDC(m_hWnd);
 
     if( !GetDeviceGammaRamp(hDC, wRamp) )
+	{
+		::ReleaseDC( m_hWnd, hDC);
 		return FALSE;
+	}
 	   
     for ( int i=0; i<256; ++i )
 	{
@@ -5424,7 +5399,10 @@ BOOL CTClientWnd::SetGamma(float fGamma, int nOverBright, float fContrast)
 		wRamp[i+0] = wRamp[i+256] = wRamp[i+512] = ((WORD)f)<<8;
     }
 	   
-    return SetDeviceGammaRamp(hDC, wRamp);
+    BOOL bResult = SetDeviceGammaRamp(hDC, wRamp);
+	::ReleaseDC( m_hWnd, hDC);
+
+	return bResult;
 }
 
 void CTClientWnd::OnSysKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags)
@@ -5797,7 +5775,7 @@ TFrame *CTClientWnd::GetTMainFrame()
 
 BOOL CTClientWnd::ResetDevices()
 {
-	CTClientApp *pTAPP = (CTClientApp *) AfxGetApp();
+	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 
 	EnterCriticalSection(&pTAPP->m_cs);
 	m_bResetDevice = TRUE;
@@ -6120,7 +6098,7 @@ void CTClientWnd::ResetTOption()
 		memcpy( &m_MainGame.m_vTOPTION, &vDEFAULT[TOPTIONLEVEL_MED], sizeof(TOPTION));
 }
 
-BOOL CTClientWnd::OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message)
+BOOL CTClientWnd::OnSetCursor( HWND pWnd, UINT nHitTest, UINT message)
 {
 	CPoint point = CTachyonInput::GetCursorPos();
 
@@ -6286,6 +6264,13 @@ void CTClientWnd::OnAgreementPage()
 
 	pList->SetCurSelItem(0);
 	m_bNeedReadAgreement = FALSE;
+}
+
+// Web pages (cash shop, account) open in the system browser.
+void CTClientWnd::OpenURL( const CString& strURL)
+{
+	if(!strURL.IsEmpty())
+		ShellExecute( NULL, _T("open"), strURL, NULL, NULL, SW_SHOWNORMAL);
 }
 
 CString CTClientWnd::CaptureIMG()
@@ -6954,7 +6939,7 @@ DWORD CTClientWnd::LoadThread()
 	{
 	}
 
-	CTClientApp *pTAPP = (CTClientApp *) AfxGetApp();
+	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 
 	while(TRUE)
 	{

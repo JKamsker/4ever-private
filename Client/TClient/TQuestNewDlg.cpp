@@ -1651,7 +1651,7 @@ CString CQuestNewDlg::GetResultString(CTClientQuest* pTQUEST)
 
 void CQuestNewDlg::CheckShowRight(const CQuest& Quest)
 {
-	CTClientWnd *pMainWnd = (CTClientWnd *)AfxGetMainWnd();
+	CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 	if (!Quest.m_Accepted)
 		return;
 
@@ -1831,7 +1831,7 @@ void CQuestNewDlg::SetQuestState(INT nIdx, LPTQUEST pTQUEST)
 
 	if (pTQuest && pTQuest->m_bTimmer)
 	{
-		CTClientWnd *pMainWnd = (CTClientWnd *)AfxGetMainWnd();
+		CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 		CTGaugePannel *pTPANNEL = (CTGaugePannel *)pMainWnd->m_MainGame.GetFrame(TFRAME_GAUGE);
 		pTPANNEL->UpdateQuestINFO(pTQuest);
 	}
@@ -2171,7 +2171,7 @@ void CQuestList::DeleteQuestList()
 void CQuestList::LoadComponent()
 {
 	if (!m_pFrame)
-		AfxMessageBox("No Component(ASSERT)");
+		::MessageBox( NULL, "No Component(ASSERT)", NULL, MB_OK);
 
 	for (BYTE i = 0; i < 255; ++i)
 	{

@@ -313,8 +313,8 @@ void CTachyonMedia::ResetVolume( BYTE bType, DWORD dwID, int nIndex)
 	}
 }
 
-void CTachyonMedia::LoadDShow( CWnd *pHost,
-							   CWnd *pWnd,
+void CTachyonMedia::LoadDShow( CTWindow *pHost,
+							   CTWindow *pWnd,
 							   DWORD dwID,
 							   DWORD dwMessage,
 							   LPTSTR szFileName,

@@ -10,14 +10,11 @@ add_library(TComp STATIC
     TEdit.cpp
     TFrame.cpp
     TGauge.cpp
-    THtmlDocWnd.cpp
-    THttpCtrl.cpp
     TImageList.cpp
     TList.cpp
     TListItem.cpp
     TMeter.cpp
     TMultiLineEdit.cpp
-    TOccManager.cpp
     TScroll.cpp
     TTabCtrl.cpp
     TToolTip.cpp

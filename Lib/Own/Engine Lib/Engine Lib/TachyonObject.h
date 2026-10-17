@@ -234,7 +234,7 @@ public:
 
 	FLOAT m_fActTime;
 	FLOAT m_fKeyTime;
-	CWnd* m_pHost;
+	CTWindow* m_pHost;
 
 	BOOL m_bUseSHADER;
 	BYTE m_bZEnable;

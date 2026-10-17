@@ -22,6 +22,7 @@ set(EngineLib_SOURCES
     TachyonMAP.cpp
     TachyonMedia.cpp
     TachyonInput.cpp
+    TWindow.cpp
     TachyonMesh.cpp
     TachyonObject.cpp
     TachyonRes.cpp

@@ -1483,7 +1483,7 @@ void CTNewQuestDlg::ExpendTree(BYTE bIndex, BYTE bExpend)
 
 void CTNewQuestDlg::CheckShowRight( BYTE bIndex)
 {
-	CTClientWnd *pMainWnd = (CTClientWnd *) AfxGetMainWnd();
+	CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 	int nIndex = m_pQLIST->GetTop() + bIndex;
 
 	if( pMainWnd && nIndex >= 0 && nIndex < m_pQLIST->GetItemCount() && GetTQUEST(nIndex) )
@@ -1681,7 +1681,7 @@ void CTNewQuestDlg::SetQuestState(INT nIdx, LPTQUEST pTQUEST)
 	{
 		m_pQLIST->SetItemString(nIdx, COL_STATE, m_pQuestDlg->GetResultString(pTQuest));
 
-		CTClientWnd *pMainWnd = (CTClientWnd *) AfxGetMainWnd();
+		CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 		CTGaugePannel *pTPANNEL = (CTGaugePannel *) pMainWnd->m_MainGame.GetFrame(TFRAME_GAUGE);
 		pTPANNEL->UpdateQuestINFO( pTQuest );
 	}*/

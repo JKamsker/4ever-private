@@ -138,7 +138,7 @@ public:
 		UINT nLength,
 		UINT nMipLevels);
 
-	BOOL InitDevices( CWnd *pWnd);
+	BOOL InitDevices( CTWindow *pWnd);
 	BOOL ResetHost();
 	BOOL Reset();
 
@@ -228,7 +228,7 @@ protected:
 	LPTVERTEXBUFFER m_pEraserVB;
 	LPTINDEXBUFFER m_pEraserIB;
 
-	CWnd* m_pMainWnd;
+	CTWindow* m_pMainWnd;
 
 public:
 	CD3DDevice();

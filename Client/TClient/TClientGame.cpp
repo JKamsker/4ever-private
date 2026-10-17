@@ -23,7 +23,6 @@
 #include "TPetManageDlg.h"
 #include "TMsgGroupList.h"
 #include "TClient.h"
-#include "PacketSpyDlg.h"
 #include "TCandidateFrame.h"
 #include "MD5.h"
 #include "SHA1.h"
@@ -27036,7 +27035,7 @@ void CTClientGame::CopyToClipboard( CString strTEXT )
 
 		if(!hHANDLE)
 		{
-			AfxMessageBox( "Cannot GlobalAlloc" );
+			::MessageBox( NULL, "Cannot GlobalAlloc", NULL, MB_OK);
 			return;
 		}
 		LPTSTR pSTR = (LPTSTR) GlobalLock(hHANDLE);
@@ -27044,7 +27043,7 @@ void CTClientGame::CopyToClipboard( CString strTEXT )
 		if(!pSTR)
 		{
 			GlobalFree(hHANDLE);
-			AfxMessageBox( "Cannot GlobalLock" );
+			::MessageBox( NULL, "Cannot GlobalLock", NULL, MB_OK);
 			return;
 		}
 		memcpy( pSTR, LPCTSTR(strTEXT), strTEXT.GetLength() * sizeof(TCHAR));
@@ -27054,21 +27053,21 @@ void CTClientGame::CopyToClipboard( CString strTEXT )
 		if(!OpenClipboard(TSAFE_HWND(m_pMainWnd)))
 		{
 			GlobalFree(hHANDLE);
-			AfxMessageBox( "Cannot open the Clipboard" );
+			::MessageBox( NULL, "Cannot open the Clipboard", NULL, MB_OK);
 			return;
 		}
 
 		if( !EmptyClipboard() )
 		{
 			GlobalFree(hHANDLE);
-			AfxMessageBox( "Cannot empty the Clipboard" );
+			::MessageBox( NULL, "Cannot empty the Clipboard", NULL, MB_OK);
 			return;  
 		}
 
 		if ( ::SetClipboardData( CF_TEXT, hHANDLE) == NULL )
 		{
 			GlobalFree(hHANDLE);
-			AfxMessageBox( "Unable to set Clipboard data" );
+			::MessageBox( NULL, "Unable to set Clipboard data", NULL, MB_OK);
 			CloseClipboard();
 			return;  
 		}  

@@ -35,7 +35,7 @@ void SmoothScrolling::Setup(CRect rArea, DWORD* All, BYTE bDynObjects, CTClientU
 		{
 			TComponent* pComponentBase = pSource->FindKid(All[i]);
 			if (!pComponentBase) {
-				AfxMessageBox(":D");
+				::MessageBox( NULL, ":D", NULL, MB_OK);
 				continue;
 			}
 

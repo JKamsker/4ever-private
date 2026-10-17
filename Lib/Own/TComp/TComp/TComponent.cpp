@@ -1112,7 +1112,7 @@ BOOL TComponent::DoMouseWheel( UINT nFlags, short zDelta, CPoint pt)
 	return FALSE;
 }
 
-BOOL TComponent::OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message, CPoint pt)
+BOOL TComponent::OnSetCursor( HWND pWnd, UINT nHitTest, UINT message, CPoint pt)
 {
 	return FALSE;
 }

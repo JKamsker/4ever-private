@@ -35,18 +35,43 @@ BOOL CTachyonApp::WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPC
 	return TRUE;
 }
 
-BEGIN_MESSAGE_MAP(CTachyonApp, CWinApp)
-	//{{AFX_MSG_MAP(CTachyonApp)
-	//}}AFX_MSG_MAP
-END_MESSAGE_MAP()
-
 /////////////////////////////////////////////////////////////////////////////
 // CTachyonApp construction
+
+CTachyonApp *CTachyonApp::m_pApp = NULL;
 
 CTachyonApp::CTachyonApp()
 {
 	m_pTachyonWnd = NULL;
+	m_pMainWnd = NULL;
 	m_dwSLEEP = 0;
+	m_hAccel = NULL;
+
+	m_hInstance = NULL;
+	m_lpCmdLine = NULL;
+	m_nCmdShow = SW_SHOWNORMAL;
+
+	m_pApp = this;
+}
+
+int CTachyonApp::Main( HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow)
+{
+	if(!m_pApp)
+		return -1;
+
+	// MFC's core classes (CString, CFile) still need their module state.
+	if(!AfxWinInit( hInstance, NULL, lpCmdLine, nCmdShow))
+		return -1;
+
+	m_pApp->m_hInstance = hInstance;
+	m_pApp->m_lpCmdLine = lpCmdLine;
+	m_pApp->m_nCmdShow = nCmdShow;
+
+	// Like MFC: a failed InitInstance still gets its ExitInstance, and Run returns the exit code.
+	if(!m_pApp->InitInstance())
+		return m_pApp->ExitInstance();
+
+	return m_pApp->Run();
 }
 
 CTachyonApp::~CTachyonApp()
@@ -61,7 +86,6 @@ void CTachyonApp::LoadStdProfileSettings()
 	CString strValue;
 	DWORD dwValue;
 
-	CWinApp::LoadStdProfileSettings();
 	strValue = GetProfileString(
 		_T("Settings"),
 		_T("WindowedMode"),
@@ -339,14 +363,14 @@ BYTE CTachyonApp::MainProc()
 		MsgWaitForMultipleObjects( 0, NULL, FALSE, TSESSION_IDLE_WAIT, QS_ALLINPUT);
 	
 #ifndef TEST_MODE
-		if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 			m_dwSLEEP = 100;
 #endif
 	}
 	else if(!m_pTachyonWnd->m_bOnMovie)
 	{
 #ifndef TEST_MODE
-		if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+		if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 			m_dwSLEEP = 10;
 #endif
 

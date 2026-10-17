@@ -16,12 +16,9 @@ set(TClient_SOURCES
     Curse.cpp
     GuildSkillsDlg.cpp
     HwidManager.cpp
-    IPDialog.cpp
     MacroProtection.cpp
     md5.cpp
     Outro.cpp
-    PacketSpyAcks.cpp
-    PacketSpyDlg.cpp
     SHA1.cpp
     SHA512.cpp
     SmoothScrolling.cpp
@@ -111,7 +108,6 @@ set(TClient_SOURCES
     TClientTalkBox.cpp
     TClientTerm.cpp
     TClientUIBase.cpp
-    TClientWebCtrl.cpp
     TClientWnd.cpp
     TColorPicker.cpp
     TCommunityDlg.cpp

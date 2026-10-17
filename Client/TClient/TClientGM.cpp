@@ -6125,50 +6125,7 @@ int CTClientGame::OnGM_TOGGLE_CASH_CHARGE()
 		strURL = CTChart::LoadString( TSTR_URL_CASHCHARGE);
 	}
 
-	if( CTNationOption::POLAND ||
-		CTNationOption::FRANCE ||
-		CTNationOption::GERMANY ||
-		CTNationOption::GREECE || 
-		CTNationOption::CZECH ||
-//		CTNationOption::ITALY ||
-		CTNationOption::SPAIN ||
-		CTNationOption::UNITEDKINGDOM ||
-		CTNationOption::TAIWAN ||
-		CTNationOption::ENGLISH ||
-		CTNationOption::RUSSIA ||
-		CTNationOption::ROMANIA ||
-		CTNationOption::UNITEDSTATE ||
-		CTNationOption::HUNGARY ||
-		CTNationOption::TURKEY ||
-		CTNationOption::PORTUGAL ||
-		CTNationOption::JAPAN )
-	{
-		m_pMainWnd->m_vWebCtrl.Navigate(
-			strURL,
-			0, 0,
-			0, 0,
-			TRUE,
-			TRUE,
-			TRUE,
-			TRUE,
-			TRUE,
-			HWND_TOPMOST);
-	}
-	else
-	{
-		m_pMainWnd->m_vWebCtrl.Navigate(
-			strURL,
-			100,
-			100,
-			530,
-			690,
-			FALSE,
-			FALSE,
-			FALSE,
-			FALSE,
-			TRUE,
-			HWND_TOPMOST);
-	}
+	m_pMainWnd->OpenURL(strURL);
 
 	return TERR_NONE;
 }
@@ -6180,16 +6137,7 @@ int CTClientGame::OnGM_SHOW_ACCOUNT()
 
 	if( !m_pMainWnd->m_TNet.m_strCAURL.IsEmpty() )
 	{
-		m_pMainWnd->m_vWebCtrl.Navigate(
-			m_pMainWnd->m_TNet.m_strCAURL,
-			0, 0,
-			0, 0,
-			TRUE,
-			TRUE,
-			TRUE,
-			TRUE,
-			TRUE,
-			HWND_TOPMOST);
+		m_pMainWnd->OpenURL(m_pMainWnd->m_TNet.m_strCAURL);
 	}
 
 	return TERR_NONE;

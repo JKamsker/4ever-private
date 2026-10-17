@@ -388,7 +388,7 @@ public:
 	virtual void OnLostDevice();
 	virtual void OnNotify( DWORD from, WORD msg, LPVOID param );
 	virtual BOOL DoMouseWheel( UINT nFlags, short zDelta, CPoint pt);
-	virtual BOOL OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message, CPoint pt);
+	virtual BOOL OnSetCursor( HWND pWnd, UINT nHitTest, UINT message, CPoint pt);
 
 public:
 	//Render

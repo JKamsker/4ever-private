@@ -21,8 +21,8 @@ public:
 	BYTE InitMEDIA();
 
 	void LoadDShow(
-		CWnd *pHost,
-		CWnd *pWnd,
+		CTWindow *pHost,
+		CTWindow *pWnd,
 		DWORD dwID,
 		DWORD dwMessage,
 		LPTSTR szFileName,

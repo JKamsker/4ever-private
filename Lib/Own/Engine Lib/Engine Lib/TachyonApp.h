@@ -10,22 +10,23 @@
 #pragma once
 #endif // _MSC_VER > 1000
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
-
-class CTachyonApp : public CWinApp
+// The application, without MFC's CWinApp: the client's WinMain calls Main, which
+// runs InitInstance then Run, like MFC did. There is one application object.
+class CTachyonApp
 {
 public:
 	CTachyonApp();
 	virtual ~CTachyonApp();
 
+	static int Main( HINSTANCE hInstance, LPTSTR lpCmdLine, int nCmdShow);
+	static CTachyonApp *GetApp() { return m_pApp; }
+
 // Overrides
-	// ClassWizard generated virtual function overrides
-	//{{AFX_VIRTUAL(CTachyonApp)
-	public:
+public:
+	virtual BOOL InitInstance() { return TRUE; }
+	virtual int ExitInstance() { return 0; }
 	virtual int Run();
-	//}}AFX_VIRTUAL
+
 	virtual void LoadStdProfileSettings();
 	virtual void SaveStdProfileSettings();
 	virtual BYTE MainProc();
@@ -38,17 +39,22 @@ public:
 	BOOL    WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nValue);
 	BOOL    WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszValue);
 
+	HICON LoadIcon( UINT nIDResource) const { return ::LoadIcon( m_hInstance, MAKEINTRESOURCE(nIDResource)); }
+
+public:
+	HINSTANCE m_hInstance;
+	LPTSTR m_lpCmdLine;
+	int m_nCmdShow;
+	CTWindow *m_pMainWnd;
+
 protected:
 	CTachyonWnd *m_pTachyonWnd;
 
 	HACCEL m_hAccel;
 	DWORD m_dwSLEEP;
 
-public:
-// Implementation
-	//{{AFX_MSG(CTachyonApp)
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
+private:
+	static CTachyonApp *m_pApp;
 };
 
 #endif // !defined __TACHYONAPP_H

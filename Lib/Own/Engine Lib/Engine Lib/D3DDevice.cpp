@@ -325,7 +325,7 @@ void CD3DDevice::ReleaseBACK()
 	}
 }
 
-BOOL CD3DDevice::InitDevices( CWnd *pWnd)
+BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 {
 	if( !pWnd || !TSAFE_HWND(pWnd) )
 		return FALSE;

@@ -3,7 +3,6 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "StdAfx.h"
-#include "THtmlDocWnd.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -11,18 +10,6 @@
 //////////////////////////////////////////////////////////////////////
 
 DWORD CTachyonWnd::m_dwPing = 0;
-
-BEGIN_MESSAGE_MAP( CTachyonWnd, CWnd)
-	ON_WM_ACTIVATE()
-	ON_WM_KEYDOWN()
-	ON_WM_KEYUP()
-	ON_WM_NCHITTEST()
-	ON_WM_NCLBUTTONDOWN()
-	ON_WM_LBUTTONUP()
-	ON_WM_MOUSEMOVE()
-	ON_WM_NCRBUTTONDOWN()
-END_MESSAGE_MAP()
-
 
 CTachyonWnd::CTachyonWnd()
 {
@@ -72,15 +59,14 @@ CTachyonWnd::~CTachyonWnd()
 BOOL CALLBACK CTachyonWnd::__Present( HWND hWnd, LPARAM lParam)
 {
 	CTachyonWnd *pMAIN = (CTachyonWnd *) lParam;
-	CWnd *pWND = FromHandlePermanent(hWnd);
 	CRect rect;
 
-	if( !pMAIN || !pWND || !pWND->IsWindowVisible() || pWND->GetWindowedChildCount() )
+	// Visible child windows without windows of their own (the HTML views).
+	if( !pMAIN || !::IsWindowVisible(hWnd) || ::GetWindow( hWnd, GW_CHILD) )
 		return TRUE;
 
-	pWND->GetClientRect(&rect);
-	pWND->ClientToScreen(&rect);
-	pMAIN->ScreenToClient(&rect);
+	::GetClientRect( hWnd, &rect);
+	::MapWindowPoints( hWnd, pMAIN->m_hWnd, (LPPOINT) &rect, 2);
 
 	if(FAILED(pMAIN->m_Device.m_pDevice->Present( &rect, NULL, hWnd, NULL)))
 		return FALSE;
@@ -213,13 +199,11 @@ BOOL CTachyonWnd::Create()
 		-rect.left,
 		-rect.top);
 
-	BOOL bResult = CWnd::CreateEx(
-		NULL,
-		AfxRegisterWndClass( CS_HREDRAW|CS_VREDRAW|CS_DBLCLKS),
+	BOOL bResult = CTWindow::CreateEx(
+		0,
 		strTitle,
 		dwStyle,
 		rect,
-		NULL,
 		NULL);
 
 #ifdef USE_CONSOLE
@@ -229,7 +213,7 @@ BOOL CTachyonWnd::Create()
 
 	if(!m_Device.m_option.m_bWindowedMode)
 	{
-		SetWindowPos( &wndTopMost, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOREDRAW|SWP_NOSIZE);
+		SetWindowPos( HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOREDRAW|SWP_NOSIZE);
 		MoveWindow(&rect);
 	}
 
@@ -249,8 +233,6 @@ void CTachyonWnd::OnDestroy()
 	CTachyonSFX::ReleaseCommon();
 	CSFX::ReleaseTEXVB();
 
-	THtmlDocWnd::ReleaseHook();
-	THttpCtrl::ReleaseBUF();
 	ReleaseThreadDevices();
 
 	m_bActivate = FALSE;
@@ -259,7 +241,16 @@ void CTachyonWnd::OnDestroy()
 	m_Device.ReleaseDevice();
 	m_vCOMMAND.clear();
 
-	CWnd::OnDestroy();
+	CTWindow::OnDestroy();
+}
+
+// Like MFC, the end of the main window ends the application.
+void CTachyonWnd::OnNcDestroy()
+{
+	CTWindow::OnNcDestroy();
+
+	if( CTachyonApp::GetApp() && CTachyonApp::GetApp()->m_pMainWnd == this )
+		PostQuitMessage(0);
 }
 
 BOOL CTachyonWnd::InitDevices()
@@ -347,10 +338,9 @@ BOOL CTachyonWnd::Present()
 	if(FAILED(m_Device.m_pDevice->Present( NULL, NULL, NULL, NULL)))
 		return FALSE;
 
-	if( m_Device.m_option.m_bWindowedMode && GetWindowedChildCount() &&
+	if( m_Device.m_option.m_bWindowedMode && ::GetWindow( m_hWnd, GW_CHILD) &&
 		!EnumChildWindows( GetSafeHwnd(), __Present, (LPARAM) this))
 		return FALSE;
-	THttpCtrl::m_bRedrawHTTP = FALSE;
 
 	return TRUE;
 }
@@ -491,7 +481,7 @@ void CTachyonWnd::OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags)
 
 LRESULT CTachyonWnd::OnNcHitTest( CPoint point)
 {
-	LRESULT nHIT = CWnd::OnNcHitTest(point);
+	LRESULT nHIT = CTWindow::OnNcHitTest(point);
 
 	if( nHIT == HTSYSMENU )
 		nHIT = HTCAPTION;
@@ -509,7 +499,7 @@ void CTachyonWnd::OnNcLButtonDown( UINT nHitTest, CPoint point)
 		SetCapture();
 	}
 
-	CWnd::OnNcLButtonDown( nHitTest, point);
+	CTWindow::OnNcLButtonDown( nHitTest, point);
 }
 
 void CTachyonWnd::OnLButtonUp( UINT nFlags, CPoint point)
@@ -520,7 +510,7 @@ void CTachyonWnd::OnLButtonUp( UINT nFlags, CPoint point)
 		ReleaseCapture();
 	}
 
-	CWnd::OnLButtonUp( nFlags, point);
+	CTWindow::OnLButtonUp( nFlags, point);
 }
 
 void CTachyonWnd::OnMouseMove( UINT nFlags, CPoint point)
@@ -548,14 +538,14 @@ void CTachyonWnd::OnMouseMove( UINT nFlags, CPoint point)
 			TRUE);
 	}
 
-	CWnd::OnMouseMove( nFlags, point);
+	CTWindow::OnMouseMove( nFlags, point);
 }
 
-void CTachyonWnd::OnActivate( UINT nState, CWnd* pWndOther, BOOL bMinimized)
+void CTachyonWnd::OnActivate( UINT nState, HWND hWndOther, BOOL bMinimized)
 {
-	CWnd::OnActivate( nState, pWndOther, bMinimized);
+	CTWindow::OnActivate( nState, hWndOther, bMinimized);
 
-	BYTE bBACK = GetForegroundWindow() == this ? FALSE : TRUE;
+	BYTE bBACK = IsThis(::GetForegroundWindow()) ? FALSE : TRUE;
 	if(m_bActivate)
 	{
 		if(m_pMainFrame)

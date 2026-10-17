@@ -687,12 +687,9 @@
     <ClCompile Include="Curse.cpp" />
     <ClCompile Include="GuildSkillsDlg.cpp" />
     <ClCompile Include="HwidManager.cpp" />
-    <ClCompile Include="IPDialog.cpp" />
     <ClCompile Include="MacroProtection.cpp" />
     <ClCompile Include="md5.cpp" />
     <ClCompile Include="Outro.cpp" />
-    <ClCompile Include="PacketSpyAcks.cpp" />
-    <ClCompile Include="PacketSpyDlg.cpp" />
     <ClCompile Include="SHA1.cpp" />
     <ClCompile Include="SHA512.cpp" />
     <ClCompile Include="SmoothScrolling.cpp" />
@@ -785,7 +782,6 @@
     <ClCompile Include="TClientTalkBox.cpp" />
     <ClCompile Include="TClientTerm.cpp" />
     <ClCompile Include="TClientUIBase.cpp" />
-    <ClCompile Include="TClientWebCtrl.cpp" />
     <ClCompile Include="TClientWnd.cpp" />
     <ClCompile Include="TColorPicker.cpp" />
     <ClCompile Include="TCommunityDlg.cpp" />
@@ -953,12 +949,9 @@
     <ClInclude Include="GuildSkillsDlg.h" />
     <ClInclude Include="helper.hpp" />
     <ClInclude Include="HwidManager.h" />
-    <ClInclude Include="IPDialog.h" />
     <ClInclude Include="MacroProtection.h" />
     <ClInclude Include="md5.h" />
     <ClInclude Include="Outro.h" />
-    <ClInclude Include="PacketSpyAcks.h" />
-    <ClInclude Include="PacketSpyDlg.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="SHA1.h" />
     <ClInclude Include="SHA512.h" />
@@ -1050,7 +1043,6 @@
     <ClInclude Include="TClientTerm.h" />
     <ClInclude Include="TClientType.h" />
     <ClInclude Include="TClientUIBase.h" />
-    <ClInclude Include="TClientWebCtrl.h" />
     <ClInclude Include="TClientWnd.h" />
     <ClInclude Include="TColorPicker.h" />
     <ClInclude Include="TCommunityDlg.h" />

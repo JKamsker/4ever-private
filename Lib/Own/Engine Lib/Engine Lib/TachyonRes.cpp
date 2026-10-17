@@ -299,7 +299,7 @@ void CTachyonRes::RenderBACK( BYTE bSTEP,
 
 	m_pDEVICE->m_pDevice->EndScene();
 
-	if( !AfxGetApp()->m_pMainWnd->IsIconic() && !m_pDEVICE->GetResetFlag() &&
+	if( !CTachyonApp::GetApp()->m_pMainWnd->IsIconic() && !m_pDEVICE->GetResetFlag() &&
 		FAILED(m_pDEVICE->m_pDevice->Present( NULL, NULL, NULL, NULL)) )
 		m_pDEVICE->ResetHost();
 }

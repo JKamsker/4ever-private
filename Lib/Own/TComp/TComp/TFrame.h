@@ -60,7 +60,7 @@ public:
 	virtual void OnImeComposition(HWND hWnd, WPARAM wParam, LPARAM lParam);
 	virtual void OnImeNotify(HWND hWnd, WPARAM wParam, LPARAM lParam);
 	virtual BOOL OnInputLangChangeRequest( HWND hWnd, WPARAM wParam, LPARAM lParam );
-	virtual BOOL OnSetCursor( CWnd* pWnd, UINT nHitTest, UINT message, CPoint pt);
+	virtual BOOL OnSetCursor( HWND pWnd, UINT nHitTest, UINT message, CPoint pt);
 
 	virtual void OnNotify(DWORD from, WORD msg, LPVOID param);
 

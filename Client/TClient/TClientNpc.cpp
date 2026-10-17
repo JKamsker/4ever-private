@@ -285,7 +285,7 @@ void CTClientNpc::InitTNPC( CD3DDevice *pDevice,
 	SetAction( vActionID.m_dwActID, vActionID.m_dwAniID);
 
 	if( m_bNPCType == TNPC_BOX || CanRandACT() )
-		m_pHost = AfxGetMainWnd();
+		m_pHost = CTachyonApp::GetApp()->m_pMainWnd;
 
 	InitSIZE(
 		pTNPC->m_fScaleX * pTNPC->m_fSizeX,
@@ -352,7 +352,7 @@ BYTE CTClientNpc::CheckRequiredQuest()
 	if(!m_dwQuestID)
 		return TRUE;
 
-	CTClientWnd *pMainWnd = (CTClientWnd *) AfxGetMainWnd();
+	CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 	CTClientChar *pMainChar = pMainWnd ? pMainWnd->m_MainGame.GetMainChar() : NULL;
 
 	return pMainChar && pMainChar->FindTQuest(m_dwQuestID) ? TRUE : FALSE;
@@ -363,7 +363,7 @@ BYTE CTClientNpc::CheckRequiredItem()
 	if(!m_wItemID)
 		return TRUE;
 
-	CTClientWnd *pMainWnd = (CTClientWnd *) AfxGetMainWnd();
+	CTClientWnd *pMainWnd = (CTClientWnd *) CTachyonApp::GetApp()->m_pMainWnd;
 	CTClientChar *pMainChar = pMainWnd ? pMainWnd->m_MainGame.GetMainChar() : NULL;
 
 	if(pMainChar)

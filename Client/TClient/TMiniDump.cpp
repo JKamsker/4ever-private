@@ -158,7 +158,7 @@ LONG WINAPI CTMiniDump::TopLevelExceptionFilter(_EXCEPTION_POINTERS *pException)
 	if( g_hWnd )
 		::ShowWindow(g_hWnd, FALSE);
 
-	if( ::DialogBox(AfxGetInstanceHandle(), MAKEINTRESOURCE(ID_ERROR_DIALOG), NULL, ErrorDlgProc) == IDCANCEL )
+	if( ::DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ERROR_DIALOG), NULL, ErrorDlgProc) == IDCANCEL )
 	{
 		Sleep( 1000 );
 	//	return EXCEPTION_EXECUTE_HANDLER;

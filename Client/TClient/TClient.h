@@ -2,10 +2,6 @@
 //
 #pragma once
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
-
 #include "resource.h"       // main symbols
 
 // CTClientApp:
@@ -56,7 +52,6 @@ public:
 	CString			m_strNPMSG;			// 게임가드 에러메세지.
 #endif
 
-	CPacketSpyDlg* m_pPacketSpy;
 
 	CString m_strHackMSG[3];
 
@@ -105,7 +100,6 @@ public:
 
 // Implementation
 public:
-	DECLARE_MESSAGE_MAP()
 	virtual BYTE MainProc();
 	virtual int Run();
 };

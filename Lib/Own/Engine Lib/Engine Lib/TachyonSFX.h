@@ -178,7 +178,7 @@ public:
 	DWORD m_dwGTime;
 	DWORD m_dwLife;
 	FLOAT m_fTime;
-	CWnd* m_pHost;
+	CTWindow* m_pHost;
 
 	BYTE m_bHasHost;
 	BYTE m_bDeleted;

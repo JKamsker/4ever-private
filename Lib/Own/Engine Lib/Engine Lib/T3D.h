@@ -64,6 +64,9 @@ inline HANDLE TSAFE_HANDLE( const CGdiObject* pObject )
 	return pObject ? (HANDLE) pObject->m_hObject : NULL;
 }
 
+// The engine's windows (no MFC): used by the classes below.
+#include <TWindow.h>
+
 //#define HEBA
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

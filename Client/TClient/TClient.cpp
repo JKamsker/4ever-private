@@ -5,8 +5,6 @@
 #include "TClient.h"
 #include "GameConfig.h"
 #include "TClientWnd.h"
-#include "PacketSpyDlg.h"
-#include "PacketSpyAcks.h"
 #include "TMiniDump.h"
 #include "Curse.h"
 
@@ -165,11 +163,6 @@ LRESULT CALLBACK CTClientApp::KeyHookProc( int nCode, WPARAM wParam, LPARAM lPar
 #endif
 
 
-// CTClientApp
-BEGIN_MESSAGE_MAP(CTClientApp, CWinApp)
-END_MESSAGE_MAP()
-
-
 // CTClientApp construction
 
 CTClientApp::CTClientApp()
@@ -187,7 +180,6 @@ CTClientApp::CTClientApp()
 	m_bWait = TRUE;
 	m_bCancelLoad = FALSE;
 	m_bForceConnect = FALSE;
-	m_pPacketSpy = NULL;
 	m_bHackMSG = FALSE;
 
 	m_dwUserID = 0;
@@ -210,6 +202,12 @@ CTClientApp::CTClientApp()
 }
 
 CTClientApp theApp;
+
+// The entry point (MFC's own WinMain is not used any more).
+int APIENTRY _tWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
+{
+	return CTachyonApp::Main( hInstance, lpCmdLine, nCmdShow);
+}
 
 BOOL CTClientApp::InitInstance()
 {
@@ -291,7 +289,7 @@ BOOL CTClientApp::InitInstance()
 	m_hHook = SetWindowsHookEx( 
 		WH_KEYBOARD_LL,
 		reinterpret_cast<HOOKPROC>( KeyHookProc ),
-		AfxGetInstanceHandle(), NULL );
+		GetModuleHandle(NULL), NULL );
 #endif
 
 	CString strCmdLine = m_lpCmdLine;
@@ -479,7 +477,8 @@ BOOL CTClientApp::InitInstance()
 	if( GdiplusStartup( &m_pGDI, &vGDIInput, NULL) != Ok )
 		return FALSE;
 
-	if(!AfxSocketInit())
+	WSADATA vWSA;
+	if(WSAStartup( MAKEWORD( 2, 2), &vWSA))
 		return FALSE;
 
 	HANDLE hFile = CreateFile(
@@ -538,11 +537,7 @@ BOOL CTClientApp::InitInstance()
 		NULL);
 
 	// Settings live in config.ini in the game folder, not the Windows registry.
-	// Resolve the file path, and (since we never call SetRegistryKey) point the MFC
-	// profile name at the same file so any framework-internal profile I/O lands there too.
 	g_Config.Init();
-	free((void*)m_pszProfileName);
-	m_pszProfileName = _tcsdup(g_Config.FilePath());
 
 	m_hAccel = LoadAccelerators(
 		m_hInstance,
@@ -566,17 +561,16 @@ BOOL CTClientApp::InitInstance()
 #endif
 
 	m_pTachyonWnd->SetWindowText( CTNationOption::m_strAppTitle );
-	m_pTachyonWnd->SetIcon( LoadIcon(IDR_MAINFRAME), TRUE);
+	// Both sizes, on the window and its class: the taskbar and Alt+Tab read either.
+	HICON hIconBig = (HICON) LoadImage( m_hInstance, MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON,
+		GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
+	HICON hIconSmall = (HICON) LoadImage( m_hInstance, MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON,
+		GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0);
 
-/*#ifdef USE_PACKETSPY
-	if( !m_pPacketSpy )
-	{
-		AfxInitRichEdit2();
-
-		m_pPacketSpy = new CPacketSpyDlg(m_pTachyonWnd);
-		CPacketSpyAcks::RegAllAcks();
-	}
-#endif*/
+	m_pTachyonWnd->SetIcon( hIconBig, TRUE);
+	m_pTachyonWnd->SetIcon( hIconSmall, FALSE);
+	SetClassLongPtr( m_pTachyonWnd->GetSafeHwnd(), GCLP_HICON, (LONG_PTR) hIconBig);
+	SetClassLongPtr( m_pTachyonWnd->GetSafeHwnd(), GCLP_HICONSM, (LONG_PTR) hIconSmall);
 
 	memcpy( m_pTachyonWnd->m_Device.m_vConstantVS, vConstantVS, VC_COUNT * sizeof(WORD));
 	memcpy( m_pTachyonWnd->m_Device.m_dwVertexShader, vVS, VS_COUNT * sizeof(DWORD));
@@ -627,11 +621,11 @@ BOOL CTClientApp::InitInstance()
 		m_pTachyonWnd->m_Device.m_option.m_dwScreenX,
 		m_pTachyonWnd->m_Device.m_option.m_dwScreenY );
 
-	CTMiniDump::SetHWND(TSAFE_HWND(AfxGetMainWnd()));
+	CTMiniDump::SetHWND(m_pMainWnd->GetSafeHwnd());
 
 #ifdef USE_GG
 	if (m_pNpgl)
-		m_pNpgl->SetHwnd(TSAFE_HWND(AfxGetMainWnd()));
+		m_pNpgl->SetHwnd(m_pMainWnd->GetSafeHwnd());
 #endif
 
 	if(m_bFirstRun)
@@ -773,9 +767,6 @@ int CTClientApp::ExitInstance()
 
 	m_TNICEventSink.ReleaseTEVENT();
 
-	if(m_pPacketSpy)
-		delete m_pPacketSpy;
-
 	if(m_bLoaded)
 		CTachyonSession::ReleaseTachyonSession();
 
@@ -852,7 +843,7 @@ int CTClientApp::ExitInstance()
 
 	if ( CTNationOption::INSTALL_HACKSHIELD )
 	{
-		CTClientApp* pTAPP = (CTClientApp*) AfxGetApp();
+		CTClientApp* pTAPP = &theApp;
 //		pTAPP->HackShield_StopService();
 //		pTAPP->HackShield_UnInit();
 	}
@@ -868,7 +859,8 @@ int CTClientApp::ExitInstance()
 	}
 #endif
 
-	return CWinApp::ExitInstance();
+	WSACleanup();
+	return CTachyonApp::ExitInstance();
 }
 
 BYTE CTClientApp::CreateLoadThread()
@@ -1361,7 +1353,7 @@ void CTClientApp::SaveStdProfileSettings()
 
 void CTClientApp::ToggleImeLocalMode()
 {
-	HWND hWnd = TSAFE_HWND(::AfxGetMainWnd());
+	HWND hWnd = TSAFE_HWND(CTachyonApp::GetApp()->m_pMainWnd);
 	if(!hWnd)
 		return;
 
@@ -1389,7 +1381,7 @@ void CTClientApp::ToggleImeLocalMode()
 
 BOOL CTClientApp::IsImeLocalMode()
 {
-	HWND hWnd = TSAFE_HWND(::AfxGetMainWnd());
+	HWND hWnd = TSAFE_HWND(CTachyonApp::GetApp()->m_pMainWnd);
 	if(!hWnd)
 		return FALSE;
 
@@ -1476,11 +1468,6 @@ BYTE CTClientApp::MainProc()
 
 					m_pTachyonWnd->OnChar( msg.wParam, nRep, nFlag);
 				}
-				else if(THttpCtrl::IsFocusedHTML(msg.hwnd))
-				{
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
 
 				break;
 
@@ -1505,17 +1492,7 @@ BYTE CTClientApp::MainProc()
 			case WM_KEYDOWN			:
 			case WM_KEYUP			:
 				if( msg.hwnd && msg.hwnd != TSAFE_HWND(m_pTachyonWnd) )
-					if(THttpCtrl::IsFocusedHTML(msg.hwnd))
-					{
-						WORD wKEY = CTKeySetting::GetInstance()->GetCurKeySet(
-							CTachyonInput::ScanToVKey(HIWORD(msg.lParam)),
-							CTClientKEY::GetCurMOD());
-
-						if( wKEY == TKEY_CLOSE_UI )
-							msg.hwnd = TSAFE_HWND(m_pTachyonWnd);
-					}
-					else
-						msg.hwnd = TSAFE_HWND(m_pTachyonWnd);
+					msg.hwnd = TSAFE_HWND(m_pTachyonWnd);
 
 			default					:
 				{
@@ -1549,14 +1526,14 @@ BYTE CTClientApp::MainProc()
 			EnterCriticalSection(&m_cs);
 
 #ifndef TEST_MODE
-			if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 				m_dwSLEEP = 100;
 #endif
 		}
 		else if(!m_pTachyonWnd->m_bOnMovie)
 		{
 #ifndef TEST_MODE
-			if( CWnd::GetForegroundWindow() != m_pTachyonWnd )
+			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
 				m_dwSLEEP = 10;
 #endif
 
@@ -1771,7 +1748,7 @@ BOOL CTClientApp::HackShield_Init()
 		}
 
 		if(szMsg)
-			AfxMessageBox(szMsg, MB_OK);
+			::MessageBox( NULL, szMsg, NULL, MB_OK);
 
 		return FALSE;
 	}
@@ -1844,7 +1821,7 @@ int __stdcall CTClientApp::HS_CallbackProc ( long lCode, long lParamSize, void* 
 
 	CString szMsg;
 
-	CWnd* pWnd = AfxGetApp()->GetMainWnd();
+	CTWindow* pWnd = CTachyonApp::GetApp()->m_pMainWnd;
 
 
 	switch ( lCode )
@@ -1891,7 +1868,7 @@ int __stdcall CTClientApp::HS_CallbackProc ( long lCode, long lParamSize, void* 
 	{
 		theApp.ExitLoadThread(TRUE);
 		pWnd->PostMessage(WM_QUIT);
-		AfxMessageBox(szMsg, MB_OK);
+		::MessageBox( NULL, szMsg, NULL, MB_OK);
 		return 0;
 	}
 

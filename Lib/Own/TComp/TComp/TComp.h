@@ -43,7 +43,6 @@ typedef list<TComponent *>				TCOMP_LIST;
 #include "TListItem.h"
 #include "TComponent.h"
 #include "TImageList.h"
-#include "THttpCtrl.h"
 #include "TTabCtrl.h"
 #include "TButton.h"
 #include "TScroll.h"
