@@ -52,7 +52,13 @@ if (cmd == "objcheck")
 
 if (cmd == "icons")
 {
-    new IconMerge(game, Console.Out).Run(args.Contains("--apply"));
+    if (args.Contains("--check"))
+    {
+        string? Arg(string k) { int i = Array.IndexOf(args, k); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
+        Environment.ExitCode = new IconMerge(game, Console.Out).Check(Arg("--before"), Arg("--html")) == 0 ? 0 : 1;
+        return;
+    }
+    new IconMerge(game, Console.Out).Run(args.Contains("--apply"), args.Contains("--all"));
     return;
 }
 

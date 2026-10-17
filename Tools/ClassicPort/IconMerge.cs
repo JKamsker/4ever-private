@@ -16,6 +16,7 @@ public class IconMerge
     const int NodeFixed = 48 + 8 + 20 + 8 + 16 + 2 + 68;  // TCMLParser::LoadFRAME fixed part after dwID+bType
     const int ItemList = 0;                               // shared list #0 = item icons (2141 children)
     const int ItemListPrefix = 21;                        // shared list #21 = first 2099 item icons (5 users)
+    const ushort FirstMergedIcon = 2141;                  // list #0 size before the first merge
 
     readonly string game; readonly TextWriter log;
     public IconMerge(string game, TextWriter log) { this.game = game; this.log = log; }
@@ -113,22 +114,41 @@ public class IconMerge
     static uint NodeImg0(byte[] b, int nodeStart) => BitConverter.ToUInt32(b, nodeStart + 5 + 48);
 
     // ------------------------------------------------------------------ run
-    public void Run(bool apply)
+    /// <param name="all">merge every Custom PNG that TItemVisual / TMount use as an icon (any port), not only the
+    /// Classic port's bookkeeping. Own images the client code uses directly (60000-60016, 61001, ...) are never
+    /// item/mount icons in the tables, so they stay.</param>
+    public void Run(bool apply, bool all = false)
     {
         string tcd = G("Tcd"), custom = G("Data", "Img", "Custom");
         string statePath = StateFiles.Get("ClassicPort.items.state");
-        if (!File.Exists(statePath)) { log.WriteLine("nothing to do: no port bookkeeping (" + statePath + ")"); return; }
-        var pngIds = File.ReadAllLines(statePath).Where(l => l.StartsWith("png=")).Select(l => ushort.Parse(Path.GetFileNameWithoutExtension(l[4..]))).OrderBy(x => x).ToList();
+        List<ushort> pngIds;
+        if (all)
+        {
+            var used = new HashSet<ushort>();
+            var v = File.ReadAllBytes(Path.Combine(tcd, "TItemVisual.tcd"));
+            for (int i = 0, n = BitConverter.ToUInt16(v, 0); i < n; i++) used.Add(BitConverter.ToUInt16(v, 2 + 63 * i + 34));
+            foreach (var m in TMount.Load(Path.Combine(tcd, "TMount.tcd"), false)) used.Add(m.Icon);
+            pngIds = used.Where(id => id >= 60000 && File.Exists(Path.Combine(custom, $"{id}.png"))).OrderBy(x => x).ToList();
+            var missing = used.Where(id => id >= 60000 && !pngIds.Contains(id)).ToList();
+            if (missing.Count > 0) log.WriteLine($"warning: icons with no Custom PNG: {string.Join(",", missing)}");
+        }
+        else
+        {
+            if (!File.Exists(statePath)) { log.WriteLine("nothing to do: no port bookkeeping (" + statePath + ")"); return; }
+            pngIds = File.ReadAllLines(statePath).Where(l => l.StartsWith("png=")).Select(l => ushort.Parse(Path.GetFileNameWithoutExtension(l[4..]))).OrderBy(x => x).ToList();
+        }
         if (pngIds.Count == 0) { log.WriteLine("no ported icons left to merge"); return; }
+        if (pngIds.Count > (PageSize / Slot) * (PageSize / Slot)) throw new InvalidDataException($"{pngIds.Count} icons do not fit one page");
 
         var tif = ParseTif(File.ReadAllBytes(G("TClientCmd.tif")));
         var listChildren = tif.ListChildStarts(ItemList);
         int firstIndex = tif.Lists[ItemList].count;
-        log.WriteLine($"item icon list: {firstIndex} icons; prefix list #{ItemListPrefix}: {tif.Lists[ItemListPrefix].count} icons, {tif.RefPositions.Count(r => -I32(tif.B, r) - 1 == ItemListPrefix)} users");
 
-        // sanity: list #21 must be a prefix of list #0 (it is redirected to #0)
-        var prefix = tif.ListChildStarts(ItemListPrefix);
-        if (prefix.Where((p, i) => NodeImg0(tif.B, p) != NodeImg0(tif.B, listChildren[i])).Any()) throw new InvalidDataException("list #21 is not a prefix of list #0");
+        // the first merge folded list #21 (a prefix of list #0) into #0; later merges just append to #0
+        var prefix = tif.Lists.Count > ItemListPrefix ? tif.ListChildStarts(ItemListPrefix) : [];
+        bool dropPrefix = prefix.Count > 0 && prefix.Count <= listChildren.Count
+            && !prefix.Where((p, i) => NodeImg0(tif.B, p) != NodeImg0(tif.B, listChildren[i])).Any();
+        log.WriteLine($"item icon list: {firstIndex} icons; list #{ItemListPrefix} " + (dropPrefix ? $"is a prefix of it ({prefix.Count} icons) and gets folded in" : "is unrelated, kept"));
 
         // sprites / pages
         var iidx = ClassicPort.Idx.Load(G("Index", "TClientI.IDX"));
@@ -198,7 +218,7 @@ public class IconMerge
             BitConverter.GetBytes(nextSprite + (uint)k).CopyTo(c, 5 + 48);
             added.Write(c);
         }
-        byte[] newTif = RewriteTif(tif, added.ToArray(), pngIds.Count);
+        byte[] newTif = RewriteTif(tif, added.ToArray(), pngIds.Count, dropPrefix);
 
         // icon fields
         var vis = File.ReadAllBytes(Path.Combine(tcd, "TItemVisual.tcd"));
@@ -231,9 +251,159 @@ public class IconMerge
         if (ok != pngIds.Count) throw new InvalidDataException("atlas read-back mismatch — restore from git");
 
         foreach (var id in pngIds) File.Delete(Path.Combine(custom, $"{id}.png"));
-        File.WriteAllLines(statePath, File.ReadAllLines(statePath).Where(l => !l.StartsWith("png=")));
+        if (File.Exists(statePath)) File.WriteAllLines(statePath, File.ReadAllLines(statePath).Where(l => !l.StartsWith("png=")));
         log.WriteLine($"written: IconSrc.TIS (+1 page), IconImg.TIM (+{pngIds.Count}), TClientI.IDX, TClientList.LST, TClientCmd.tif, TItemVisual.tcd, TMount.tcd; {pngIds.Count} PNGs deleted");
     }
+
+    // ------------------------------------------------------------------ check
+    /// <summary>Resolves every TItemVisual / TMount icon through TIF list #0 -> TClientI.IDX -> IconImg.TIM ->
+    /// TIS page, compares icons that used to be Custom PNGs against those PNGs (taken from <paramref name="before"/>:
+    /// the old TItemVisual.tcd, TMount.tcd and *.png), and writes an HTML contact sheet of every icon on an
+    /// A8R8G8B8 page (= every merged icon) with the items / mounts using it.</summary>
+    public int Check(string? before, string? html)
+    {
+        string tcd = G("Tcd");
+        var tif = ParseTif(File.ReadAllBytes(G("TClientCmd.tif")));
+        var kids = tif.ListChildStarts(ItemList);
+        var iidx = ClassicPort.Idx.Load(G("Index", "TClientI.IDX"));
+        byte[] lst = File.ReadAllBytes(G("Index", "TClientList.LST"));
+        var pageFmt = new Dictionary<uint, byte>(); var pages = new Dictionary<uint, byte[]>();
+        { int n = I32(lst, 0), p = 8; for (int i = 0; i < n; i++) { int l = I32(lst, p); var f = System.Text.Encoding.Latin1.GetString(lst, p + 4, l); p += 4 + l;
+            var b = File.ReadAllBytes(G("Data", f));
+            for (int q = 0; q + 8 <= b.Length;)
+            {
+                var raw = Client.Unchunk(b, q, out int len); q += len;
+                uint id = BitConverter.ToUInt32(raw, 0); pageFmt[id] = raw[4];
+                if (raw[4] != FmtNonComp) continue;
+                using var z = new ZLibStream(new MemoryStream(raw, 13, BitConverter.ToInt32(raw, 9)), CompressionMode.Decompress);
+                var ms = new MemoryStream(); z.CopyTo(ms); pages[id] = ms.ToArray();
+            } } }
+
+        var files = new Dictionary<int, byte[]>();
+        int errors = 0;
+        void Err(string s) { errors++; log.WriteLine("  ERROR " + s); }
+
+        // icon index -> (w, h, page, sx, sy) or null when broken
+        var sprite = new Dictionary<ushort, (int w, int h, uint page, int sx, int sy)?>();
+        (int w, int h, uint page, int sx, int sy)? Resolve(ushort icon, string who)
+        {
+            if (sprite.TryGetValue(icon, out var s)) return s;
+            sprite[icon] = null;
+            if (icon >= 60000) { if (!File.Exists(G("Data", "Img", "Custom", $"{icon}.png"))) Err($"{who}: own image {icon} has no Custom PNG"); return null; }
+            if (icon >= kids.Count) { Err($"{who}: icon {icon} >= list size {kids.Count}"); return null; }
+            uint sid = NodeImg0(tif.B, kids[icon]);
+            if (!iidx.ById.TryGetValue(sid, out var e)) { Err($"{who}: icon {icon} sprite {sid} not in TClientI.IDX"); return null; }
+            if (!files.TryGetValue(e.File, out var fb)) files[e.File] = fb = File.ReadAllBytes(G("Data", iidx.Files[e.File]));
+            var r = new BinaryReader(new MemoryStream(Client.Unchunk(fb, (int)e.Pos, out _)));
+            int nf = r.ReadInt32(); r.ReadBytes(4 * nf); int nk = r.ReadInt32(); r.ReadBytes(8 * nk); r.ReadUInt32(); r.ReadByte(); r.ReadInt32();
+            r.ReadInt32(); int w = r.ReadInt32(), h = r.ReadInt32(); uint pid = r.ReadUInt32();
+            r.ReadBytes(16); float u0 = r.ReadSingle(), v0 = r.ReadSingle();
+            if (!pageFmt.ContainsKey(pid)) { Err($"{who}: icon {icon} sprite {sid} on missing page {pid}"); return null; }
+            return sprite[icon] = (w, h, pid, (int)Math.Round(u0 * PageSize), (int)Math.Round(v0 * PageSize));
+        }
+        byte[]? Pixels(ushort icon)
+        {
+            if (sprite.GetValueOrDefault(icon) is not { } s || !pages.TryGetValue(s.page, out var dds)) return null;
+            var rgba = new byte[s.w * s.h * 4];
+            for (int y = 0; y < s.h; y++) for (int x = 0; x < s.w; x++)
+            {
+                int d = 128 + 4 * ((s.sy + y) * PageSize + s.sx + x), o = 4 * (y * s.w + x);
+                rgba[o] = dds[d + 2]; rgba[o + 1] = dds[d + 1]; rgba[o + 2] = dds[d]; rgba[o + 3] = dds[d + 3];
+            }
+            return rgba;
+        }
+
+        static Dictionary<ushort, ushort> VisualIcons(byte[] v)
+        {
+            var d = new Dictionary<ushort, ushort>();
+            for (int i = 0, n = BitConverter.ToUInt16(v, 0); i < n; i++) d[BitConverter.ToUInt16(v, 2 + 63 * i)] = BitConverter.ToUInt16(v, 2 + 63 * i + 34);
+            return d;
+        }
+        var vis = VisualIcons(File.ReadAllBytes(Path.Combine(tcd, "TItemVisual.tcd")));
+        var mounts = TMount.Load(Path.Combine(tcd, "TMount.tcd"), false);
+        var users = new Dictionary<ushort, List<string>>();
+        void Use(ushort icon, string s) { if (!users.TryGetValue(icon, out var l)) users[icon] = l = new(); l.Add(s); }
+
+        var items = TItem.Load(Path.Combine(tcd, "TItem.tcd"));
+        int itemsChecked = 0;
+        foreach (var it in items)
+        {
+            ushort v0 = BitConverter.ToUInt16(it.Raw, it.TailOfs + 63);
+            if (v0 == 0) continue;
+            if (!vis.TryGetValue(v0, out var icon)) { if (v0 < 60000) Err($"item {it.Id} {it.Name}: visual {v0} not in TItemVisual"); continue; }
+            itemsChecked++;
+            Resolve(icon, $"item {it.Id} {it.Name}");
+            Use(icon, $"{it.Id} {it.Name}");
+        }
+        foreach (var m in mounts) { Resolve(m.Icon, $"mount {m.Id}"); Use(m.Icon, $"mount {m.Id}"); }
+        foreach (var (vid, icon) in vis) Resolve(icon, $"visual {vid}");
+        log.WriteLine($"resolved: {itemsChecked} items, {mounts.Count} mounts, {vis.Count} visuals -> {sprite.Count} distinct icons, {sprite.Count(s => s.Value == null)} broken");
+
+        // merged icons nobody uses
+        var merged = sprite.Where(s => s.Key >= FirstMergedIcon && s.Key < 60000 && s.Value is { } v && pages.ContainsKey(v.page)).Select(s => s.Key).ToHashSet();
+        for (ushort i = FirstMergedIcon; i < kids.Count; i++)
+            if (!sprite.ContainsKey(i) && iidx.ById.TryGetValue(NodeImg0(tif.B, kids[i]), out var e) && Resolve(i, $"list #0 child {i}") is { } s && pages.ContainsKey(s.page))
+                log.WriteLine($"  note: merged icon {i} is used by no item / mount");
+
+        // old Custom PNG -> new icon, pixel compare
+        if (before != null)
+        {
+            var oldVis = VisualIcons(File.ReadAllBytes(Path.Combine(before, "TItemVisual.tcd")));
+            var oldMounts = TMount.Load(Path.Combine(before, "TMount.tcd"), false).ToDictionary(m => m.Id);
+            int same = 0, diff = 0;
+            void Cmp(string who, ushort oldIcon, ushort newIcon)
+            {
+                string png = Path.Combine(before, $"{oldIcon}.png");
+                if (oldIcon < 60000 || !File.Exists(png)) return;
+                var (w, h, rgba) = DecodePng(File.ReadAllBytes(png));
+                var px = Pixels(newIcon);
+                if (px != null && sprite[newIcon] is { } s && s.w == w && s.h == h && px.AsSpan().SequenceEqual(rgba)) same++;
+                else { diff++; Err($"{who}: was {oldIcon}.png, now icon {newIcon} shows something else"); }
+            }
+            foreach (var (vid, oi) in oldVis) if (vis.TryGetValue(vid, out var ni)) Cmp($"visual {vid}", oi, ni);
+            foreach (var m in mounts) if (oldMounts.TryGetValue(m.Id, out var om)) Cmp($"mount {m.Id}", om.Icon, m.Icon);
+            log.WriteLine($"old Custom PNG icons: {same} identical in the atlas, {diff} different");
+        }
+
+        if (html != null)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("<!doctype html><meta charset=utf-8><title>Merged icons</title><style>body{font:12px system-ui;background:#222;color:#ddd;margin:16px}"
+                + ".g{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}.c{display:flex;gap:8px;background:#333;padding:6px;border-radius:4px}"
+                + "img{width:64px;height:64px;image-rendering:pixelated;background:#555}b{color:#fff}</style><div class=g>");
+            foreach (var icon in merged.OrderBy(x => x))
+            {
+                var s = sprite[icon]!.Value; var px = Pixels(icon)!;
+                var who = users.GetValueOrDefault(icon) ?? ["(unused)"];
+                sb.Append($"<div class=c><img src=\"data:image/png;base64,{Convert.ToBase64String(EncodePng(s.w, s.h, px))}\"><div><b>#{icon}</b><br>"
+                    + string.Join("<br>", who.Take(4).Select(System.Net.WebUtility.HtmlEncode)) + (who.Count > 4 ? $"<br>+{who.Count - 4} more" : "") + "</div></div>");
+            }
+            sb.Append("</div>");
+            File.WriteAllText(html, sb.ToString());
+            log.WriteLine($"contact sheet: {merged.Count} merged icons -> {html}");
+        }
+        log.WriteLine(errors == 0 ? "OK: every icon resolves" : $"{errors} errors");
+        return errors;
+    }
+
+    static byte[] EncodePng(int w, int h, byte[] rgba)
+    {
+        var raw = new MemoryStream();
+        for (int y = 0; y < h; y++) { raw.WriteByte(0); raw.Write(rgba, y * w * 4, w * 4); }
+        var z = new MemoryStream(); using (var zs = new ZLibStream(z, CompressionLevel.Optimal, true)) { raw.Position = 0; raw.CopyTo(zs); }
+        var o = new MemoryStream();
+        o.Write([137, 80, 78, 71, 13, 10, 26, 10]);
+        void ChunkW(string t, byte[] d)
+        {
+            var tb = System.Text.Encoding.ASCII.GetBytes(t);
+            o.Write([(byte)(d.Length >> 24), (byte)(d.Length >> 16), (byte)(d.Length >> 8), (byte)d.Length]); o.Write(tb); o.Write(d);
+            uint c = Crc([.. tb, .. d]); o.Write([(byte)(c >> 24), (byte)(c >> 16), (byte)(c >> 8), (byte)c]);
+        }
+        ChunkW("IHDR", [(byte)(w >> 24), (byte)(w >> 16), (byte)(w >> 8), (byte)w, (byte)(h >> 24), (byte)(h >> 16), (byte)(h >> 8), (byte)h, 8, 6, 0, 0, 0]);
+        ChunkW("IDAT", z.ToArray()); ChunkW("IEND", []);
+        return o.ToArray();
+    }
+    static uint Crc(byte[] b) { uint c = 0xFFFFFFFF; foreach (var x in b) { c ^= x; for (int k = 0; k < 8; k++) c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1; } return ~c; }
 
     /// <summary>IMAGESET record (LoadIMG) holding one CD3DImage blob (CD3DImage::Load) with one part.</summary>
     static byte[] SpriteRecord(uint sid, uint pageId, int sx, int sy, int w, int h, byte[] rgba)
@@ -260,14 +430,14 @@ public class IconMerge
         return rec.ToArray();
     }
 
-    static byte[] RewriteTif(Tif t, byte[] addedChildren, int addedCount)
+    static byte[] RewriteTif(Tif t, byte[] addedChildren, int addedCount, bool dropPrefix)
     {
         var o = new MemoryStream(); var w = new BinaryWriter(o);
         w.Write(-2);
-        w.Write(t.Lists.Count - 1);
+        w.Write(dropPrefix ? t.Lists.Count - 1 : t.Lists.Count);
         for (int s = 0; s < t.Lists.Count; s++)
         {
-            if (s == ItemListPrefix) continue;
+            if (dropPrefix && s == ItemListPrefix) continue;
             var (n, st, en) = t.Lists[s];
             w.Write(s == ItemList ? n + addedCount : n);
             w.Write(t.B, st, en - st);
@@ -275,7 +445,7 @@ public class IconMerge
         }
         // frames + fonts, with shared-list references remapped (#21 -> #0, above #21 shifted down)
         var fr = t.B[t.FramesStart..];
-        foreach (int rp in t.RefPositions)
+        if (dropPrefix) foreach (int rp in t.RefPositions)
         {
             int list = -I32(t.B, rp) - 1;
             int nl = list == ItemListPrefix ? ItemList : list > ItemListPrefix ? list - 1 : list;
