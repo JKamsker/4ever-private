@@ -22,7 +22,12 @@ if (cmd.StartsWith("rev-"))
     if (cmd == "rev-mounts") Revelation.Mounts(G, R, game, rev);
     if (cmd == "rev-costumes") Revelation.Costumes(G, R, game, rev);
     if (cmd == "rev-walk") RevWalk.Run(rev);
+    if (cmd == "rev-port")
+        new RevImport(game, rev, Path.Combine(repo, "Database", "migrations", "019_revelation_port.sql"),
+            Path.Combine(repo, "Client", "TClient", "TCostumeSFXTable.inl"), G, R, Console.Out).Run(args.Contains("--apply"));
+    if (cmd == "rev-icons") { IconCheck.Run(game, rev, args[1]); IconSheet.Run(rev, int.Parse(args[2]), int.Parse(args[3]), Path.Combine(args[1], "rev_sheet.png")); }
     if (cmd == "rev-shape") RevShape.Run(G, R, game, rev);
+    if (cmd == "rev-iconmatch") Environment.ExitCode = RevIconMatch.Run(game, rev, 12215, 12304, 31425, 31490, 137) == 0 ? 0 : 1;
     if (cmd == "rev-objcmp") RevObjCmp.Run(G, R, Convert.ToUInt32(args[1], 16));
     return;
 }

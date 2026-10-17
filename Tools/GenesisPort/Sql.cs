@@ -44,14 +44,15 @@ public static class Sql
         sb.AppendLine("GO");
     }
 
-    public static string Build(List<ItemRec> costumes, List<Import.MountRow> mounts, List<MonRec> monsters, List<ItemRec> mountItems)
+    public static string Build(List<ItemRec> costumes, List<Import.MountRow> mounts, List<MonRec> monsters, List<ItemRec> mountItems,
+        string title = "017_genesis_mounts_costumes", string source = "4Genesis", string tool = "Tools/GenesisPort `port --apply`")
     {
         var sb = new StringBuilder();
-        sb.AppendLine("-- 017_genesis_mounts_costumes");
+        sb.AppendLine($"-- {title}");
         sb.AppendLine("--");
-        sb.AppendLine("-- Mounts + costumes imported from the 4Genesis client (Tools/GenesisPort `port --apply` - generated, do not edit by hand).");
+        sb.AppendLine($"-- Mounts + costumes imported from the {source} client ({tool} - generated, do not edit by hand).");
         sb.AppendLine($"--   TMONSTERCHART: {monsters.Count} mount recall monsters ({string.Join(", ", monsters.Select(m => m.Id))}), clones of {MonSibling} (Brown Horse).");
-        sb.AppendLine($"--   TMOUNTCHART:   {mounts.Count} mounts ({mounts.Min(m => m.Id)}-{mounts.Max(m => m.Id)}), plain = saddled monster (Genesis mounts have no saddle variant).");
+        sb.AppendLine($"--   TMOUNTCHART:   {mounts.Count} mounts ({mounts.Min(m => m.Id)}-{mounts.Max(m => m.Id)}), plain / saddled recall monster.");
         sb.AppendLine($"--   TITEMCHART:    {mountItems.Count} mount items (clones of {MountItemSibling}) + {costumes.Count} costumes");
         sb.AppendLine($"--                  (hats clone {HatSibling}, outfits {DressSibling}, wings {WingSibling}); client-file fields overwritten.");
         sb.AppendLine("-- NOTE: chart tables load once at startup - RESTART TMapSvr/TWorldSvr after applying.");
@@ -76,7 +77,7 @@ public static class Sql
         }
         sb.AppendLine();
         foreach (var m in mounts)
-            sb.AppendLine($"IF NOT EXISTS (SELECT 1 FROM dbo.TMOUNTCHART WHERE wMountID = {m.Id}) INSERT INTO dbo.TMOUNTCHART (wMountID, wDefMonID, wUpgMonID) VALUES ({m.Id}, {m.MonId}, {m.MonId});   -- {m.Name}");
+            sb.AppendLine($"IF NOT EXISTS (SELECT 1 FROM dbo.TMOUNTCHART WHERE wMountID = {m.Id}) INSERT INTO dbo.TMOUNTCHART (wMountID, wDefMonID, wUpgMonID) VALUES ({m.Id}, {m.MonId}, {m.SaddleMonId});   -- {m.Name}");
         sb.AppendLine("GO");
         sb.AppendLine();
         foreach (var it in mountItems) Item(sb, it, MountItemSibling, $"mount {it.UseValue}");

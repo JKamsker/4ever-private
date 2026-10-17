@@ -73,11 +73,13 @@ public class IconCut
             for (int i = 0; i < n; i++) { o.Add(Img0(b, p)); p = SkipNode(b, p, NodeFixed, null); }
             return o;
         }
-        if (I32(b, 0) != GenesisMagic) throw new InvalidDataException("unsupported TClientCmd.tif layout");
+        // Genesis: [999][frame count], 174-byte fixed part; plain v1 (e.g. decrypted 4Revelation): [frame count], 170
+        bool genesis = I32(b, 0) == GenesisMagic;
+        int fixedLen = genesis ? GenesisNodeFixed : NodeFixed;
         int best = -1, bestStart = 0;
-        int fc = I32(b, 4), q = 8;
-        for (int f = 0; f < fc; f++) q = SkipNode(b, q, GenesisNodeFixed, (_, n, cs) => { if (n > best) { best = n; bestStart = cs; } });
-        for (int i = 0, p = bestStart; i < best; i++) { o.Add(Img0(b, p)); p = SkipNode(b, p, GenesisNodeFixed, null); }
+        int fc = genesis ? I32(b, 4) : I32(b, 0), q = genesis ? 8 : 4;
+        for (int f = 0; f < fc; f++) q = SkipNode(b, q, fixedLen, (_, n, cs) => { if (n > best) { best = n; bestStart = cs; } });
+        for (int i = 0, p = bestStart; i < best; i++) { o.Add(Img0(b, p)); p = SkipNode(b, p, fixedLen, null); }
         return o;
     }
 
@@ -89,7 +91,12 @@ public class IconCut
         var raw = Client.Unchunk(Bytes(Path.Combine(root, "Data", f)), pos, out _);
         using var z = new ZLibStream(new MemoryStream(raw, 13, I32(raw, 9)), CompressionMode.Decompress);
         var ms = new MemoryStream(); z.CopyTo(ms);
-        return pages[id] = Dds.Decode(ms.ToArray());
+        var img = ms.ToArray();
+        // 4Revelation stores its pages as PNG (fmt 5) instead of DDS
+        if (img.Length > 8 && img[0] == 0x89 && img[1] == (byte)'P')
+            return pages[id] = Png.TryDecode(img) ?? (1, 1, new byte[4]);
+        if (img.Length < 4 || BitConverter.ToUInt32(img, 0) != 0x20534444) return pages[id] = (1, 1, new byte[4]);   // e.g. JPEG pages
+        return pages[id] = Dds.Decode(img);
     }
 
     // ------------------------------------------------------------------ cut
@@ -213,9 +220,48 @@ public static class Dds
     }
 }
 
-/// <summary>Minimal PNG writer (RGBA8, filter 0).</summary>
+/// <summary>Minimal PNG writer (RGBA8, filter 0) and reader (8-bit RGB/RGBA, non-interlaced).</summary>
 public static class Png
 {
+    static int BE32(byte[] b, int o) => (b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3];
+    static byte Paeth(int a, int b, int c) { int p = a + b - c, pa = Math.Abs(p - a), pb = Math.Abs(p - b), pc = Math.Abs(p - c); return (byte)(pa <= pb && pa <= pc ? a : pb <= pc ? b : c); }
+
+    public static (int w, int h, byte[] rgba)? TryDecode(byte[] b)
+    {
+        int w = BE32(b, 16), h = BE32(b, 20); byte depth = b[24], ct = b[25], il = b[28];
+        if (depth != 8 || (ct != 2 && ct != 6) || il != 0) return null;
+        int bpp = ct == 6 ? 4 : 3;
+        var idat = new MemoryStream();
+        for (int p = 8; p + 8 <= b.Length;)
+        {
+            int len = BE32(b, p); string type = System.Text.Encoding.ASCII.GetString(b, p + 4, 4);
+            if (type == "IDAT") idat.Write(b, p + 8, len);
+            p += 12 + len;
+        }
+        idat.Position = 0;
+        var raw = new MemoryStream();
+        using (var z = new ZLibStream(idat, CompressionMode.Decompress)) z.CopyTo(raw);
+        byte[] d = raw.ToArray();
+        int stride = w * bpp; var prev = new byte[stride]; var rgba = new byte[w * h * 4];
+        for (int y = 0; y < h; y++)
+        {
+            byte f = d[y * (stride + 1)]; var cur = new byte[stride];
+            Buffer.BlockCopy(d, y * (stride + 1) + 1, cur, 0, stride);
+            for (int x = 0; x < stride; x++)
+            {
+                int a = x >= bpp ? cur[x - bpp] : 0, up = prev[x], c = x >= bpp ? prev[x - bpp] : 0;
+                cur[x] += f switch { 0 => 0, 1 => (byte)a, 2 => (byte)up, 3 => (byte)((a + up) / 2), 4 => Paeth(a, up, c), _ => throw new InvalidDataException("png filter") };
+            }
+            for (int x = 0; x < w; x++)
+            {
+                int s = bpp * x, t = 4 * (y * w + x);
+                rgba[t] = cur[s]; rgba[t + 1] = cur[s + 1]; rgba[t + 2] = cur[s + 2]; rgba[t + 3] = bpp == 4 ? cur[s + 3] : (byte)255;
+            }
+            prev = cur;
+        }
+        return (w, h, rgba);
+    }
+
     static readonly uint[] Crc = Enumerable.Range(0, 256).Select(n => { uint c = (uint)n; for (int k = 0; k < 8; k++) c = (c & 1) != 0 ? 0xEDB88320 ^ (c >> 1) : c >> 1; return c; }).ToArray();
 
     public static byte[] Encode(int w, int h, byte[] rgba)

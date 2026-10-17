@@ -120,6 +120,7 @@ public static class RevPack
         [".TTX"] = Convert.FromHexString("D94E55F3CB7E971B17E0A91BC7892336AE678DFE"),
         [".TOB"] = Convert.FromHexString("2CF697FBD290443496F8DF7D3A26809229FEE306"),
         [@"Action\Character.TAC"] = Convert.FromHexString("5A1B6C9D3E2FA08F7E4DBBDCCA1AF90826E57A3B"),
+        [".TIS"] = Convert.FromHexString("FF11884422BB6699DD33AA55CC77EE0012345678"),
     };
     static readonly Dictionary<string, Kind> Seq = new() { [".TMH"] = Kind.Mesh, [".TAC"] = Kind.Ani, [".TOB"] = Kind.Obj };
 
@@ -242,5 +243,26 @@ public static class RevPack
         }
         // TClientList.LST etc.
         foreach (var f in Directory.EnumerateFiles(Path.Combine(src, "Index"), "*.LST")) File.Copy(f, Path.Combine(dIdx, Path.GetFileName(f)), true);
+        File.WriteAllBytes(Path.Combine(dst, "TClientCmd.tif"), DecryptTif(File.ReadAllBytes(Path.Combine(src, "TClientcmd.tif"))));
+        Console.WriteLine("TClientCmd.tif decrypted (v1)");
+    }
+
+    /// <summary>TClientcmd.tif "ETIF": 4-byte magic + 8 bytes, then body[i] = (enc[i] - (byte)i) ^ key[i % 256]; key =
+    /// 8 rounds of a 32-byte state (init = first 31 chars of "Cr7pt0Sh13ld#2025", state[j] = state[j]*31 + str[j % len])
+    /// appended after each round (TClient.exe 0x1402F35C0 / 0x1402F4050). The body is a plain v1 TIF (170-byte nodes).</summary>
+    public static byte[] DecryptTif(byte[] b)
+    {
+        if (System.Text.Encoding.ASCII.GetString(b, 0, 4) != "ETIF") return b;
+        var str = System.Text.Encoding.ASCII.GetBytes("Cr7pt0Sh13ld#2025");
+        var st = new byte[32]; Array.Copy(str, st, Math.Min(str.Length, 31));
+        var key = new List<byte>();
+        while (key.Count < 256)
+        {
+            for (int j = 0; j < 32; j++) st[j] = (byte)(st[j] * 31 + (sbyte)str[j % str.Length]);
+            key.AddRange(st);
+        }
+        var o = new byte[b.Length - 12];
+        for (int i = 0; i < o.Length; i++) o[i] = (byte)((byte)(b[12 + i] - (byte)i) ^ key[i & 255]);
+        return o;
     }
 }

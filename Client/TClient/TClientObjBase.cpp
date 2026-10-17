@@ -7700,6 +7700,18 @@ void CTClientObjBase::ApplyCloakTexture(CTClientItem* pCloak)
 	}
 }
 
+// Costume effects that a source client hardcoded by item id (4Revelation auras / sets), one row per effect:
+// raw = PlayRawSFX(SFX resource id), else PlayTActionSFX(TSFX id); tint as dwCustomColor.
+static const struct TCOSTUMESFX
+{
+	WORD m_wItemID;
+	DWORD m_dwSFX;
+	BOOL m_bRaw;
+	DWORD m_dwColor;
+} kCostumeSFX[] = {
+#include "TCostumeSFXTable.inl"
+};
+
 void CTClientObjBase::ApplyCharacterSFX(CTClientItem* pItem)
 {
 	CTClientInven *pTEQUIP = FindTInven(m_pTRANS ? INVEN_TRANS : INVEN_EQUIP);
@@ -7709,6 +7721,38 @@ void CTClientObjBase::ApplyCharacterSFX(CTClientItem* pItem)
 
 	if (bSFX && pItem && pItem->GetTITEM()->m_wUseValue && !m_bGhost)
 	{
+		WORD wItemID = pItem->GetItemID();
+		BOOL bTable = FALSE;
+		for (const TCOSTUMESFX& t : kCostumeSFX)
+			bTable |= t.m_wItemID == wItemID;
+
+		if (bTable)
+		{
+			// same host rules as below: a hidden main character plays them through its own object
+			CTClientObjBase* pHOST = NULL;
+			if (m_dwID == pTGAME->GetMainChar()->m_dwID && m_bHide)
+			{
+				ClearTActionSFX(&m_vTGARBAGESFX);
+				pHOST = pTGAME->GetMainChar();
+			}
+			else if (!m_bHide)
+			{
+				pTGAME->GetMainChar()->ClearTActionSFX(&m_vTGARBAGESFX);
+				pHOST = this;
+			}
+
+			if (pHOST)
+				for (const TCOSTUMESFX& t : kCostumeSFX)
+					if (t.m_wItemID == wItemID)
+					{
+						if (t.m_bRaw)
+							pHOST->PlayRawSFX(&m_vTGARBAGESFX, t.m_dwSFX, TRUE, D3DXVECTOR3(0, 0, 0), D3DXVECTOR3(0, 0, 0), t.m_dwColor);
+						else
+							pHOST->PlayTActionSFX(&m_vTGARBAGESFX, t.m_dwSFX, TRUE, t.m_dwColor);
+					}
+			return;
+		}
+
 		DWORD dwSFX = pItem->GetTITEM()->m_wUseValue;
 		DWORD dwColor = 0x00000000;
 		BOOL RawSFX = FALSE;

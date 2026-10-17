@@ -196,10 +196,10 @@ public class Import
         foreach (var p in Genesis.Players)
         {
             var rec = outObjs.GetValueOrDefault(p) ?? ours[p];
-            var mineInst = ObjSfx(rec).ToList();
+            var mineInst = ObjSfxList(rec).ToList();
             var add = new List<byte[]>();
             uint nextInstKey = mineInst.Select(x => U32(x, 0)).DefaultIfEmpty(0u).Max() + 1;
-            foreach (var inst in ObjSfx(gp[p]).Where(x => funcs.Contains(U32(x, 37))))
+            foreach (var inst in ObjSfxList(gp[p]).Where(x => funcs.Contains(U32(x, 37))))
             {
                 if (mineInst.Any(x => x.AsSpan().SequenceEqual(inst))) continue;
                 var ni = (byte[])inst.Clone();
@@ -208,7 +208,7 @@ public class Import
                 roots.Add((Kind.Sfx, U32(ni, 4)));
             }
             if (add.Count == 0) continue;
-            outObjs[p] = AddObjSfx(rec, add);
+            outObjs[p] = AddObjSfxList(rec, add);
             log.WriteLine($"  player obj {p:X}: +{add.Count} effect SFX (funcs {string.Join(",", add.Select(x => U32(x, 37).ToString("X")))})");
         }
         Pull(roots);
@@ -218,13 +218,13 @@ public class Import
     /// <summary>Object-level SFXINST records of a .TOB record: right after the pivots, 49 bytes each
     /// (key, sfx, pos, rot, pivot, bias, func, tick, deleteOnStop - LoadOBJ order).</summary>
     const int SfxInst = 49;
-    static IEnumerable<byte[]> ObjSfx(byte[] rec)
+    public static IEnumerable<byte[]> ObjSfxList(byte[] rec)
     {
         int o = 5 + 8 * BitConverter.ToInt32(rec, 1), n = BitConverter.ToInt32(rec, o);
         for (int i = 0; i < n; i++) yield return rec[(o + 4 + SfxInst * i)..(o + 4 + SfxInst * (i + 1))];
     }
 
-    static byte[] AddObjSfx(byte[] rec, List<byte[]> add)
+    public static byte[] AddObjSfxList(byte[] rec, List<byte[]> add)
     {
         int o = 5 + 8 * BitConverter.ToInt32(rec, 1), n = BitConverter.ToInt32(rec, o), end = o + 4 + SfxInst * n;
         var outp = (byte[])[.. rec[..end], .. add.SelectMany(x => x), .. rec[end..]];
@@ -233,7 +233,10 @@ public class Import
     }
 
     // =========================================================================================== mounts
-    public record MountRow(ushort Id, ushort MonId, ushort Icon, string Name);
+    public record MountRow(ushort Id, ushort MonId, ushort Icon, string Name)
+    {
+        public ushort SaddleMonId { get; init; } = MonId;      // saddled recall monster (Genesis mounts: none -> same)
+    }
 
     (List<MountRow> mounts, List<MonRec> monsters, List<ItemRec> items) Mounts()
     {
