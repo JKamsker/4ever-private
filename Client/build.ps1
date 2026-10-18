@@ -4,10 +4,12 @@
 #   .\Client\build.ps1                  # Release build into build\msvc-x86\bin\TClient.exe
 #   .\Client\build.ps1 -Preset msvc-x86 -Deploy   # also copies TClient.exe into Game\
 #   .\Client\build.ps1 -Preset clang-x86          # clang-cl build into build\clang-x86\bin\
+#   .\Client\build.ps1 -Preset clang-x64 -KeepGoing   # builds every file it can: all the errors
 param(
     [string]$Preset = "msvc-x86",
     [switch]$Deploy,
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$KeepGoing
 )
 $ErrorActionPreference = "Stop"
 
@@ -33,7 +35,7 @@ try {
     $deployFlag = if ($Deploy) { "ON" } else { "OFF" }
     cmake --preset $Preset "-DTCLIENT_DEPLOY_TO_GAME=$deployFlag"
     if ($LASTEXITCODE) { throw "CMake configure failed." }
-    cmake --build --preset $Preset
+    if ($KeepGoing) { cmake --build --preset $Preset -- -k 0 } else { cmake --build --preset $Preset }
     if ($LASTEXITCODE) { throw "Build failed." }
 } finally {
     Pop-Location

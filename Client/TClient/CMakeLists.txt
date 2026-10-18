@@ -301,9 +301,12 @@ target_link_libraries(TClient PRIVATE
     TChart
     TCML
     TComp
-    d3d9 d3dx9 dxguid strmiids
+    dxguid strmiids
     advapi32 imm32 version dbghelp psapi
 )
+if(NOT TCLIENT_NO_D3D9)
+    target_link_libraries(TClient PRIVATE d3d9 d3dx9)
+endif()
 target_link_options(TClient PRIVATE
     /DEBUG
     /INCREMENTAL:NO

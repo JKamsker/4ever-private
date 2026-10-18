@@ -33,13 +33,13 @@ set(EngineLib_SOURCES
     TBSPPortal.cpp
     TConsole.cpp
     TCrypt.cpp
+    TFile.cpp
     TDynamicBillboard.cpp
     TMath.cpp
     TMiniAudio.cpp
     TModuleProtector.cpp
     TNICEventSink.cpp
     TProfile.cpp
-    TRenderD3D9.cpp
     TShow.cpp
 )
 
@@ -60,6 +60,11 @@ target_link_libraries(TRenderBGFX
         bx
         gdiplus
 )
+
+# The Direct3D 9 backend of the render layer.
+if(NOT TCLIENT_NO_D3D9)
+    list(APPEND EngineLib_SOURCES TRenderD3D9.cpp)
+endif()
 
 add_library(EngineLib STATIC ${EngineLib_SOURCES})
 target_compile_definitions(EngineLib PRIVATE WIN32 NDEBUG _WINDOWS TCLIENT_BGFX)

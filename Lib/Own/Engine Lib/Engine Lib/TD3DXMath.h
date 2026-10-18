@@ -7,7 +7,11 @@
 // Only what the client uses is here.
 #define __D3DX9MATH_H__
 
+#ifdef TCLIENT_NO_D3D9
+#include "TD3D9Types.h"
+#else
 #include <d3d9.h>
+#endif
 #include <math.h>
 #include <string.h>
 

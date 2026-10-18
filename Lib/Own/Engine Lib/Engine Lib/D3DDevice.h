@@ -126,6 +126,15 @@ protected:
 		D3DDEVTYPE nType,
 		D3DFORMAT nFormat);
 
+	// The desktop's mode and the display's modes: from Direct3D 9, or without it from SDL.
+	BOOL GetDesktopMode( D3DDISPLAYMODE *pMODE);
+	void GetDisplayModes( D3DFORMAT nFormat, std::vector<D3DDISPLAYMODE>& vMODES);
+	void ReleaseD3D9();
+
+#ifdef TCLIENT_NO_D3D9
+	static void GetDefaultCaps( D3DCAPS9 *pCaps);
+#endif
+
 	void InitBACK( D3DDISPLAYMODE *pMODE);
 	void ReleaseBACK();
 	void InitCAPS();
@@ -178,7 +187,9 @@ public:
 	static DWORD ScaleAmbient( DWORD dwAmbient);	// scale the RGB of an ambient color by m_fAmbientScale
 
 	LPTRENDERDEVICE m_pDevice;
+#ifndef TCLIENT_NO_D3D9
 	LPDIRECT3D9 m_pD3D;
+#endif
 
 	LPDIRECT3DVERTEXSHADER9 m_pVertexShader[VS_COUNT];
 	LPDIRECT3DPIXELSHADER9 m_pPixelShader[PS_COUNT];

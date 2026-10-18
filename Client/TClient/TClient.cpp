@@ -706,14 +706,14 @@ int CTClientApp::ExitInstance()
 
 	if( !strURL.IsEmpty() )
 	{
-		FILE* pFile = ::fopen(".\\_event.url", "wt");
+		FILE* pFile = TFileOpen(".\\_event.url", "wt");
 		if( pFile )
 		{
 			::fprintf(pFile, strURL);
 			::fclose(pFile);
 
 			CTWindow::OpenURL(_T(".\\_event.url"));
-			::DeleteFile(".\\_event.url");
+			TFileDelete(".\\_event.url");
 		}
 	}
 

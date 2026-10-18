@@ -1003,7 +1003,7 @@ void CTClientMAP::LoadMAPOBJ( CD3DDevice *pDevice,
 #ifdef TEST_MODE
 		if( pINST->m_pTNPC == NULL )
 		{
-			FILE* fp = fopen("npc_error.txt", "at");
+			FILE* fp = TFileOpen("npc_error.txt", "at");
 			if( fp )
 			{
 

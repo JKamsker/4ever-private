@@ -16,9 +16,7 @@
 #include <gdiplus.h>
 #include <ddraw.h>
 #include <dshow.h>
-#include <d3d9.h>
-#include <TD3DXMath.h>
-#include <d3dx9.h>
+#include "TD3D9.h"
 #include <TRenderDevice.h>
 #include "TThread.h"
 #include "TCodePage.h"

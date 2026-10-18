@@ -314,7 +314,7 @@ static void PrefetchIndexFiles( CString strINDEX, VECTORSTRING& vFILE)
 {
 	FILE *pFILE = NULL;
 
-	if( fopen_s( &pFILE, LPCSTR(strINDEX), "rb") || !pFILE )
+	if(!(pFILE = TFileOpen( strINDEX, _T("rb"))))
 		return;
 
 	int nCount = 0;
@@ -349,22 +349,16 @@ static void PrefetchThread( VECTORSTRING *pFILE)
 
 	for( size_t i=0; i<pFILE->size() && !g_bStopPrefetch; i++)
 	{
-		HANDLE hFile = CreateFile(
-			LPCSTR((*pFILE)[i]),
-			GENERIC_READ,
-			FILE_SHARE_READ|FILE_SHARE_WRITE,
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL);
+		FILE *pREAD = TFileOpen( (*pFILE)[i], _T("rb"));
 
-		if( hFile == INVALID_HANDLE_VALUE )
+		if(!pREAD)
 			continue;
 
-		DWORD dwRead = 0;
-		while( !g_bStopPrefetch && ReadFile( hFile, pBLOCK, TPREFETCH_BLOCK, &dwRead, NULL) && dwRead );
+		// Unbuffered: the blocks go straight from the file to pBLOCK.
+		setvbuf( pREAD, NULL, _IONBF, 0);
+		while( !g_bStopPrefetch && fread( pBLOCK, 1, TPREFETCH_BLOCK, pREAD) );
 
-		CloseHandle(hFile);
+		fclose(pREAD);
 	}
 
 	delete[] pBLOCK;

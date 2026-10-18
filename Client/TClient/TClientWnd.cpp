@@ -3868,7 +3868,7 @@ void CTClientWnd::InitTRESIMG()
 	char rec[MAX_PATH], *ret;
 	CString optName, optVal;
 	
-	fpLIST = fopen(INTRO_PATH+INTRO_LIST, "r");
+	fpLIST = TFileOpen(INTRO_PATH+INTRO_LIST, "r");
 	if( !fpLIST )
 		return;
 
@@ -3998,7 +3998,7 @@ void CTClientWnd::InitTCUSTOMCLOAKTEX()
 		static const CString CUSTOMTEX_PATH		= ".\\Data\\Cache\\";
 		CString strPath;
 		strPath.Format("%s%d",(LPCTSTR)CUSTOMTEX_PATH, i);
-		if(PathFileExists(strPath))
+		if(TFileExists(strPath))
 			AddTCUSTOMCLOAKTEX(i);
 	}
 }
@@ -4010,7 +4010,7 @@ BYTE CTClientWnd::AddTCUSTOMCLOAKTEX(WORD wID)
 	CString strPath;
 	strPath.Format("%s%d",(LPCTSTR)CUSTOMTEX_PATH, wID);
 
-	if(!PathFileExists(strPath))
+	if(!TFileExists(strPath))
 		return FALSE;
 
 	CTClientWnd* pMainWnd = CTClientWnd::GetInstance();
@@ -5823,7 +5823,7 @@ BYTE CTClientWnd::RestoreDevice()
 	if(m_MainGame.m_vMAP.m_pMAP)
 		m_MainGame.m_vMAP.m_pMAP->DeleteForRestore();
 
-	while( m_Device.m_pD3D && m_Device.m_pDevice )
+	while(m_Device.m_pDevice)
 		if(m_Device.Reset())
 			break;
 
@@ -6290,7 +6290,7 @@ CString CTClientWnd::CaptureIMG()
 	} while(vFINDER.FindFile(strFileName));
 
 	strFolder = CTChart::LoadString( TSTR_CAPTURE_FOLDER);
-	CreateDirectory( strFolder, NULL);
+	TCreateFolder(strFolder);
 
 	if( SUCCEEDED(m_Device.m_pRTARGET->GetDesc(&vDESC)) &&
 		SUCCEEDED(m_Device.m_pDevice->CreateOffscreenPlainSurface(

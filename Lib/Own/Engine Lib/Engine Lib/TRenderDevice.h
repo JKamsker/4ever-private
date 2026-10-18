@@ -153,7 +153,9 @@ protected:
 typedef CTRenderDevice *LPTRENDERDEVICE;
 
 // The two backends. CreateRenderDeviceBGFX exists only in the CMake build (TCLIENT_BGFX).
+#ifndef TCLIENT_NO_D3D9
 LPTRENDERDEVICE CreateRenderDeviceD3D9( LPDIRECT3DDEVICE9 pD3D9);
+#endif
 LPTRENDERDEVICE CreateRenderDeviceBGFX( HWND hWnd, const D3DPRESENT_PARAMETERS *pPresent, const D3DCAPS9 *pCaps);
 
 
@@ -261,3 +263,17 @@ inline HRESULT D3DXSaveTextureToFileA( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT De
 {
 	return CTRenderDevice::m_pCURRENT->SaveTextureToFile( pDestFile, DestFormat, pSrcTexture, pSrcPalette);
 }
+
+#ifdef TCLIENT_NO_D3D9
+// Without D3DX: the header reader of TImageInfo.h, and d3dx9tex.h's names for the functions above.
+#include "TImageInfo.h"
+
+inline HRESULT D3DXGetImageInfoFromFileInMemory( LPCVOID pSrcData, UINT SrcDataSize, D3DXIMAGE_INFO *pSrcInfo)
+{
+	return TImageInfo::Get( pSrcData, SrcDataSize, pSrcInfo);
+}
+
+#define D3DXCreateTextureFromFile	D3DXCreateTextureFromFileA
+#define D3DXSaveSurfaceToFile		D3DXSaveSurfaceToFileA
+#define D3DXSaveTextureToFile		D3DXSaveTextureToFileA
+#endif

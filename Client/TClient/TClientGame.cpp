@@ -26844,7 +26844,7 @@ void CTClientGame::DebugMSG( const CString& strMSG, BOOL bPrintChat, BOOL bFile,
 	{
 
 
-		FILE* fp = fopen(szPATH,"at");
+		FILE* fp = TFileOpen(szPATH,"at");
 		if( !fp )
 			return ;
 

@@ -5,8 +5,6 @@
 #include <map>
 #include <mutex>
 
-CTRenderDevice *CTRenderDevice::m_pCURRENT = NULL;
-
 namespace
 {
 	// A D3D9 object behind the layer. There is exactly one wrapper per D3D9

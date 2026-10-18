@@ -189,7 +189,7 @@ BOOL CTachyonWnd::Present()
 
 BOOL CTachyonWnd::ResetDevices()
 {
-	while( m_Device.m_pD3D && m_Device.m_pDevice )
+	while(m_Device.m_pDevice)
 		if(m_Device.Reset())
 			return TRUE;
 

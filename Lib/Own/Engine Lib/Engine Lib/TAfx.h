@@ -1,5 +1,8 @@
 // TAfx.h: the part of MFC's core the client uses, without MFC.
 //
+// File names go through CTPath::Resolve (TFile.h), so the game's paths work where names are
+// case sensitive.
+//
 // CString, CPoint/CRect/CSize and CTime/CTimeSpan are the engine's own (TString.h, TTypes.h,
 // TTime.h), with ATL's API and behavior. The rest is written here with MFC's names and behavior:
 // CFile throws CFileException* on errors, CArchive reads and writes MFC's binary format
@@ -38,6 +41,7 @@
 #include "TString.h"
 #include "TTypes.h"
 #include "TTime.h"
+#include "TFile.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")
@@ -358,7 +362,7 @@ public:
 		vSA.bInheritHandle = (nOpenFlags & modeNoInherit) ? FALSE : TRUE;
 
 		HANDLE hFile = ::CreateFile(
-			lpszFileName,
+			CTPath::Resolve(lpszFileName),
 			dwAccess,
 			dwShare,
 			&vSA,
@@ -530,13 +534,13 @@ public:
 
 	static void Remove( LPCTSTR lpszFileName)
 	{
-		if(!::DeleteFile(lpszFileName))
+		if(!TFileDelete(lpszFileName))
 			AfxThrowFileException( CFileException::OsErrorToException(::GetLastError()), ::GetLastError(), lpszFileName);
 	}
 
 	static void Rename( LPCTSTR lpszOldName, LPCTSTR lpszNewName)
 	{
-		if(!::MoveFile( lpszOldName, lpszNewName))
+		if(!TFileRename( lpszOldName, lpszNewName))
 			AfxThrowFileException( CFileException::OsErrorToException(::GetLastError()), ::GetLastError(), lpszOldName);
 	}
 
@@ -814,7 +818,9 @@ public:
 		if(!pstrName)
 			pstrName = _T("*.*");
 
-		m_hContext = ::FindFirstFile( pstrName, &m_vNEXT);
+		CString strName = CTPath::Resolve(pstrName);
+
+		m_hContext = ::FindFirstFile( strName, &m_vNEXT);
 		if( m_hContext == INVALID_HANDLE_VALUE )
 		{
 			m_hContext = NULL;
@@ -824,7 +830,7 @@ public:
 		TCHAR szFULL[MAX_PATH];
 		LPTSTR lpszName = NULL;
 
-		if(::GetFullPathName( pstrName, MAX_PATH, szFULL, &lpszName))
+		if(::GetFullPathName( strName, MAX_PATH, szFULL, &lpszName))
 		{
 			if(lpszName)
 				*lpszName = 0;

@@ -4,11 +4,13 @@
 
 #include "stdafx.h"
 #include "D3DSphere.h"
-#include <dxdiag.h>
 
 // Compiled vs_3_0 GPU-skinning vertex shader (reads the bone palette from a float
 // texture via vertex-texture-fetch). Ported from 4retro: const BYTE g_wmesh_skinned_vertex[].
 #include "wmesh_skinned_vertex.h"
+
+// The render layer's current device (TRenderDevice.h), whichever backend made it.
+CTRenderDevice *CTRenderDevice::m_pCURRENT = NULL;
 
 DWORD CD3DDevice::m_dwPolyCount = 0;
 DWORD CD3DDevice::m_dwWorldAniso = 0;
@@ -91,7 +93,9 @@ CD3DDevice::CD3DDevice()
 
 	m_pMainWnd = NULL;
 	m_pDevice = NULL;
+#ifndef TCLIENT_NO_D3D9
 	m_pD3D = NULL;
+#endif
 
 	m_lVIDEOMEM = 0;
 	m_lSYSMEM = 0;
@@ -116,10 +120,89 @@ BYTE CD3DDevice::GetResetFlag()
 	return m_bRESET;
 }
 
+BOOL CD3DDevice::GetDesktopMode( D3DDISPLAYMODE *pMODE)
+{
+#ifdef TCLIENT_NO_D3D9
+	CSize vSCREEN = CTWindow::GetScreenSize();
+
+	if( !vSCREEN.cx || !vSCREEN.cy )
+		return FALSE;
+
+	pMODE->Width = UINT(vSCREEN.cx);
+	pMODE->Height = UINT(vSCREEN.cy);
+	pMODE->RefreshRate = 0;
+	pMODE->Format = D3DFMT_X8R8G8B8;
+
+	return TRUE;
+#else
+	return m_pD3D && SUCCEEDED(m_pD3D->GetAdapterDisplayMode( D3DADAPTER_DEFAULT, pMODE)) ? TRUE : FALSE;
+#endif
+}
+
+void CD3DDevice::GetDisplayModes( D3DFORMAT nFormat, std::vector<D3DDISPLAYMODE>& vMODES)
+{
+	vMODES.clear();
+
+#ifdef TCLIENT_NO_D3D9
+	std::vector<CSize> vSIZE;
+	CTWindow::GetDisplayModes(vSIZE);
+
+	for( size_t i=0; i<vSIZE.size(); i++)
+	{
+		D3DDISPLAYMODE vMODE = { UINT(vSIZE[i].cx), UINT(vSIZE[i].cy), 0, nFormat };
+		vMODES.push_back(vMODE);
+	}
+#else
+	UINT nCount = m_pD3D->GetAdapterModeCount( D3DADAPTER_DEFAULT, nFormat);
+
+	for( UINT i=0; i<nCount; i++)
+	{
+		D3DDISPLAYMODE vMODE;
+
+		if(SUCCEEDED(m_pD3D->EnumAdapterModes( D3DADAPTER_DEFAULT, nFormat, i, &vMODE)))
+			vMODES.push_back(vMODE);
+	}
+#endif
+}
+
+void CD3DDevice::ReleaseD3D9()
+{
+#ifndef TCLIENT_NO_D3D9
+	if(m_pD3D)
+	{
+		m_pD3D->Release();
+		m_pD3D = NULL;
+	}
+#endif
+}
+
+#ifdef TCLIENT_NO_D3D9
+// The caps the engine reads, as a current Direct3D 9 card reports them (bgfx draws on such cards).
+void CD3DDevice::GetDefaultCaps( D3DCAPS9 *pCaps)
+{
+	ZeroMemory( pCaps, sizeof(D3DCAPS9));
+
+	pCaps->DeviceType = D3DDEVTYPE_HAL;
+	pCaps->Caps2 = 0xE0020000;
+	pCaps->Caps3 = 0x000003A0;
+	pCaps->DevCaps = 0x001BBEF0;
+	pCaps->PrimitiveMiscCaps = 0x002FCEF2;
+	pCaps->RasterCaps = 0x07732191;
+	pCaps->MaxAnisotropy = 16;
+	pCaps->MaxPrimitiveCount = 0x00FFFFFF;
+	pCaps->MaxVertexIndex = 0x00FFFFFF;
+	pCaps->VertexShaderVersion = 0xFFFE0300;
+	pCaps->PixelShaderVersion = 0xFFFF0300;
+}
+#endif
+
 D3DFORMAT CD3DDevice::GetBestZFormat( UINT nAdapter,
 									  D3DDEVTYPE nType,
 									  D3DFORMAT nFormat)
 {
+#ifdef TCLIENT_NO_D3D9
+	return D3DFMT_D24S8;
+#else
 	if( SUCCEEDED(m_pD3D->CheckDeviceFormat(
 		nAdapter, nType, nFormat,
 		D3DUSAGE_DEPTHSTENCIL,
@@ -161,6 +244,7 @@ D3DFORMAT CD3DDevice::GetBestZFormat( UINT nAdapter,
 		return D3DFMT_D24X8;
 
 	return D3DFMT_D16;
+#endif
 }
 
 void CD3DDevice::InitBACK( D3DDISPLAYMODE *pMODE)
@@ -327,42 +411,37 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 	if( !pWnd || !TSAFE_HWND(pWnd) )
 		return FALSE;
 
+#ifdef TCLIENT_NO_D3D9
+	// No Direct3D 9: bgfx draws.
+	m_option.m_bBGFX = TRUE;
+#else
 	m_pD3D = Direct3DCreate9(D3D_SDK_VERSION);
 	if(!m_pD3D)
 		return FALSE;
+#endif
 
 	D3DDISPLAYMODE d3ddm;
-	HRESULT hr = m_pD3D->GetAdapterDisplayMode(
-		D3DADAPTER_DEFAULT,
-		&d3ddm);
+	HRESULT hr = D3D_OK;
 
-	if(FAILED(hr))
+	if(!GetDesktopMode(&d3ddm))
 	{
-		m_pD3D->Release();
-		m_pD3D = NULL;
+		ReleaseD3D9();
 		return FALSE;
 	}
 
 	if(!m_option.m_bWindowedMode)
 		d3ddm.Format = D3DFMT_X8R8G8B8;
 
-	UINT nAdapterModeCount = m_pD3D->GetAdapterModeCount(
-		D3DADAPTER_DEFAULT,
-		d3ddm.Format );
+	std::vector<D3DDISPLAYMODE> vMODES;
+	GetDisplayModes( d3ddm.Format, vMODES);
 
 	UINT uLastDeltaX = 0xFFFFFFFF;
 	UINT uLastDeltaY = 0xFFFFFFFF;
 	D3DDISPLAYMODE LastMode = d3ddm;
 
-	for( UINT i=0 ; i < nAdapterModeCount ; ++i )
+	for( size_t i=0 ; i < vMODES.size() ; ++i )
 	{
-		D3DDISPLAYMODE mode;
-
-		m_pD3D->EnumAdapterModes(
-			D3DADAPTER_DEFAULT,
-			d3ddm.Format,
-			i,
-			&mode );
+		D3DDISPLAYMODE& mode = vMODES[i];
 
 		if( d3ddm.Format == mode.Format && d3ddm.RefreshRate == mode.RefreshRate )
 		{
@@ -410,7 +489,7 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 	D3DDEVTYPE devType = D3DDEVTYPE_HAL;
 	UINT iAdapter = D3DADAPTER_DEFAULT;
 
-#ifdef USE_NVPERFHUD
+#if defined(USE_NVPERFHUD) && !defined(TCLIENT_NO_D3D9)
 	for( UINT iAdt=0; iAdt<m_pD3D->GetAdapterCount(); ++iAdt)
 	{
 		D3DADAPTER_IDENTIFIER9 adapterIdentifier;
@@ -425,6 +504,9 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 	}
 #endif
 
+#ifdef TCLIENT_NO_D3D9
+	GetDefaultCaps(&m_vCAPS);
+#else
 	hr = m_pD3D->GetDeviceCaps(
 		iAdapter,
 		devType,
@@ -432,11 +514,10 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 
 	if(FAILED(hr))
 	{
-		m_pD3D->Release();
-		m_pD3D = NULL;
-
+		ReleaseD3D9();
 		return FALSE;
 	}
+#endif
 
 	if (m_vCAPS.Caps3 & D3DCAPS3_ALPHA_FULLSCREEN_FLIP_OR_DISCARD && m_vCAPS.DevCaps & D3DDEVCAPS_EXECUTEVIDEOMEMORY)
 		m_vPRESENT.SwapEffect = D3DSWAPEFFECT_DISCARD;
@@ -463,11 +544,12 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 	if(m_option.m_bBGFX)
 	{
 		// bgfx draws with the fixed-function emulation of the render layer: the
-		// engine's D3D9 shaders stay off. m_pD3D still lists the display modes.
+		// engine's D3D9 shaders stay off. Direct3D 9, when there, still lists the display modes.
 		m_option.m_bUseSHADER = FALSE;
 		m_pDevice = CreateRenderDeviceBGFX( TSAFE_HWND(pWnd), &m_vPRESENT, &m_vCAPS);
 		hr = m_pDevice ? D3D_OK : E_FAIL;
 	}
+#ifndef TCLIENT_NO_D3D9
 	else
 	{
 		LPDIRECT3DDEVICE9 pD3D9 = NULL;
@@ -482,12 +564,11 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 		if(SUCCEEDED(hr))
 			m_pDevice = CreateRenderDeviceD3D9(pD3D9);
 	}
+#endif
 
 	if(FAILED(hr))
 	{
-		m_pD3D->Release();
-		m_pD3D = NULL;
-
+		ReleaseD3D9();
 		return FALSE;
 	}
 	InitCAPS();
@@ -540,6 +621,7 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 			&m_pDECL[i]);
 	}
 
+#ifndef TCLIENT_NO_D3D9
 	if(m_option.m_bUseSHADER)
 	{
 		for(auto i=0; i<VS_COUNT; i++)
@@ -613,6 +695,7 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 			}
 	}
 	else
+#endif
 		m_bEnableSHADER = FALSE;
 
 	if(!m_bEnableSHADER)
@@ -649,7 +732,6 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 			{ 0, 40, D3DDECLTYPE_FLOAT2, D3DDECLMETHOD_DEFAULT, D3DDECLUSAGE_TEXCOORD, 0},
 			D3DDECL_END()};
 
-		D3DDISPLAYMODE dmCAP;
 		HRESULT hrVS  = m_pDevice->CreateVertexShader((const DWORD*) g_wmesh_skinned_vertex, &m_pSkinnedVS);
 		HRESULT hrDCL = m_pDevice->CreateVertexDeclaration(vSKINDECL, &m_pSkinnedDECL);
 
@@ -658,12 +740,17 @@ BOOL CD3DDevice::InitDevices( CTWindow *pWnd)
 			if( FAILED(m_pDevice->CreateTexture(256 * 4, 1, 1, 0, D3DFMT_A32B32G32R32F, D3DPOOL_MANAGED, &m_pBonesTexture[i], NULL)) || !m_pBonesTexture[i] )
 				bTEX = FALSE;
 
+		// Hardware vertex-texture-fetch of a float4 texture must be supported (Direct3D 9 only).
+#ifdef TCLIENT_NO_D3D9
+		HRESULT hrCAP = E_FAIL;
+#else
+		D3DDISPLAYMODE dmCAP;
 		HRESULT hrCAP = m_pD3D->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &dmCAP);
 
-		// Hardware vertex-texture-fetch of a float4 texture must be supported.
 		if(SUCCEEDED(hrCAP))
 			hrCAP = m_pD3D->CheckDeviceFormat(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, dmCAP.Format,
 				D3DUSAGE_QUERY_VERTEXTEXTURE, D3DRTYPE_TEXTURE, D3DFMT_A32B32G32R32F);
+#endif
 
 		m_bGPUSkinReady = (SUCCEEDED(hrVS) && SUCCEEDED(hrDCL) && bTEX && SUCCEEDED(hrCAP) &&
 			m_pSkinnedVS && m_pSkinnedDECL) ? TRUE : FALSE;
@@ -679,17 +766,13 @@ BOOL CD3DDevice::Reset()
 {
 	D3DDISPLAYMODE d3ddm;
 
-	if( !m_pD3D || !m_pDevice )
+	if(!m_pDevice)
 		return FALSE;
 
 	if( m_pDevice->TestCooperativeLevel() == D3DERR_DEVICELOST )
 		return FALSE;
 
-	HRESULT hr = m_pD3D->GetAdapterDisplayMode(
-		D3DADAPTER_DEFAULT,
-		&d3ddm);
-
-	if (FAILED(hr))
+	if(!GetDesktopMode(&d3ddm))
 
 	{
 		ReleaseDevice();
@@ -802,11 +885,7 @@ void CD3DDevice::ReleaseDevice()
 		m_pDevice = NULL;
 	}
 
-	if(m_pD3D)
-	{
-		m_pD3D->Release();
-		m_pD3D = NULL;
-	}
+	ReleaseD3D9();
 
 	ZeroMemory( m_vConstantVS, VC_COUNT * sizeof(WORD));
 	ZeroMemory( m_vConstantPS, PC_COUNT * sizeof(WORD));

@@ -40,7 +40,7 @@ void TCMLParser::Load( char* fname, TCMLParserProgress* pProgress)
 {
 	FILE *pFILE = nullptr;
 
-	if (0 != fopen_s(&pFILE, fname, "rb"))
+	if (!(pFILE = TFileOpen(fname, "rb")))
 	{
 #ifdef _DEBUG
 		TRACE("Error has occured while opening interface file!");
@@ -195,7 +195,7 @@ int TCMLParser::Parse( char* fname)
 {
     int ret= -1;
  
-	if (0 != fopen_s(&TCMLin, fname, "r"))
+	if (!(TCMLin = TFileOpen(fname, "r")))
 		return -1;
 
     if(InitTCMLInterface())

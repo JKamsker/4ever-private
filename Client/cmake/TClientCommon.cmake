@@ -70,16 +70,28 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
     target_compile_options(tclient_options INTERFACE /MP)
 endif()
 
+# bgfx only, without Direct3D 9 and the DirectX SDK: the engine takes the D3D9 types from its own
+# TD3D9Types.h, as the Linux build does.
+option(TCLIENT_NO_D3D9 "Build without Direct3D 9 and the DirectX SDK (bgfx renderer only)" OFF)
+if(TCLIENT_NO_D3D9)
+    target_compile_definitions(tclient_options INTERFACE TCLIENT_NO_D3D9)
+    set(_tclient_dxsdk_include "")
+else()
+    set(_tclient_dxsdk_include "${TCLIENT_DXSDK}/Include")
+endif()
+
 # Old DirectX SDK headers (d3dx9, dsound, ...). They must come AFTER the Windows SDK headers,
 # whose newer dxgi/d3d headers they would otherwise shadow (MSBuild: IncludePath=$(IncludePath);DX).
 add_library(tclient_dxsdk INTERFACE)
-target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/${TCLIENT_ARCH}")
+if(NOT TCLIENT_NO_D3D9)
+    target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/${TCLIENT_ARCH}")
+endif()
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    set(CMAKE_VS_SDK_INCLUDE_DIRECTORIES "$(VC_IncludePath);$(WindowsSDK_IncludePath);${TCLIENT_DXSDK}/Include")
+    set(CMAKE_VS_SDK_INCLUDE_DIRECTORIES "$(VC_IncludePath);$(WindowsSDK_IncludePath);${_tclient_dxsdk_include}")
 else()
     # Command-line /I paths are searched before the INCLUDE variable of the developer shell, so
     # repeat the shell's directories first, then the DirectX SDK.
     set(_tclient_env_include "$ENV{INCLUDE}")
     list(FILTER _tclient_env_include EXCLUDE REGEX "^$")
-    target_include_directories(tclient_dxsdk SYSTEM INTERFACE ${_tclient_env_include} "${TCLIENT_DXSDK}/Include")
+    target_include_directories(tclient_dxsdk SYSTEM INTERFACE ${_tclient_env_include} ${_tclient_dxsdk_include})
 endif()

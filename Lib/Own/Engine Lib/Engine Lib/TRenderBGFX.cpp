@@ -15,11 +15,11 @@
 
 #define NOMINMAX
 #include <windows.h>
-#include <d3d9.h>
-#include <TD3DXMath.h>
-#include <d3dx9.h>
+#include "TD3D9.h"
 #include <TRenderDevice.h>
 #include "TThread.h"
+#include "TString.h"
+#include "TFile.h"
 
 #include <bgfx/bgfx.h>
 #include <bimg/decode.h>
@@ -1423,6 +1423,7 @@ namespace
 			m_vMAIN.m_bValid = (bPosition || bRHW) && m_dwStreams < (1 << 4);
 		}
 
+#ifndef TCLIENT_NO_D3D9
 		STDMETHOD(QueryInterface)( REFIID riid, void **ppvObj) override
 		{
 			if(!ppvObj)
@@ -1440,6 +1441,8 @@ namespace
 			return E_NOINTERFACE;
 		}
 
+#endif
+
 		STDMETHOD_(ULONG, AddRef)() override
 		{
 			return ULONG(InterlockedIncrement(&m_nRef));
@@ -1455,6 +1458,7 @@ namespace
 			return ULONG(nRef);
 		}
 
+#ifndef TCLIENT_NO_D3D9
 		STDMETHOD(GetDevice)( IDirect3DDevice9 **ppDevice) override
 		{
 			if(ppDevice)
@@ -1462,6 +1466,7 @@ namespace
 
 			return D3DERR_INVALIDCALL;
 		}
+#endif
 
 		STDMETHOD(GetDeclaration)( D3DVERTEXELEMENT9 *pElement, UINT *pNumElements) override
 		{
@@ -1741,7 +1746,7 @@ namespace
 				FILE *pFLAG = NULL;
 
 				m_nHighlight = 0;
-				if( !fopen_s( &pFLAG, vFILE, "r") && pFLAG )
+				if( (pFLAG = TFileOpen( vFILE, "r")) != NULL )
 				{
 					if( fscanf_s( pFLAG, "%d", &m_nHighlight) != 1 )
 						m_nHighlight = 1;
@@ -2437,7 +2442,7 @@ namespace
 		{
 			FILE *pFILE = NULL;
 
-			if( fopen_s( &pFILE, pFileName, "rb") || !pFILE )
+			if( !(pFILE = TFileOpen( pFileName, "rb")) )
 				return FALSE;
 
 			BYTE vBUF[4096];
@@ -2496,7 +2501,7 @@ namespace
 			GetTempPathA( MAX_PATH, vPATH);
 			sprintf_s( vFILE, "%stclient-bgfx.log", vPATH);
 
-			if( fopen_s( &pFILE, vFILE, "a") || !pFILE )
+			if( !(pFILE = TFileOpen( vFILE, "a")) )
 				return;
 
 			const BYTE *p = (const BYTE *) pData;
@@ -3444,19 +3449,19 @@ namespace
 			GetTempPathA( MAX_PATH, vPATH);
 			sprintf_s( vFILE, "%stclient-bgfx-dump.flag", vPATH);
 
-			if( GetFileAttributesA(vFILE) != INVALID_FILE_ATTRIBUTES )
+			if( TFileExists(vFILE) )
 			{
 				FILE *pFLAG = NULL;
 
 				s_nCount = 1;
-				if( !fopen_s( &pFLAG, vFILE, "r") && pFLAG )
+				if( (pFLAG = TFileOpen( vFILE, "r")) != NULL )
 				{
 					if( fscanf_s( pFLAG, "%d", &s_nCount) != 1 || s_nCount < 1 )
 						s_nCount = 1;
 					fclose(pFLAG);
 				}
 
-				DeleteFileA(vFILE);
+				TFileDelete(vFILE);
 				s_nLeft = s_nCount;
 				s_nIndex = 0;
 				s_dwNext = 0;
@@ -3474,7 +3479,7 @@ namespace
 			s_nIndex++;
 			s_dwNext = GetTickCount() + 1000;
 
-			if( fopen_s( &m_pDUMP, vFILE, "w") )
+			if( !(m_pDUMP = TFileOpen( vFILE, "w")) )
 				m_pDUMP = NULL;
 
 			if(m_pDUMP)

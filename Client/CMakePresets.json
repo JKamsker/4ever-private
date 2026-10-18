@@ -55,6 +55,15 @@
         "CMAKE_C_COMPILER_TARGET": "x86_64-pc-windows-msvc",
         "CMAKE_CXX_COMPILER_TARGET": "x86_64-pc-windows-msvc"
       }
+    },
+    {
+      "name": "clang-nod3d9-x64",
+      "displayName": "Ninja + clang-cl, x64, bgfx only: no Direct3D 9 nor DirectX SDK (the Linux build's engine, on Windows)",
+      "inherits": "clang-x64",
+      "binaryDir": "${sourceDir}/../build/clang-nod3d9-x64",
+      "cacheVariables": {
+        "TCLIENT_NO_D3D9": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -62,6 +71,7 @@
     { "name": "msvc-x86", "configurePreset": "msvc-x86" },
     { "name": "clang-x86", "configurePreset": "clang-x86" },
     { "name": "msvc-x64", "configurePreset": "msvc-x64" },
-    { "name": "clang-x64", "configurePreset": "clang-x64" }
+    { "name": "clang-x64", "configurePreset": "clang-x64" },
+    { "name": "clang-nod3d9-x64", "configurePreset": "clang-nod3d9-x64" }
   ]
 }
