@@ -1,7 +1,7 @@
 // TAfx.h: the part of MFC's core the client uses, without MFC.
 //
-// CString, CPoint/CRect/CSize and CTime/CTimeSpan come from ATL's standalone headers
-// (the same classes MFC uses). The rest is written here with MFC's names and behavior:
+// CString, CPoint/CRect/CSize and CTime/CTimeSpan are the engine's own (TString.h, TTypes.h,
+// TTime.h), with ATL's API and behavior. The rest is written here with MFC's names and behavior:
 // CFile throws CFileException* on errors, CArchive reads and writes MFC's binary format
 // (CString length prefixes included) and throws CArchiveException* past the end, and
 // TRY/CATCH delete the exception at the end of the handler like MFC's macros.
@@ -26,15 +26,18 @@
 #include <imm.h>
 #include <commctrl.h>
 #include <ole2.h>
+#include <shlwapi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <io.h>
 #include <fcntl.h>
 
-#include <atlstr.h>
-#include <atltypes.h>
-#include <atltime.h>
+#include <assert.h>
+
+#include "TString.h"
+#include "TTypes.h"
+#include "TTime.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")
@@ -47,9 +50,28 @@
 #define AFX_IDS_APP_TITLE			0xE000
 #endif
 
-#define TRACE						ATLTRACE
-#define ASSERT						ATLASSERT
-#define VERIFY						ATLVERIFY
+// TRACE writes to the debugger in debug builds, ASSERT checks in debug builds only.
+#ifdef _DEBUG
+inline void TAfxTrace( LPCTSTR pszFormat, ...)
+{
+	CString strText;
+	va_list args;
+
+	va_start( args, pszFormat);
+	strText.FormatV( pszFormat, args);
+	va_end(args);
+
+	::OutputDebugString(strText);
+}
+
+#define TRACE						TAfxTrace
+#define ASSERT(f)					assert(f)
+#define VERIFY(f)					assert(f)
+#else
+#define TRACE						__noop
+#define ASSERT(f)					((void) 0)
+#define VERIFY(f)					((void) (f))
+#endif
 
 
 //////////////////////////////////////////////////////////////////////

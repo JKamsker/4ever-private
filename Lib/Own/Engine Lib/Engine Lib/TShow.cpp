@@ -266,13 +266,12 @@ BYTE CTShow::Play()
 	if( !CTachyonMedia::m_bON || !m_bON )
 		return FALSE;
 
-	USES_CONVERSION;
 	ResetGB();
 
 	if(!m_pMC)
 		return FALSE;
 
-	if(FAILED(m_pGB->RenderFile( T2W(LPCSTR(m_strFILE)), NULL)))
+	if(FAILED(m_pGB->RenderFile( CStringW(m_strFILE), NULL)))
 		return FALSE;
 
 	if(m_pWnd)

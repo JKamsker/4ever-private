@@ -106,7 +106,7 @@
 #include <windows.h> 
 #include <tchar.h> 
 #include <objbase.h> 
-#include <atlbase.h>
+#include <comdef.h>
 
 #include "TUtilityBarDlg.h"
 #include "TCompanionMiniUI.h"
