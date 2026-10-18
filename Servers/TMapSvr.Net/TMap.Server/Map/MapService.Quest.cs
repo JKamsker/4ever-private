@@ -906,11 +906,13 @@ public sealed partial class MapService
         byte count = r.ReadByte();
 
         var perNpc = new List<(ushort npcId, byte country, List<(uint questId, byte con)> quests)>();
+        var arenasShown = new HashSet<ushort>();
         for (int i = 0; i < count; i++)
         {
             ushort npcId = r.ReadUInt16();
             if (_state.FindNpc(npcId) is not { } npc) continue;
             if (npc.Country != 3 && npc.Country != 2 && npc.Country != ch.Country) continue; // TCONTRY_N/_B or own
+            SendArenaRosters(s, npc, arenasShown);                                          // an arena NPC's teams (MapService.Arena.cs)
 
             var runnable = new List<(uint, byte, byte)>();  // (questId, canRun, level)
             byte minLevel = 0xFF;

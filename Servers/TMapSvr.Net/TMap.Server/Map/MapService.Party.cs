@@ -35,6 +35,7 @@ public sealed partial class MapService
         if (s.State != EnterState.InGame || !s.IsMain || s.Char is not { } ch) return;
         string target = r.ReadString();
         byte obtainType = r.ReadByte();
+        if (ch.ArenaId != 0) return;                                                     // no invites from an arena
 
         var w = new PacketWriter(Msg.MW_PARTYADD_ACK);
         w.WriteString(ch.Name); w.WriteString(target); w.WriteByte(obtainType);
@@ -208,6 +209,7 @@ public sealed partial class MapService
         ushort commander = r.ReadUInt16();
 
         if (FindPlayer(charId, key) is not { Char: { } ch } s) return;
+        if (partyId == 0) { ArenaLeave(s, ch); ArenaDequeue(ch.CharId); }              // out of the party, out of the arena
         ch.PartyChiefId = chiefId;
         ch.PartyId = partyId;
         ch.PartyType = partyType;

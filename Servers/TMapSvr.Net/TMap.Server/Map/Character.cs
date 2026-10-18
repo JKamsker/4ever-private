@@ -246,6 +246,11 @@ public sealed class Character
     /// <summary>C++ <c>m_bRPSType</c> / <c>m_bRPSWin</c> — the rock-paper-scissors game being played (MapService.Rps.cs), 0 = none.</summary>
     public byte RpsType, RpsWin;
 
+    /// <summary>C++ <c>m_wArenaID</c> / <c>m_bArenaTeam</c> — the arena the character fights in and its side (1 or 2), 0 = none
+    /// (MapService.Arena.cs).</summary>
+    public ushort ArenaId { get; set; }
+    public byte ArenaTeam { get; set; }
+
     /// <summary>C++ <c>m_vRemainSkill</c> — the learned skills whose rows apply for good (<c>IsRemainType</c>). The C++
     /// fills it with every such skill at login and, on learning one, first drops another of the same
     /// <c>m_bPriority</c>; this reads the learned list instead (the live remain skills, 41-46, are one per class).</summary>

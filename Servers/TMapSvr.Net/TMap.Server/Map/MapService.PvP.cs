@@ -137,6 +137,7 @@ public sealed partial class MapService
     /// partner in view, who gets 12.</summary>
     private void PvPKill(ClientSession vs, Character victim, ClientSession ks, Character killer)
     {
+        if (victim.ArenaId != 0) return;                                                // C++ PvPEvent: no points in an arena
         // C++ CTPlayer::OnDie: the kill counts in the victim's territory (m_mapKills).
         if (victim.LocalId != 0 && _territories.TryGetValue(victim.LocalId, out var at)) at.Kills[killer.CharId] = at.Kills.GetValueOrDefault(killer.CharId) + 1;
         var local = LocalOf(victim) is { Status: BsBattle } l ? l : null;      // GetPvPStatus: PVPS_LOCAL in a territory at war

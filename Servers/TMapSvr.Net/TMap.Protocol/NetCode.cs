@@ -197,6 +197,16 @@ public static class Msg
     public const ushort CS_COMMENT_REQ = CS_MAP + 0x01E0;           // strComment
     public const ushort CS_COMMENT_ACK = CS_MAP + 0x01E1;           // dwCharID, strComment
     public const ushort CS_QUESTPOSEXEC_REQ = CS_MAP + 0x0354;      // dwQuestID, dwTermID
+    // The arena, batch S6d (CSProtocol.h / MWProtocol.h; MapService.Arena.cs).
+    public const ushort CS_ARENA_REQ = CS_MAP + 0x0250;              // bCommand (0 join, 1 give up), wNpcID, wArenaID
+    public const ushort CS_ARENA_ACK = CS_MAP + 0x0251;              // bResult (ARENA_RESULT)
+    public const ushort CS_ARENATEAM_ACK = CS_MAP + 0x0252;          // wArenaID, bTeam (0 = out), bCount, dwCharID...
+    public const ushort CS_ARENAINFO_REQ = CS_MAP + 0x039D;          // bArenaID
+    public const ushort CS_ARENAINFO_ACK = CS_MAP + 0x039E;
+    public const ushort CS_ARENARANKING_REQ = CS_MAP + 0x0540;
+    public const ushort CS_ARENARANKING_ACK = CS_MAP + 0x0541;
+    public const ushort CS_RESETCOOLTIME_ACK = CS_MAP + 0x01C2;      // wExceptSkill
+    public const ushort MW_ARENAJOIN_ACK = MW_BASE + 0x0174;         // dwCharID, dwKey, bJoin, dwCount, dwCharID...
     // Heroes and the warlord's message, batch S6c (CSProtocol.h / MWProtocol.h; MapService.Heroes.cs).
     public const ushort CS_HEROSELECT_REQ = CS_MAP + 0x01CD;         // wBattleZoneID, strHero
     public const ushort CS_HEROSELECT_ACK = CS_MAP + 0x01CE;         // bResult (HERO_SELECT_RESULT)

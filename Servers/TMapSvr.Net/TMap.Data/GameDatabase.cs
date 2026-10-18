@@ -423,6 +423,12 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 list.Add(new GambleRow(r.GetUShortSafe(2), r.GetByteSafe(3), r.GetByteSafe(4), r.GetByteSafe(5), r.GetUShortSafe(6)));
             }
 
+        // C++ CTBLArena (DBAccess.h:4588)
+        await using (var cmd = new SqlCommand("SELECT wID, bType, wInPos, wOutPos, dwFee FROM TARENACHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+                store.Arenas.Add(new ArenaRow(r.GetUShortSafe(0), r.GetByteSafe(1), r.GetUIntSafe(4), r.GetUShortSafe(2), r.GetUShortSafe(3)));
+
         // C++ CTBLRPSGame (DBAccess.h:4545)
         await using (var cmd = new SqlCommand(@"SELECT bType, bWinCount, wItemID, dwRewardMoney, wRewardItem_1, wRewardItem_2, bItemCount_1,
                  bItemCount_2, bProb_Win, bProb_Draw, bProb_Lose, wWinKeep, wWinPeriod FROM TRPSGAMECHART", c))

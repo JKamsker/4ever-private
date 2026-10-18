@@ -32,6 +32,7 @@ public sealed partial class MapService
     /// mode. Idempotent.</summary>
     public void InitNpcs()
     {
+        InitArenas();                                                                            // MapService.Arena.cs
         foreach (var def in _templates.Npcs.Values)
         {
             var npc = new Npc
@@ -52,6 +53,8 @@ public sealed partial class MapService
                 foreach (var portal in def.ItemIds)
                     if (_templates.Portals.ContainsKey(portal)) npc.PortalId = portal;
             if (def.Type == TnpcMonster) InitMonsterShop(npc);
+            if (def.Type == TnpcArena)                                                           // MapService.Arena.cs
+                npc.ArenaId = (ushort)def.ItemIds.FirstOrDefault(id => _arenas.ContainsKey((ushort)id));
             if (def.Type == TnpcMagicItem)                                                       // MapService.Gamble.cs
                 foreach (var qid in def.ItemIds)
                     if (_templates.QuestItems.TryGetValue(qid, out var qi)) npc.MagicItems[qid] = qi;

@@ -94,6 +94,8 @@ public sealed partial class MapService
         if (skill is null) { SendSkillUseFail(s, SkillUseResult.NotFound, attackId, attackType, skillId, actionId, actId, aniId); return; }
         // ---- a guild skill: the guild, the duty, its time (MapService.GuildSkill.cs) ----
         if (!CanCastGuildSkill(ch, skillId)) { SendSkillUseFail(s, SkillUseResult.NotFound, attackId, attackType, skillId, actionId, actId, aniId); return; }
+        if (ch.ArenaId != 0 && skillId == TournamentCantUseSkill)                       // not in an arena (MapService.Arena.cs)
+        { SendSkillUseFail(s, SkillUseResult.NotFound, attackId, attackType, skillId, actionId, actId, aniId); return; }
         // ---- no hostile skill in a peace zone (C++ CheckPeaceZone, CSHandler.cpp:2584) ----
         if ((skill.Template?.IsNegative ?? true) && CheckPeaceZone(s.Char!))
         { SendSkillUseFail(s, SkillUseResult.PeaceZone, attackId, attackType, skillId, actionId, actId, aniId); return; }

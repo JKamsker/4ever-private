@@ -207,6 +207,7 @@ public sealed partial class MapService
         RecallsOwnerDied(dead, target);
         CompanionOwnerDied(dead, target);
         ReleaseMaintainPlayer(dead, target, notify: false);
+        ArenaOnDeath(target);                                                   // a side wiped out loses (MapService.Arena.cs)
     }
 
     /// <summary>

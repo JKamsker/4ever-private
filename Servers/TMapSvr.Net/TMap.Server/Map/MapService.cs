@@ -84,6 +84,7 @@ public sealed partial class MapService
             SendMW_CLOSECHAR_ACK(session.CharId, session.Key);
 
         SaveCharData(session);   // flush the char record + dirty quests on logout (C++ SetEventCloseSession)
+        if (session.Char is { } fighter) { ArenaLeave(session, fighter, teleport: false); ArenaDequeue(fighter.CharId); }   // C++ ExitMAP (MapService.Arena.cs)
         if (session.State == EnterState.InGame && session.Char is { } carrier) DropGodBall(carrier);   // C++ ExitMAP (MapService.Castle.cs)
         if (session.Char is { } looter) ReleaseLootLock(looter);   // C++ SSHandler.cpp:19205 / TMapSvr.cpp:1544
         if (session.Char is { } dueller) { LeaveDuel(dueller, loses: false); ClearDuel(dueller); }   // CTPlayer release
@@ -246,6 +247,9 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_ARENA_REQ: OnCS_ARENA_REQ(session, r); break;                                   // MapService.Arena.cs
+                case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
+                case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
                 case Msg.CS_HEROLIST_REQ: OnCS_HEROLIST_REQ(session); break;                                // MapService.Heroes.cs
                 case Msg.CS_HEROSELECT_REQ: await OnCS_HEROSELECT_REQ(session, r); break;
                 case Msg.CS_WARLORDSAY_REQ: await OnCS_WARLORDSAY_REQ(session, r); break;
@@ -554,6 +558,7 @@ public sealed partial class MapService
         FlushItemDirect();                     // incremental item persistence (TSaveItemDirect); off-thread write
         await RunPostBills();                  // unpaid bills past 3 days go back to their sender
         await RunAuctionEnds();                // auctions whose time is up (MapService.Auction.cs)
+        ArenaTick();                           // the arenas' ready and battle clocks (MapService.Arena.cs)
         RunDuels();                            // duel standby → start → timeout → clear (the SM_DUEL* timer)
         // Still deferred here: war timers — see PORT_STATUS.md.
     }

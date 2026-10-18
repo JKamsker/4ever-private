@@ -94,6 +94,7 @@ public sealed partial class MapService
         string name = r.ReadString();
         if (!s.IsMain || s.Char is not { } ch || IsTutorial(ch)) return;
         void Fail(byte result, byte type = TpNoneDef) => SendCS_PARTYMEMBERRECALL_ACK(s, result, type, name);
+        if (ch.ArenaId != 0) { Fail(IuTargetBusy); return; }                              // not from an arena
         if (ch.Riding != 0) { Fail(IuRiding); return; }
         if (s.Deal.Status >= DealStart) { Fail(IuDealing); return; }
         if (ch.FindInven(inven)?.FindItem(slot) is not { Count: > 0 } item || item.Template?.Type != ItUse) { Fail(IuNotFound); return; }
@@ -125,7 +126,7 @@ public sealed partial class MapService
         string user = r.ReadString();
         byte type = r.ReadByte(), inven = r.ReadByte(), item = r.ReadByte();
         if (FindPlayer(charId, key) is not { Char: { } ch } s) { SendMW_PARTYMEMBERRECALLANS_ACK(IuNotFound, user, "", type, inven, item); return; }
-        if (!s.IsMain || ch.Hp == 0 || s.Deal.Status >= DealStart)
+        if (!s.IsMain || ch.Hp == 0 || s.Deal.Status >= DealStart || ch.ArenaId != 0)
         {
             SendMW_PARTYMEMBERRECALLANS_ACK(IuTargetBusy, user, ch.Name, type, inven, item);
             return;
@@ -157,6 +158,7 @@ public sealed partial class MapService
         ushort mapId = r.ReadUInt16();
         float x = r.ReadFloat(), y = r.ReadFloat(), z = r.ReadFloat();
         if (FindPlayer(charId, key) is not { Char: { } ch } s || s.Deal.Status >= DealStart) return;
+        if (ch.ArenaId != 0) { SendCS_PARTYMEMBERRECALL_ACK(s, IuNotFound, type, name); return; }   // the arena (SSHandler.cpp:13545)
         if (result != IuSuccess) { SendCS_PARTYMEMBERRECALL_ACK(s, result, type, name); return; }
         var inv = ch.FindInven(inven);
         if (inv?.FindItem(slot) is not { } item || item.Template?.Type != ItUse) { SendCS_PARTYMEMBERRECALL_ACK(s, IuNotFound, type, name); return; }

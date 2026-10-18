@@ -235,6 +235,7 @@ public sealed partial class MapService
         if (s.State != EnterState.InGame) return;
 
         EraseZoneEffects(s, ch);               // C++ ExitMAP → EraseMissionSkill (MapService.Mission.cs)
+        ArenaLeave(s, ch); ArenaDequeue(ch.CharId);   // and ArenaLeave + the queue (MapService.Arena.cs)
         SkyGardenExitMap(s, ch);               // and CS_LEAVESKYGARDEN_ACK (MapService.SkyGarden.cs)
         CastleExitMap(s, ch);                  // a carried god ball falls, CS_LEAVECASTLE_ACK (MapService.Castle.cs)
         RecallsExitMap(s, ch);

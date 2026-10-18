@@ -99,6 +99,8 @@ public sealed partial class MapService
         if (attackType != OtPc) return;
         // C++ (CSHandler.cpp:1653): no hostile skill out of a peace zone, on anything.
         if ((_templates.Skill(skillId)?.IsNegative ?? true) && CheckPeaceZone(ch)) return;
+        // Arena fighters and outsiders can't hit each other (C++ CSHandler.cpp:1541; MapService.Arena.cs).
+        if (targetType == OtPc && _state.FindByChar(targetId)?.Char is { } tc && ArenaApart(ch, tc)) return;
 
         PlayerHitsTarget(s, ch, hostId, attackId, attackType, targetId, targetType, actId, aniId, attackerLevel,
             transHp, transMp, canSelect, skillId, skillLevel, atkX, atkY, atkZ, defX, defY, defZ);

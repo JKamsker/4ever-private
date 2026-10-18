@@ -162,7 +162,7 @@ public sealed partial class MapService
     /// <summary>C++ <c>CheckPeaceZone</c> (TMapSvr.cpp:11602), the territory part: in a territory that cannot battle, or in the sky
     /// garden's map out of its war. (Tournament lounge, arena and meeting room are not ported.)</summary>
     private bool CheckPeaceZone(Character ch)
-        => LocalOf(ch) is { CanBattle: false }
+        => LocalOf(ch) is { CanBattle: false } || InArenaPeace(ch)
            || _skyGardens.Any(g => g.Valid && g.Zone.MapId == ch.MapId && !g.CanBattle);
 
     /// <summary>The defender side (CSHandler.cpp:1683 / 20552): a hostile skill does not land on a player standing in a territory

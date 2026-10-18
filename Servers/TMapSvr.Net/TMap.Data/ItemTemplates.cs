@@ -76,6 +76,10 @@ public sealed record GambleRow(ushort ReplaceId, byte CountMax, byte MinLevel, b
 
 /// <summary>A rock-paper-scissors step (C++ <c>TRPSGAME</c> from <c>TRPSGAMECHART</c>, keyed by type and wins so far): the ticket (win 0
 /// only), what cashing out pays, and the cumulative odds (win, draw, out of lose) — changed live by the world (<c>MW_RPSGAMECHANGE_REQ</c>).</summary>
+/// <summary>An arena (C++ <c>TARENA</c> from <c>TARENACHART</c>): the party size (3 or 5 a side), the fee, and the spawn points
+/// inside (where a team is sent) and outside (where it leaves).</summary>
+public sealed record ArenaRow(ushort Id, byte Type, uint Fee, ushort InPos, ushort OutPos);
+
 public sealed class RpsGame
 {
     public byte Type, WinCount;
@@ -156,6 +160,9 @@ public sealed class TemplateStore
 
     /// <summary>C++ <c>m_mapTGAMBLE</c>: the outcomes by (item type, item kind).</summary>
     public Dictionary<(byte Type, byte Kind), List<GambleRow>> Gambles { get; } = new();
+
+    /// <summary>C++ <c>CTBLArena</c>: the arenas.</summary>
+    public List<ArenaRow> Arenas { get; } = new();
 
     /// <summary>C++ <c>m_mapRPSGame</c>: the rock-paper-scissors steps by <c>MAKEWORD(type, winCount)</c>.</summary>
     public Dictionary<ushort, RpsGame> RpsGames { get; } = new();

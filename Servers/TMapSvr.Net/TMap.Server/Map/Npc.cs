@@ -36,6 +36,9 @@ public sealed class Npc
     /// (MapService.Gamble.cs).</summary>
     public Dictionary<uint, QuestItemRow> MagicItems { get; } = new();
 
+    /// <summary>C++ <c>m_pArena</c> — the arena a <c>TNPC_ARENA</c> NPC signs parties up for (MapService.Arena.cs), 0 = none.</summary>
+    public ushort ArenaId { get; set; }
+
     /// <summary>C++ <c>m_mapSkill</c> — for a skill trainer (<c>TNPC_SKILL_MASTER</c>/<c>TNPC_SKILL_RENT</c>), the skills
     /// it teaches: its <c>TNPCITEMCHART</c> ids resolved against the skill chart.</summary>
     public Dictionary<ushort, SkillTemplate> Skills { get; } = new();

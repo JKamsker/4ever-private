@@ -156,6 +156,14 @@ and **restarts the world and the map** to load it. A reads the hero list (the fo
 Needs migration 021 (`THeroSelect` read a missing `TCHARTABLE_PW`). The fort table and the guild are put back and the world and
 the map restarted again. 5 checks.
 
+## Scenario: arena (two against two)
+
+`--Bot:Scenario=arena` (needs `--Bot:Account3/4`) puts the four bots by the 3-against-3 arena (map 0, NPC 26156). A and B make
+a party, C and D another. A signs up (50 000 copper), then C: the arena is ready, and a minute later the battle starts — a hit
+before that does nothing. A and B bring C and D down: C's side is sent out, and A gets the fee by mail. The info window shows
+A's side, the ranking answers, and A gives up the waiting arena — out, with the fee back by mail. Positions, money, HP and the
+letters are put back. Takes about two minutes. 15 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account
