@@ -1,7 +1,6 @@
 # Tachyon 3D engine (Engine Lib.vcxproj)
 
 set(EngineLib_SOURCES
-    CryptographyExt.cpp
     D3DCamera.cpp
     D3DDevice.cpp
     D3DFont.cpp
@@ -33,6 +32,7 @@ set(EngineLib_SOURCES
     TBSPNode.cpp
     TBSPPortal.cpp
     TConsole.cpp
+    TCrypt.cpp
     TDynamicBillboard.cpp
     TMath.cpp
     TMiniAudio.cpp

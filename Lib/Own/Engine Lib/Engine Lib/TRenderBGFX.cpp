@@ -19,6 +19,7 @@
 #include <TD3DXMath.h>
 #include <d3dx9.h>
 #include <TRenderDevice.h>
+#include "TThread.h"
 
 #include <bgfx/bgfx.h>
 #include <bimg/decode.h>
@@ -711,14 +712,14 @@ namespace
 	{
 	public:
 		CTSurfaceBGFX( CTTextureBGFX *pTexture, UINT nLevel)
-			: m_nRef(1), m_pTexture(pTexture), m_nLevel(nLevel), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_hREADY(NULL)
+			: m_nRef(1), m_pTexture(pTexture), m_nLevel(nLevel), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_vREADY( TRUE, TRUE)
 		{
 			pTexture->AddRef();
 			pTexture->GetLevelDesc( nLevel, &m_vDESC);
 		}
 
 		CTSurfaceBGFX( UINT nWidth, UINT nHeight, D3DFORMAT nFormat, DWORD dwUsage, D3DPOOL nPool)
-			: m_nRef(1), m_pTexture(NULL), m_nLevel(0), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_hREADY(NULL)
+			: m_nRef(1), m_pTexture(NULL), m_nLevel(0), m_dwSerial(NewSerial()), m_hDepth(BGFX_INVALID_HANDLE), m_dwGeneration(0), m_vREADY( TRUE, TRUE)
 		{
 			ZeroMemory( &m_vDESC, sizeof(D3DSURFACE_DESC));
 			m_vDESC.Format = nFormat;
@@ -732,31 +733,23 @@ namespace
 		~CTSurfaceBGFX()
 		{
 			DeferDestroy( Pending().m_vTEXTURE, m_hDepth, m_dwGeneration);
-
-			if(m_hREADY)
-				CloseHandle(m_hREADY);
 		}
 
 		// A read back into this surface is coming: readers wait for it (see WaitReady).
 		void BeginReadBack()
 		{
-			if(!m_hREADY)
-				m_hREADY = CreateEvent( NULL, TRUE, FALSE, NULL);
-			else
-				ResetEvent(m_hREADY);
+			m_vREADY.Reset();
 		}
 
 		void EndReadBack()
 		{
-			if(m_hREADY)
-				SetEvent(m_hREADY);
+			m_vREADY.Set();
 		}
 
 		// Read backs end when bgfx renders the frame, so only another thread can wait for them.
 		void WaitReady()
 		{
-			if(m_hREADY)
-				WaitForSingleObject( m_hREADY, 3000);
+			m_vREADY.Wait(3000);
 		}
 
 		static DWORD NewSerial()
@@ -887,7 +880,7 @@ namespace
 
 		bgfx::TextureHandle m_hDepth;
 		DWORD m_dwGeneration;
-		HANDLE m_hREADY;
+		CTEvent m_vREADY;
 	};
 
 	// bgfx's callbacks: errors, and the screenshots that read the back buffer back.

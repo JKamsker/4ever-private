@@ -112,16 +112,14 @@ void CTachyonSession::Poll()
 
 		if(m_bConnecting)
 		{
-			// Same error codes as the FD_CONNECT event of WSAAsyncSelect.
+			// The connect is done: SO_ERROR tells a failure, which Winsock reports in the error
+			// set and BSD sockets as writable.
 			int nError = 0;
+			TSOCKLEN nLength = sizeof(int);
 
-			if(FD_ISSET( sock, &vERROR))
-			{
-				int nLength = sizeof(int);
-
-				if( getsockopt( sock, SOL_SOCKET, SO_ERROR, (char *) &nError, &nLength) == SOCKET_ERROR || !nError )
-					nError = WSAECONNREFUSED;
-			}
+			if( getsockopt( sock, SOL_SOCKET, SO_ERROR, (char *) &nError, &nLength) == SOCKET_ERROR ||
+				(!nError && FD_ISSET( sock, &vERROR)) )
+				nError = TSOCK_ECONNREFUSED;
 
 			m_bConnecting = FALSE;
 			OnConnect(nError);
@@ -141,9 +139,9 @@ void CTachyonSession::Poll()
 
 		if( nPEEK == SOCKET_ERROR )
 		{
-			int nError = WSAGetLastError();
+			int nError = TSocketError();
 
-			if( nError != WSAEWOULDBLOCK )
+			if(!TSocketWouldBlock(nError))
 				OnClose(nError);
 
 			return;
@@ -216,22 +214,17 @@ void CTachyonSession::OnClose( int nErrorCode)
 
 BYTE CTachyonSession::Start( LPCTSTR strAddr, DWORD dwPort, BYTE bType)
 {
-	BOOL bAsync = TRUE;
 	End();
 
 	if(!m_pOwner)
 		return FALSE;
 
-	m_sock = WSASocket(
-		AF_INET,
-		bType,
-		0, NULL,
-		0, 0);
+	m_sock = socket( AF_INET, bType, 0);
 
 	if( m_sock == INVALID_SOCKET )
 		return FALSE;
 
-	if( ioctlsocket( m_sock, FIONBIO, (unsigned long *) &bAsync) == SOCKET_ERROR )
+	if(!TSocketSetNonBlocking(m_sock))
 	{
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
@@ -248,19 +241,29 @@ BYTE CTachyonSession::Start( LPCTSTR strAddr, DWORD dwPort, BYTE bType)
 		return FALSE;
 	}
 
-	hostent *pHostent = gethostbyname(strAddr);
-	if( !pHostent )
-		return FALSE;
+	addrinfo vHINT;
+	addrinfo *pADDR = NULL;
 
-	CString strIP = inet_ntoa(*((in_addr *) *pHostent->h_addr_list));
+	memset( &vHINT, 0x00, sizeof(addrinfo));
+	vHINT.ai_family = AF_INET;
+	vHINT.ai_socktype = bType;
+
+	if( getaddrinfo( strAddr, NULL, &vHINT, &pADDR) || !pADDR )
+	{
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
+
+		return FALSE;
+	}
 
 	memset( &m_target, 0x00, sizeof(SOCKADDR_IN));
 	m_target.sin_family = AF_INET;
-	m_target.sin_addr.s_addr = inet_addr(strIP);
+	m_target.sin_addr = ((SOCKADDR_IN *) pADDR->ai_addr)->sin_addr;
 	m_target.sin_port = htons((u_short) dwPort);
+	freeaddrinfo(pADDR);
 
 	// Non-blocking connect: PollAll() reports its completion through OnConnect().
-	if( connect( m_sock, (SOCKADDR *) &m_target, sizeof(SOCKADDR_IN)) && WSAGetLastError() != WSAEWOULDBLOCK )
+	if( connect( m_sock, (SOCKADDR *) &m_target, sizeof(SOCKADDR_IN)) && !TSocketWouldBlock(TSocketError()) )
 	{
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
@@ -304,15 +307,14 @@ void CTachyonSession::Encrypt( CPacket *pPacket)
 	pPacket->Encrypt(key);
 	pPacket->EncryptHeader(key);
 
-	CString strSecretKey = g_strSecretKey;
-	LPBYTE lpszSecretKey = (LPBYTE)(LPCTSTR)strSecretKey;
-	DWORD dwSecretKey = (strSecretKey.GetLength() + 1) * sizeof(TCHAR);
+	// Then RC4 over the whole packet, keyed with the MD5 of the secret and its terminator. The
+	// size stays readable: it is written back over its encrypted bytes.
+	BYTE vKEY[TMD5_LENGTH];
+	WORD wSize = pPacket->m_pHeader->m_wSize;
 
-	DWORD dwBufSize = DWORD(pPacket->m_pHeader->m_wSize);
-
-	EncryptBuffer(CALG_RC4, pPacket->m_pBuf, dwBufSize, pPacket->m_pBuf, dwBufSize, lpszSecretKey, dwSecretKey);
-
-	pPacket->m_pHeader->m_wSize = WORD(dwBufSize);
+	CTMD5::Digest( (LPCTSTR) g_strSecretKey, g_strSecretKey.GetLength() + 1, vKEY);
+	TRC4( vKEY, TMD5_LENGTH, pPacket->m_pBuf, wSize);
+	pPacket->m_pHeader->m_wSize = wSize;
 }
 
 void CTachyonSession::Say( CPacket *pPacket)
@@ -330,7 +332,7 @@ void CTachyonSession::Say( CPacket *pPacket)
 
 	while(nSEND < nSIZE)
 	{
-		int nLOCAL = send( m_sock, (const char *) pBUF, nSIZE - nSEND, 0);
+		int nLOCAL = send( m_sock, (const char *) pBUF, nSIZE - nSEND, TSOCK_SEND_FLAGS);
 
 		if( nLOCAL != SOCKET_ERROR )
 		{
@@ -339,9 +341,7 @@ void CTachyonSession::Say( CPacket *pPacket)
 		}
 		else
 		{
-			int nERROR = WSAGetLastError();
-
-			if( nERROR != WSAEWOULDBLOCK )
+			if(!TSocketWouldBlock(TSocketError()))
 				return;
 		}
 	}

@@ -131,8 +131,7 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 	WCHAR pBUF[TGDIBUFFER_SIZE];
 	Release();
 
-	MultiByteToWideChar(
-		CP_ACP, 0,
+	CTCodePage::ToWide(
 		LPCSTR(strText),
 		strText.GetLength() + 1,
 		pBUF, TGDIBUFFER_SIZE);

@@ -50,7 +50,7 @@ public:
 	DWORD m_dwKickID;
 	DWORD m_dwKEY;
 
-	HANDLE m_hResetEvent;
+	CTEvent m_vResetEvent;
 	BYTE m_bCreateCardCnt;
 	BYTE m_bResetDevice;
 	BYTE m_bResetTick;

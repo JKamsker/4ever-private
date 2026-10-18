@@ -534,16 +534,16 @@ CHAR CTachyonInput::ScanToChar( UINT nFlags)
 	return nChar[0];
 }
 
-// The game's strings are in the ANSI code page; SDL's text is UTF-8.
+// The game's strings are in its code page; SDL's text is UTF-8.
 CString CTachyonInput::FromUTF8( LPCSTR lpszUTF8)
 {
 	CStringW strW;
-	int nLength = ::MultiByteToWideChar( CP_UTF8, 0, lpszUTF8, -1, NULL, 0);
+	int nLength = CTCodePage::ToWide( lpszUTF8, -1, NULL, 0, TCP_UTF8);
 
 	if( nLength <= 1 )
 		return CString();
 
-	::MultiByteToWideChar( CP_UTF8, 0, lpszUTF8, -1, strW.GetBufferSetLength(nLength), nLength);
+	CTCodePage::ToWide( lpszUTF8, -1, strW.GetBufferSetLength(nLength), nLength, TCP_UTF8);
 	strW.ReleaseBuffer();
 
 	return CString(strW);

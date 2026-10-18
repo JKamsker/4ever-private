@@ -155,7 +155,7 @@ void CTNumberEdit::OnImeComposition(HWND hWnd, WPARAM wParam, LPARAM lParam)
 				0x4F <= cTailByte && cTailByte <= 0x58 ) // 일본 전각 숫자 범위 : 0x824F ~ 0x8258
 			{
 				WCHAR pBuffer[64];
-				MultiByteToWideChar(CP_ACP, 0, (LPCTSTR)strORG, strORG.GetLength(), pBuffer, 64);
+				CTCodePage::ToWide( (LPCTSTR)strORG, strORG.GetLength(), pBuffer, 64);
 				int n = _wtoi( pBuffer );
 
 				if( 0 <= n && n <= 9 )

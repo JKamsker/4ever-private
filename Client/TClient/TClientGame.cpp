@@ -24,7 +24,6 @@
 #include "TMsgGroupList.h"
 #include "TClient.h"
 #include "TCandidateFrame.h"
-#include "MD5.h"
 #include "SHA1.h"
 #include "TItemGambleDlg.h"
 #include "TMiniDump.h"
@@ -450,15 +449,7 @@ protected:
 
 CString CTClientGame::GetMD5String( CString& strSOURCE )
 {
-	MD5 context;
-	context.update( (unsigned char*) strSOURCE.GetBuffer(), strSOURCE.GetLength() );
-	context.finalize();
-
-	char* pstr = context.hex_digest();
-	CString strRESULT( pstr );
-	delete [] pstr;
-	
-	return strRESULT;
+	return CTMD5::HexDigest( (LPCTSTR) strSOURCE, strSOURCE.GetLength());
 }
 
 CString CTClientGame::GetSHA1String(const CString& strSTRING)
@@ -28242,8 +28233,6 @@ DWORD WINAPI CTClientGame::_OpenWebsiteSafely( LPVOID lpParam)
 void CTClientGame::OpenWebsiteSafely()
 {
 	CTWindow::OpenURL(_T("http://4story.com/pvp/user_cp.php?m=cash_overview"));
-	CloseHandle(GetInstance()->m_hWebsiteOpener);
-	GetInstance()->m_hWebsiteOpener = NULL;
 
 	if (GetInstance()->GetSession())
 		GetInstance()->GetMainWnd()->m_mapPendingMapSession.insert(MAPTPENDINGMAPSESSION::value_type(GetInstance()->GetSession()->m_bSvrID, GetInstance()->GetSession()->m_target));

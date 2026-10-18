@@ -10,8 +10,6 @@ typedef LONG (__stdcall *FN_UNMAPSECTION)( IN HANDLE, IN PVOID);
 
 CTModuleProtector::CTModuleProtector()
 {
-	InitializeCriticalSection(&m_cs);
-	m_hThread = NULL;
 	m_bRUN = FALSE;
 
 	m_vTMODULE.clear();
@@ -24,13 +22,6 @@ CTModuleProtector::CTModuleProtector()
 CTModuleProtector::~CTModuleProtector()
 {
 	ClearModule();
-	DeleteCriticalSection(&m_cs);
-}
-
-DWORD WINAPI CTModuleProtector::_WatchThread( LPVOID lpParam)
-{
-	((CTModuleProtector *) lpParam)->WatchThread();
-	return 0;
 }
 
 void CTModuleProtector::WatchThread()
@@ -98,48 +89,27 @@ void CTModuleProtector::SetTICK()
 
 BYTE CTModuleProtector::BeginWatch()
 {
-	DWORD dwThreadID;
 	EndWatch();
-
-	m_hThread = CreateThread(
-		NULL, 0,
-		_WatchThread,
-		(LPVOID) this,
-		CREATE_SUSPENDED,
-		&dwThreadID);
-
-	if(!m_hThread)
-		return FALSE;
-
-	if(!SetThreadPriority( m_hThread, THREAD_PRIORITY_TIME_CRITICAL))
-	{
-		SetRUN(FALSE);
-		ResumeThread(m_hThread);
-		WaitForSingleObject(
-			m_hThread,
-			INFINITE);
-		m_hThread = NULL;
-
-		return FALSE;
-	}
 
 	SetRUN(TRUE);
 	SetTICK();
-	ResumeThread(m_hThread);
+
+	if(!m_vThread.Start( &CTModuleProtector::WatchThread, this))
+	{
+		SetRUN(FALSE);
+		return FALSE;
+	}
+	m_vThread.SetPriority(TTHREAD_PRIORITY_TIME_CRITICAL);
 
 	return TRUE;
 }
 
 void CTModuleProtector::EndWatch()
 {
-	if(m_hThread)
+	if(m_vThread.IsRunning())
 	{
 		SetRUN(FALSE);
-		WaitForSingleObject(
-			m_hThread,
-			INFINITE);
-
-		m_hThread = NULL;
+		m_vThread.Join();
 	}
 }
 

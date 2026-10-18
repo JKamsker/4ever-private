@@ -17,7 +17,6 @@ set(TClient_SOURCES
     GuildSkillsDlg.cpp
     HwidManager.cpp
     MacroProtection.cpp
-    md5.cpp
     Outro.cpp
     SHA1.cpp
     SHA512.cpp

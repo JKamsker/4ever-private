@@ -1,9 +1,11 @@
 // TString.h: the engine's CString, CStringA and CStringW, without ATL.
 //
 // The same API and behavior as ATL's CStringT in an MBCS build: narrow strings are searched,
-// compared, trimmed and case-mapped with the CRT's multibyte functions (_mbschr, _mbsstr,
-// _mbsicmp, _mbsupr, _mbsinc...), so a DBCS trail byte never matches, and the conversions
-// between narrow and wide strings use the thread's ANSI code page.
+// compared, trimmed and case-mapped character by character like the CRT's multibyte functions
+// (_mbschr, _mbsstr, _mbsicmp, _mbsupr, _mbsinc...), so a DBCS trail byte never matches. The
+// code page is the game's (TCodePage.h), for these and for the conversions to wide strings.
+// Windows calls the CRT's functions; the other systems, or TSTRING_PORTABLE_MBCS, use TMbcs
+// below, which does the same.
 //
 // Like ATL's, the object is a single pointer to the characters, the length and capacity are
 // stored just before them, so a CString passed to printf-like functions still reads as a char*.
@@ -20,8 +22,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
-#include <mbstring.h>
 #include <new>
+
+#include "TCodePage.h"
+
+#if !defined(_WIN32) && !defined(TSTRING_PORTABLE_MBCS)
+#define TSTRING_PORTABLE_MBCS
+#endif
+
+#ifndef TSTRING_PORTABLE_MBCS
+#include <mbstring.h>
+#endif
 
 #ifdef _ATL_CSTRING_EXPLICIT_CONSTRUCTORS
 #define TSTRING_EXPLICIT			explicit
@@ -35,11 +46,294 @@
 
 template< typename T > struct TStringTraits;
 
+#ifdef TSTRING_PORTABLE_MBCS
+
+//////////////////////////////////////////////////////////////////////
+// TMbcs: the CRT's multibyte string functions, in the game's code page. Same algorithms as the
+// UCRT's, down to their handling of a lead byte left alone before the terminator.
+
+#define TMBCS_INVALID				0xFFFFFFFF
+
+struct TMbcs
+{
+	static BOOL IsLead( BYTE ch) { return CTCodePage::IsLeadByte(ch); }
+
+	// _mbsinc
+	static const char *Inc( const char *p)
+	{
+		if( IsLead(BYTE(*p++)) && *p )
+			p++;
+
+		return p;
+	}
+
+	// _ismbcspace on a single byte: the C locale's spaces.
+	static int IsSpace( BYTE ch)
+	{
+		return ch == ' ' || (ch >= '\t' && ch <= '\r') ? 1 : 0;
+	}
+
+	// _mbscmp, and _mbsicmp: single bytes lowercase, double bytes uppercase (through the wide
+	// character), a single byte code page like _stricmp.
+	static int Compare( const char *a, const char *b, BOOL bNoCase)
+	{
+		const BYTE *s1 = (const BYTE *) a;
+		const BYTE *s2 = (const BYTE *) b;
+
+		if( bNoCase && !CTCodePage::IsDBCS() )
+		{
+			int f, l;
+
+			do
+			{
+				f = AsciiLower(*s1++);
+				l = AsciiLower(*s2++);
+			}
+			while( f && f == l );
+
+			return f - l;
+		}
+
+		for(;;)
+		{
+			UINT c1 = NextChar( s1, bNoCase);
+			UINT c2 = NextChar( s2, bNoCase);
+
+			// _NLSCMPERROR: a double byte character that is none.
+			if( c1 == TMBCS_INVALID || c2 == TMBCS_INVALID )
+				return 0x7FFFFFFF;
+
+			if( c1 != c2 )
+				return c1 > c2 ? 1 : -1;
+
+			if(!c1)
+				return 0;
+		}
+	}
+
+	// _mbsstr: the first match that starts on a character.
+	static const char *FindString( const char *a, const char *b)
+	{
+		size_t nLength = strlen(b);
+
+		if(!nLength)
+			return a;
+
+		for( ; *a; a++)
+		{
+			if(!strncmp( a, b, nLength))
+				return a;
+
+			if( IsLead(BYTE(*a)) && !*++a )
+				break;
+		}
+
+		return NULL;
+	}
+
+	// _mbschr with a single byte character.
+	static const char *FindChar( const char *a, BYTE ch)
+	{
+		const BYTE *p = (const BYTE *) a;
+		UINT cc = 0;
+
+		for( ; (cc = *p) != 0; p++)
+			if(IsLead(BYTE(cc)))
+			{
+				if( *++p == 0 )
+					return NULL;
+			}
+			else if( cc == ch )
+				break;
+
+		return cc == ch ? (const char *) p : NULL;
+	}
+
+	// _mbsrchr with a single byte character.
+	static const char *FindCharRev( const char *a, BYTE ch)
+	{
+		const BYTE *p = (const BYTE *) a;
+		const BYTE *r = NULL;
+
+		do
+		{
+			UINT cc = *p;
+
+			if(IsLead(BYTE(cc)))
+			{
+				if( !*++p && !r )
+					r = p;
+			}
+			else if( cc == ch )
+				r = p;
+		}
+		while(*p++);
+
+		return (const char *) r;
+	}
+
+	// _mbsspn (bIn) and _mbscspn/_mbspbrk: the end of the run of characters in (or not in) the
+	// set. A lead byte alone at the end of the set matches every character, as in the CRT.
+	static const char *Scan( const char *a, const char *pszSET, BOOL bIn)
+	{
+		const BYTE *q = (const BYTE *) a;
+
+		for( ; *q; q++)
+		{
+			const BYTE *p = (const BYTE *) pszSET;
+
+			for( ; *p; p++)
+				if(IsLead(*p))
+				{
+					if( (p[0] == q[0] && p[1] == q[1]) || !p[1] )
+						break;
+
+					p++;
+				}
+				else if( *p == *q )
+					break;
+
+			if( bIn ? !*p : *p != 0 )
+				break;
+
+			if( IsLead(*q) && !*++q )
+				break;
+		}
+
+		return (const char *) q;
+	}
+
+	// _mbsupr_s/_mbslwr_s: nonzero when a double byte character has no case mapping.
+	static int MapCase( char *psz, BOOL bUpper)
+	{
+		BYTE *p = (BYTE *) psz;
+
+		for( ; *p; p++)
+			if(IsLead(*p))
+			{
+				BYTE vPAIR[2];
+
+				if(!MapPair( p, bUpper, vPAIR))
+					return 1;
+
+				p[0] = vPAIR[0];
+				p[1] = vPAIR[1];
+				p++;
+			}
+			else
+				*p = bUpper ? CTCodePage::ToUpper(*p) : CTCodePage::ToLower(*p);
+
+		return 0;
+	}
+
+	// _mbsrev: the characters in reverse, each double byte character kept in order.
+	static void Reverse( char *psz)
+	{
+		BYTE *p = (BYTE *) psz;
+
+		while(*p)
+			if( IsLead(*p++) )
+			{
+				if(!*p)
+					break;
+
+				BYTE c = p[0];
+				p[0] = p[-1];
+				p[-1] = c;
+				p++;
+			}
+
+		for( BYTE *s = (BYTE *) psz, *e = p - 1; s < e; s++, e--)
+		{
+			BYTE c = *s;
+			*s = *e;
+			*e = c;
+		}
+	}
+
+protected:
+	static int AsciiLower( BYTE ch)
+	{
+		return ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch;
+	}
+
+	// A double byte character in the other case, through its wide character; FALSE when the
+	// pair is no character of the code page.
+	static BOOL MapPair( const BYTE *p, BOOL bUpper, BYTE vPAIR[2])
+	{
+		wchar_t vWIDE[2] = { 0, 0 };
+		char vBACK[4] = { 0, 0, 0, 0 };
+
+		if( CTCodePage::ToWide( (const char *) p, 2, vWIDE, 2) != 1 ||
+			CTCodePage::FromWide( vWIDE, 1, vBACK, 4) != 2 || BYTE(vBACK[0]) != p[0] || BYTE(vBACK[1]) != p[1] )
+			return FALSE;
+
+		vWIDE[0] = CTCodePage::MapWide( vWIDE[0], bUpper);
+		int nBACK = CTCodePage::FromWide( vWIDE, 1, vBACK, 4);
+
+		if( nBACK < 1 || nBACK > 2 )
+			return FALSE;
+
+		vPAIR[0] = BYTE(vBACK[0]);
+		vPAIR[1] = nBACK == 2 ? BYTE(vBACK[1]) : p[1];
+
+		return TRUE;
+	}
+
+	// The next character's value (lead << 8 | trail), and for _mbsicmp single bytes lowercase,
+	// double bytes uppercase (TMBCS_INVALID for a pair that is no character). A lead byte alone
+	// at the end reads as the terminator.
+	static UINT NextChar( const BYTE *&s, BOOL bNoCase)
+	{
+		UINT c = *s++;
+
+		if(!IsLead(BYTE(c)))
+			return bNoCase ? CTCodePage::ToLower(BYTE(c)) : c;
+
+		if(!*s)
+			return 0;
+
+		if(bNoCase)
+		{
+			BYTE vPAIR[2];
+
+			if(!MapPair( s - 1, TRUE, vPAIR))
+				return TMBCS_INVALID;
+
+			s++;
+			return (UINT(vPAIR[0]) << 8) | vPAIR[1];
+		}
+
+		c = (c << 8) | *s++;
+		return c;
+	}
+};
+
+#endif
+
+
 template<> struct TStringTraits<char>
 {
 	typedef wchar_t OTHER;
 
 	static int Length( const char *psz) { return psz ? int(strlen(psz)) : 0; }
+#ifdef TSTRING_PORTABLE_MBCS
+	static const char *CharNext( const char *p) { return TMbcs::Inc(p); }
+	static int IsSpace( char ch) { return TMbcs::IsSpace(BYTE(ch)); }
+	static int Compare( const char *a, const char *b) { return TMbcs::Compare( a, b, FALSE); }
+	static int CompareNoCase( const char *a, const char *b) { return TMbcs::Compare( a, b, TRUE); }
+	static int Collate( const char *a, const char *b) { return TMbcs::Compare( a, b, FALSE); }
+	static int CollateNoCase( const char *a, const char *b) { return TMbcs::Compare( a, b, TRUE); }
+	static const char *FindString( const char *a, const char *b) { return TMbcs::FindString( a, b); }
+	static const char *FindChar( const char *a, char ch) { return TMbcs::FindChar( a, BYTE(ch)); }
+	static const char *FindCharRev( const char *a, char ch) { return TMbcs::FindCharRev( a, BYTE(ch)); }
+	static const char *ScanSet( const char *a, const char *b) { const char *p = TMbcs::Scan( a, b, FALSE); return *p ? p : NULL; }
+	static int SpanIncluding( const char *a, const char *b) { return int(TMbcs::Scan( a, b, TRUE) - a); }
+	static int SpanExcluding( const char *a, const char *b) { return int(TMbcs::Scan( a, b, FALSE) - a); }
+	static int Uppercase( char *psz, int nSize) { return TMbcs::MapCase( psz, TRUE); }
+	static int Lowercase( char *psz, int nSize) { return TMbcs::MapCase( psz, FALSE); }
+	static void Reverse( char *psz) { TMbcs::Reverse(psz); }
+#else
 	static const char *CharNext( const char *p) { return (const char *) _mbsinc((const unsigned char *) p); }
 	static int IsSpace( char ch) { return _ismbcspace(BYTE(ch)); }
 	static int Compare( const char *a, const char *b) { return _mbscmp( (const unsigned char *) a, (const unsigned char *) b); }
@@ -55,12 +349,13 @@ template<> struct TStringTraits<char>
 	static int Uppercase( char *psz, int nSize) { return _mbsupr_s( (unsigned char *) psz, size_t(nSize)); }
 	static int Lowercase( char *psz, int nSize) { return _mbslwr_s( (unsigned char *) psz, size_t(nSize)); }
 	static void Reverse( char *psz) { _mbsrev((unsigned char *) psz); }
+#endif
 	static int FormattedLength( const char *pszFormat, va_list args) { return _vscprintf( pszFormat, args); }
 	static void Format( char *pszBuffer, int nSize, const char *pszFormat, va_list args) { vsprintf_s( pszBuffer, size_t(nSize), pszFormat, args); }
 
-	// The other type's string in this type, through the thread's ANSI code page.
-	static int ConvertLength( const wchar_t *psz, int nLength) { return ::WideCharToMultiByte( CP_THREAD_ACP, 0, psz, nLength, NULL, 0, NULL, NULL); }
-	static void Convert( char *pszDest, int nDest, const wchar_t *psz, int nLength) { ::WideCharToMultiByte( CP_THREAD_ACP, 0, psz, nLength, pszDest, nDest, NULL, NULL); }
+	// The other type's string in this type, through the game's code page.
+	static int ConvertLength( const wchar_t *psz, int nLength) { return CTCodePage::FromWide( psz, nLength, NULL, 0); }
+	static void Convert( char *pszDest, int nDest, const wchar_t *psz, int nLength) { CTCodePage::FromWide( psz, nLength, pszDest, nDest); }
 	static int LoadString( HINSTANCE hInstance, UINT nID, char *pszBuffer, int nSize) { return ::LoadStringA( hInstance, nID, pszBuffer, nSize); }
 };
 
@@ -87,8 +382,8 @@ template<> struct TStringTraits<wchar_t>
 	static int FormattedLength( const wchar_t *pszFormat, va_list args) { return _vscwprintf( pszFormat, args); }
 	static void Format( wchar_t *pszBuffer, int nSize, const wchar_t *pszFormat, va_list args) { vswprintf_s( pszBuffer, size_t(nSize), pszFormat, args); }
 
-	static int ConvertLength( const char *psz, int nLength) { return ::MultiByteToWideChar( CP_THREAD_ACP, 0, psz, nLength, NULL, 0); }
-	static void Convert( wchar_t *pszDest, int nDest, const char *psz, int nLength) { ::MultiByteToWideChar( CP_THREAD_ACP, 0, psz, nLength, pszDest, nDest); }
+	static int ConvertLength( const char *psz, int nLength) { return CTCodePage::ToWide( psz, nLength, NULL, 0); }
+	static void Convert( wchar_t *pszDest, int nDest, const char *psz, int nLength) { CTCodePage::ToWide( psz, nLength, pszDest, nDest); }
 	static int LoadString( HINSTANCE hInstance, UINT nID, wchar_t *pszBuffer, int nSize) { return ::LoadStringW( hInstance, nID, pszBuffer, nSize); }
 };
 

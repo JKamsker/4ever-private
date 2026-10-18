@@ -182,14 +182,14 @@ CTWindow *CTWindow::FromSDLWindow( SDL_Window *pSDL)
 	return pSDL ? (CTWindow *) SDL_GetPointerProperty( SDL_GetWindowProperties(pSDL), TWINDOW_PROP, NULL) : NULL;
 }
 
-// SDL's strings are UTF-8; the game's are in the ANSI code page.
+// SDL's strings are UTF-8; the game's are in its code page.
 static CStringA ToUTF8( LPCTSTR lpszText)
 {
 	CStringW strW(lpszText ? lpszText : _T(""));
 	CStringA strUTF8;
-	int nLength = ::WideCharToMultiByte( CP_UTF8, 0, strW, -1, NULL, 0, NULL, NULL);
+	int nLength = CTCodePage::FromWide( strW, -1, NULL, 0, TCP_UTF8);
 
-	::WideCharToMultiByte( CP_UTF8, 0, strW, -1, strUTF8.GetBufferSetLength(nLength), nLength, NULL, NULL);
+	CTCodePage::FromWide( strW, -1, strUTF8.GetBufferSetLength(nLength), nLength, TCP_UTF8);
 	strUTF8.ReleaseBuffer();
 
 	return strUTF8;
@@ -712,7 +712,7 @@ void CTWindow::DispatchText( const SDL_Event& event)
 			BOOL bDBCS = FALSE;
 
 			for( int i=0; i<strText.GetLength() && !bDBCS; i++)
-				bDBCS = IsDBCSLeadByte(BYTE(strText[i]));
+				bDBCS = CTCodePage::IsLeadByte(BYTE(strText[i]));
 
 			// What the IME made is its result; a key's own character is a WM_CHAR per byte.
 			if( bComposing || bDBCS )

@@ -1300,8 +1300,7 @@ void TComponent::GetTextExtentPoint( LPCTSTR strText, CSize &size)
 		Graphics vGDI(hDC);
 		Font vFONT(hDC);
 
-		MultiByteToWideChar(
-			CP_ACP, 0,
+		CTCodePage::ToWide(
 			strText,
 			static_cast<int>(_tcslen(strText) + 1),
 			pBUF, TGDIBUFFER_SIZE);

@@ -153,9 +153,8 @@ public:
 	BYTE GetResetFlag();
 
 public:
-	CRITICAL_SECTION m_cs;
+	CTCriticalSection m_cs;
 
-	BYTE m_bUseTHREAD;
 	BYTE m_bRESET;
 
 public:

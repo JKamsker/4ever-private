@@ -170,7 +170,7 @@ void CTClientMAP::ReleaseMAP()
 	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 	MAPTGATE::iterator itTGATE;
 
-	if( pTAPP->m_hLoadThread && pTAPP->m_hLoadEvent )
+	if(pTAPP->m_vLoadThread.IsRunning())
 	{
 		pTAPP->ExitLoadThread(TRUE);
 		pTAPP->CreateLoadThread();
@@ -960,7 +960,7 @@ void CTClientMAP::LoadMAPOBJ( CD3DDevice *pDevice,
 		pTAPP->m_qTLOADCMD.push(pTCMD);
 
 		if(!bLoadNOW)
-			SetEvent(pTAPP->m_hLoadEvent);
+			pTAPP->m_vLoadEvent.Set();
 	}
 
 	if( bLoadNOW && (!pTAPP->m_bWait || !pTAPP->m_qTLOADCMD.empty()) )

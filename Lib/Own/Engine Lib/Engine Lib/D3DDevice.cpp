@@ -83,9 +83,7 @@ CD3DDevice::CD3DDevice()
 	m_pBACKVB = NULL;
 	m_pZBUF = NULL;
 
-	InitializeCriticalSection(&m_cs);
 	m_bEnableSHADER = TRUE;
-	m_bUseTHREAD = FALSE;
 	m_bRESET = FALSE;
 
 	m_pEraserVB = NULL;
@@ -103,7 +101,6 @@ CD3DDevice::CD3DDevice()
 
 CD3DDevice::~CD3DDevice()
 {
-	DeleteCriticalSection(&m_cs);
 	ReleaseDevice();
 }
 
@@ -761,7 +758,7 @@ BOOL CD3DDevice::Reset()
 BOOL CD3DDevice::ResetHost()
 {
 	if(m_pMainWnd)
-		return m_bUseTHREAD ? ((CTachyonWnd *) m_pMainWnd)->ResetThreadDevices() : ((CTachyonWnd *) m_pMainWnd)->ResetDevices();
+		return ((CTachyonWnd *) m_pMainWnd)->ResetDevices();
 
 	return FALSE;
 }

@@ -24,9 +24,9 @@ public:
 	QTLOADCMD m_qTLOADCMD;
 	ULONG_PTR m_pGDI;
 
-	CRITICAL_SECTION m_cs;
-	HANDLE m_hLoadEvent;
-	HANDLE m_hLoadThread;
+	CTCriticalSection m_cs;
+	CTEvent m_vLoadEvent;
+	CTThread m_vLoadThread;
 
 	BYTE m_bFirstRun;
 	BYTE m_bLoadRun;
@@ -69,6 +69,8 @@ public:
 	void ExitLoadThread( BYTE bCancelCMD);
 	BYTE CreateLoadThread();
 
+	static void SetNationLocale();
+
 #ifndef TEST_MODE
 	static int __stdcall HS_CallbackProc ( long lCode, long lParamSize, void* pParam );
 	BOOL HackShield_Update();
@@ -92,7 +94,6 @@ public:
 	virtual int ExitInstance();
 
 private:
-	static DWORD WINAPI _LoadThread( LPVOID lpParam);
 
 public:
 	static void ToggleImeLocalMode();

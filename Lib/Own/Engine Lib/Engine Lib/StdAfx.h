@@ -22,4 +22,3 @@
 #include <zlib.h>
 #include <shlwapi.h>
 #include <Psapi.h>
-#include "CryptographyExt.h"

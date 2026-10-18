@@ -24,20 +24,6 @@ CTachyonWnd::CTachyonWnd()
 	m_bDirectLogin = FALSE;
 	m_bSiteCode = 0xFF;
 
-	m_hDEVICE = NULL;
-	m_bRUN = FALSE;
-
-	m_hRESET = CreateEvent(
-		NULL,
-		FALSE,
-		FALSE,
-		NULL);
-
-	m_hINIT = CreateEvent(
-		NULL,
-		FALSE,
-		FALSE,
-		NULL);
 }
 
 CTachyonWnd::~CTachyonWnd()
@@ -47,9 +33,6 @@ CTachyonWnd::~CTachyonWnd()
 		delete m_pTParser;
 		m_pTParser = NULL;
 	}
-
-	CloseHandle(m_hRESET);
-	CloseHandle(m_hINIT);
 
 	FinishTachyonComponent();
 }
@@ -68,99 +51,6 @@ BOOL CALLBACK CTachyonWnd::__Present( HWND hWnd, LPARAM lParam)
 
 	if(FAILED(pMAIN->m_Device.m_pDevice->Present( &rect, NULL, hWnd, NULL)))
 		return FALSE;
-
-	return TRUE;
-}
-
-DWORD WINAPI CTachyonWnd::__DeviceCtrl( LPVOID lpParam)
-{
-	CTachyonWnd *pMainWnd = (CTachyonWnd *) lpParam;
-
-	if( !pMainWnd || !pMainWnd->InitDevices() )
-	{
-		SetEvent(pMainWnd->m_hINIT);
-		return 0;
-	}
-	SetEvent(pMainWnd->m_hINIT);
-
-	while(TRUE)
-	{
-		WaitForSingleObject( pMainWnd->m_hRESET, INFINITE);
-
-		if(!pMainWnd->GetDeviceThreadFlag())
-			break;
-
-		pMainWnd->ResetDevices();
-		pMainWnd->m_Device.SetResetFlag(FALSE);
-	}
-
-	return 0;
-}
-
-void CTachyonWnd::SetDeviceThreadFlag( BYTE bRUN)
-{
-	SMART_LOCKCS(&m_Device.m_cs);
-	m_bRUN = bRUN;
-}
-
-BYTE CTachyonWnd::GetDeviceThreadFlag()
-{
-	SMART_LOCKCS(&m_Device.m_cs);
-	return m_bRUN;
-}
-
-void CTachyonWnd::ReleaseThreadDevices()
-{
-	if(m_hDEVICE)
-	{
-		SetDeviceThreadFlag(FALSE);
-		SetEvent(m_hRESET);
-
-		WaitForSingleObject(
-			m_hDEVICE,
-			INFINITE);
-	}
-
-	m_Device.m_bUseTHREAD = FALSE;
-	m_hDEVICE = NULL;
-}
-
-BOOL CTachyonWnd::InitThreadDevices()
-{
-	ReleaseThreadDevices();
-	DWORD dwThread = 0;
-
-	SetDeviceThreadFlag(TRUE);
-	m_hDEVICE = CreateThread(
-		NULL, 0,
-		__DeviceCtrl,
-		this, 0,
-		&dwThread);
-
-	if(!m_hDEVICE)
-		return FALSE;
-
-	WaitForSingleObject(
-		m_hINIT,
-		INFINITE);
-
-	if(!m_Device.m_pDevice)
-	{
-		ReleaseThreadDevices();
-		return FALSE;
-	}
-	m_Device.m_bUseTHREAD = TRUE;
-
-	return TRUE;
-}
-
-BOOL CTachyonWnd::ResetThreadDevices()
-{
-	if(m_hDEVICE)
-	{
-		m_Device.SetResetFlag(TRUE);
-		SetEvent(m_hRESET);
-	}
 
 	return TRUE;
 }
@@ -208,8 +98,6 @@ void CTachyonWnd::OnDestroy()
 	CTachyonMesh::ReleaseGlobalVB();
 	CTachyonSFX::ReleaseCommon();
 	CSFX::ReleaseTEXVB();
-
-	ReleaseThreadDevices();
 
 	m_bActivate = FALSE;
 	m_Font.DeleteObject();

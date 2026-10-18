@@ -43,8 +43,6 @@ public:
 	static CString MakeMoneyStr(INT64 dwPrice);
 	static CString MakeMoneyStr(DWORD dwRune, DWORD dwLuna, DWORD dwCron);
 
-	HANDLE m_hWebsiteOpener;
-
 	static DWORD WINAPI _OpenWebsiteSafely( LPVOID lpParam);
 	static void OpenWebsiteSafely();
 	// Option calculator

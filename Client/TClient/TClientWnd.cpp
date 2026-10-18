@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "md5.h"
 #include <iostream>
 #include <fstream> 
 //#include <string>
@@ -241,11 +240,6 @@ CTClientWnd::CTClientWnd()
 	m_vNEWTCHAR.m_bContry = TCONTRY_PEACE;
 	m_pTNet = &m_session[0];
 
-	m_hResetEvent = CreateEvent(
-		NULL,
-		FALSE,
-		FALSE,
-		NULL);
 	m_bModalFrame = T_INVALID;
 	m_bNeedReadAgreement = TRUE;
 
@@ -266,8 +260,6 @@ CTClientWnd::~CTClientWnd()
 {
 	if( m_pTGROUP )
 		delete m_pTGROUP;
-
-	CloseHandle(m_hResetEvent);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -5783,13 +5775,11 @@ BOOL CTClientWnd::ResetDevices()
 {
 	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 
-	EnterCriticalSection(&pTAPP->m_cs);
+	pTAPP->m_cs.Lock();
 	m_bResetDevice = TRUE;
-	LeaveCriticalSection(&pTAPP->m_cs);
+	pTAPP->m_cs.Unlock();
 
-	WaitForSingleObject(
-		m_hResetEvent,
-		INFINITE);
+	m_vResetEvent.Wait();
 
 	return TRUE;
 }
@@ -5884,7 +5874,7 @@ BYTE CTClientWnd::RestoreDevice()
 #endif
 
 	if(m_bResetDevice)
-		SetEvent(m_hResetEvent);
+		m_vResetEvent.Set();
 
 	m_bResetDevice = FALSE;
 	m_bResetTick = TRUE;
@@ -6291,8 +6281,7 @@ CString CTClientWnd::CaptureIMG()
 	LPTSCRCAPTURE_PARAM pPARAM = new TSCRCAPTURE_PARAM();
 	D3DSURFACE_DESC vDESC;
 
-	HANDLE hThread = NULL;
-	DWORD dwThread = 0;
+	BOOL bThread = FALSE;
 
 	do
 	{
@@ -6347,14 +6336,11 @@ CString CTClientWnd::CaptureIMG()
 		}
 		}*/
 
-		hThread = ::CreateThread(
-			NULL, 0,
-			_CaptureIMG,
-			(LPVOID) pPARAM,
-			0, &dwThread);
+		CTThread vTHREAD;
+		bThread = vTHREAD.Start( _CaptureIMG, (LPVOID) pPARAM);
 	}
 
-	if(!hThread)
+	if(!bThread)
 	{
 		strFileName.Empty();
 		delete pPARAM;
@@ -6877,86 +6863,20 @@ void CTClientWnd::OpenSecurityWindow()
 
 DWORD CTClientWnd::LoadThread()
 {
-	if( CTNationOption::GERMANY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_GERMAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::GREECE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_GREEK, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if( CTNationOption::ENGLISH )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if( CTNationOption::JAPAN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::FRANCE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_FRENCH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::TAIWAN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_CHINESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::CZECH )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_CZECH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::ITALY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ITALIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::POLAND )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_POLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::SPAIN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_SPANISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::UNITEDKINGDOM || CTNationOption::UNITEDSTATE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::RUSSIA )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::ROMANIA )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ROMANIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::HUNGARY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_HUNGARIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::TURKEY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_TURKISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::PORTUGAL )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_PORTUGUESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else
-	{
-	}
+	CTClientApp::SetNationLocale();
 
 	CTClientApp *pTAPP = (CTClientApp *) CTachyonApp::GetApp();
 
 	while(TRUE)
 	{
-		EnterCriticalSection(&pTAPP->m_cs);
+		pTAPP->m_cs.Lock();
 
 		if(!pTAPP->m_qTLOADCMD.empty())
 		{
 			LPTLOADCMD pTCMD = pTAPP->m_qTLOADCMD.front();
 			pTAPP->m_qTLOADCMD.pop();
 			pTAPP->m_bWait = FALSE;
-			LeaveCriticalSection(&pTAPP->m_cs);
+			pTAPP->m_cs.Unlock();
 
 			ProcLoadCMD( pTAPP, pTCMD);
 			pTAPP->DeleteTLoadCMD(pTCMD);
@@ -6964,15 +6884,13 @@ DWORD CTClientWnd::LoadThread()
 		else if(pTAPP->m_bLoadRun)
 		{
 			pTAPP->m_bWait = TRUE;
-			LeaveCriticalSection(&pTAPP->m_cs);
+			pTAPP->m_cs.Unlock();
 
-			WaitForSingleObject(
-				pTAPP->m_hLoadEvent,
-				INFINITE);
+			pTAPP->m_vLoadEvent.Wait();
 		}
 		else
 		{
-			LeaveCriticalSection(&pTAPP->m_cs);
+			pTAPP->m_cs.Unlock();
 			break;
 		}
 	}
@@ -6988,9 +6906,9 @@ void CTClientWnd::ProcLoadCMD( CTClientApp *pTAPP,
 	case TLOADCMD_OBJ	: m_MainGame.DoTLOADCMD_OBJ( pTAPP, pTCMD); break;
 	case TLOADCMD_RES	:
 		{
-			::SetThreadPriority( pTAPP->m_hLoadThread, THREAD_PRIORITY_HIGHEST);
+			pTAPP->m_vLoadThread.SetPriority(TTHREAD_PRIORITY_HIGHEST);
 			InitResource( _T("TClient"), 0);
-			::SetThreadPriority( pTAPP->m_hLoadThread, THREAD_PRIORITY_BELOW_NORMAL);
+			pTAPP->m_vLoadThread.SetPriority(TTHREAD_PRIORITY_BELOW_NORMAL);
 
 			SMART_LOCKCS(&pTAPP->m_cs);
 

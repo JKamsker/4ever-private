@@ -37,8 +37,6 @@ public:
 	static DWORD m_dwPing;
 
 protected:
-	static DWORD WINAPI __DeviceCtrl( LPVOID lpParam);
-
 	static BOOL CALLBACK __Present(
 		HWND hWnd,
 		LPARAM lParam);
@@ -81,10 +79,6 @@ public:
 		CString strGroupID,
 		BYTE bGroupID);
 
-	virtual void ReleaseThreadDevices();
-	virtual BOOL ResetThreadDevices();
-	virtual BOOL InitThreadDevices();
-
 	virtual BOOL ResetDevices();
 	virtual BOOL InitDevices();
 	virtual BOOL Present();
@@ -102,10 +96,6 @@ public:
 protected:
 
 
-
-	void SetDeviceThreadFlag( BYTE bRUN);
-	BYTE GetDeviceThreadFlag();
-
 public:
 	CTachyonRes m_RES;
 
@@ -115,10 +105,6 @@ public:
 	CD3DFont m_FontFPS;
 	CFont m_Font;
 
-	HANDLE m_hDEVICE;
-	HANDLE m_hRESET;
-	HANDLE m_hINIT;
-	BYTE m_bRUN;
 
 public:
 	virtual void OnActivate(UINT nState, HWND hWndOther, BOOL bMinimized);

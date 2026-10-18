@@ -20,6 +20,16 @@
 #include <TD3DXMath.h>
 #include <d3dx9.h>
 #include <TRenderDevice.h>
+#include "TThread.h"
+#include "TCodePage.h"
+#include "TSocket.h"
+#include "TCrypt.h"
+#include "TSocket.h"
+#include "TCrypt.h"
+#include "TSocket.h"
+#include "TCrypt.h"
+#include "TSocket.h"
+#include "TCrypt.h"
 
 
 #pragma warning( disable : 4786 4530 4018 4995)
@@ -622,29 +632,6 @@ typedef map< DWORD, CTBSPNode *>						MAPTBSPNODE, *LPMAPTBSPNODE;
 
 typedef map< LPVOID, CTDynamicBillboard *>				MAPTDBB, *LPMAPTDBB;
 
-
-//////////////////////////////////////////////////////////////////////////////
-// Smart sync class for critical section
-
-class CCSLock
-{
-public:
-	CCSLock( CRITICAL_SECTION *pCS)
-	{
-		EnterCriticalSection(pCS);
-		m_pCS = pCS;
-	};
-
-	virtual ~CCSLock()
-	{
-		LeaveCriticalSection(m_pCS);
-	};
-
-protected:
-	CRITICAL_SECTION *m_pCS;
-};
-
-#define SMART_LOCKCS(x)					CCSLock lock_object(x);
 
 struct tagCOMMAND
 {

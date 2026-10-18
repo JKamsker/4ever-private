@@ -167,8 +167,6 @@ LRESULT CALLBACK CTClientApp::KeyHookProc( int nCode, WPARAM wParam, LPARAM lPar
 
 CTClientApp::CTClientApp()
 {
-	m_hLoadThread = NULL;
-	m_hLoadEvent = NULL;
 	m_pGDI = NULL;
 
 	m_bFirstRun = TRUE;
@@ -320,76 +318,12 @@ BOOL CTClientApp::InitInstance()
 		return FALSE;
 	}
 
-	if( CTNationOption::GERMANY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_GERMAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::GREECE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_GREEK, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::CZECH )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_CZECH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::ITALY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ITALIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::SPAIN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_SPANISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::UNITEDKINGDOM || CTNationOption::UNITEDSTATE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if( CTNationOption::ENGLISH )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if( CTNationOption::JAPAN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
+	SetNationLocale();
+
+	// Japanese, Chinese and Korean (the double byte code pages) break lines anywhere, not
+	// between words: cutting long words looked bad.
+	if(CTCodePage::IsDBCS())
 		TComponent::m_bUseWordBreak = FALSE;
-	}
-	else if( CTNationOption::POLAND )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_POLISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::FRANCE )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_FRENCH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::TAIWAN )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_CHINESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-		TComponent::m_bUseWordBreak = FALSE;
-	}
-	else if ( CTNationOption::RUSSIA )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_RUSSIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::ROMANIA )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_ROMANIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::HUNGARY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_HUNGARIAN, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::TURKEY )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_TURKISH, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else if ( CTNationOption::PORTUGAL )
-	{
-		SetThreadLocale( MAKELCID( MAKELANGID(LANG_PORTUGUESE, SUBLANG_DEFAULT) , SORT_DEFAULT ) );
-	}
-	else	// 국내. 단어단위로 자르다보니 긴 단어 일 때 너무 많이 잘려서 아름답지 않음.
-	{
-		TComponent::m_bUseWordBreak = FALSE;
-	}
 
 #ifdef USE_GG
 	// 게임가드.
@@ -476,8 +410,7 @@ BOOL CTClientApp::InitInstance()
 	if( GdiplusStartup( &m_pGDI, &vGDIInput, NULL) != Ok )
 		return FALSE;
 
-	WSADATA vWSA;
-	if(WSAStartup( MAKEWORD( 2, 2), &vWSA))
+	if(!TSocketStartup())
 		return FALSE;
 
 	HANDLE hFile = CreateFile(
@@ -525,16 +458,9 @@ BOOL CTClientApp::InitInstance()
 
 	CTachyonSession::InitTachyonSession();
 	CTDynamicBillboard::ClearTACTIVE();
-	InitializeCriticalSection(&m_cs);
 	GetSystemInfo(&vINFO);
 
 	m_bNeedSleep = vINFO.dwNumberOfProcessors > 1 ? FALSE : TRUE;
-	m_hLoadEvent = CreateEvent(
-		NULL,
-		FALSE,
-		FALSE,
-		NULL);
-
 	// Settings live in config.ini in the game folder, not the Windows registry.
 	g_Config.Init();
 
@@ -695,13 +621,13 @@ BOOL CTClientApp::InitInstance()
 	else if( CTNationOption::ENGLISH )
 		CCurse::Load(NULL, IDR_TEXT_CURSE_GSP, "TEXT");
 
-	EnterCriticalSection(&m_cs);
+	m_cs.Lock();
 	if(!CreateLoadThread())
 	{
-		LeaveCriticalSection(&m_cs);
+		m_cs.Unlock();
 		return FALSE;
 	}
-	LeaveCriticalSection(&m_cs);
+	m_cs.Unlock();
 
 	TRY
 	{
@@ -713,13 +639,13 @@ BOOL CTClientApp::InitInstance()
 		SMART_LOCKCS(&m_cs);
 		m_pTachyonWnd->m_bActivate = FALSE;
 		m_qTLOADCMD.push(pTCMD);
-		SetEvent(m_hLoadEvent);
+		m_vLoadEvent.Set();
 	}
 	CATCH(CFileException, fe)
 	{
-		EnterCriticalSection(&m_cs);
+		m_cs.Lock();
 		ExitLoadThread(TRUE);
-		LeaveCriticalSection(&m_cs);
+		m_cs.Unlock();
 
 		CString msg;
 		msg = CTChart::Format( TSTR_ERROR_FILE, (LPCTSTR)fe->m_strFileName);
@@ -730,9 +656,9 @@ BOOL CTClientApp::InitInstance()
 	}
 	AND_CATCH(CMemoryException, me)
 	{
-		EnterCriticalSection(&m_cs);
+		m_cs.Lock();
 		ExitLoadThread(TRUE);
-		LeaveCriticalSection(&m_cs);
+		m_cs.Unlock();
 
 		CString msg;
 		msg = CTChart::LoadString( TSTR_ERROR_MEMORY);
@@ -768,8 +694,6 @@ int CTClientApp::ExitInstance()
 	if(m_bLoaded)
 		CTachyonSession::ReleaseTachyonSession();
 
-	DeleteCriticalSection(&m_cs);
-	CloseHandle(m_hLoadEvent);
 
 	GdiplusShutdown(m_pGDI);
 	CoUninitialize();
@@ -857,42 +781,73 @@ int CTClientApp::ExitInstance()
 	}
 #endif
 
-	WSACleanup();
+	TSocketCleanup();
 	return CTachyonApp::ExitInstance();
+}
+
+#ifdef _WIN32
+#define TNATION_LANG(x)				LANG_##x
+#else
+#define TNATION_LANG(x)				0
+#endif
+
+// The code page of the nation's texts and, on Windows, its language for the calling thread (the
+// resources come in several languages). Korean when no nation matches.
+void CTClientApp::SetNationLocale()
+{
+	static const struct
+	{
+		BOOL *m_pNATION;
+		WORD m_wLANG;
+		UINT m_nCodePage;
+	} vLOCALE[] = {
+		{ &CTNationOption::GERMANY, TNATION_LANG(GERMAN), 1252 },
+		{ &CTNationOption::GREECE, TNATION_LANG(GREEK), 1253 },
+		{ &CTNationOption::CZECH, TNATION_LANG(CZECH), 1250 },
+		{ &CTNationOption::ITALY, TNATION_LANG(ITALIAN), 1252 },
+		{ &CTNationOption::SPAIN, TNATION_LANG(SPANISH), 1252 },
+		{ &CTNationOption::UNITEDKINGDOM, TNATION_LANG(ENGLISH), 1252 },
+		{ &CTNationOption::UNITEDSTATE, TNATION_LANG(ENGLISH), 1252 },
+		{ &CTNationOption::ENGLISH, TNATION_LANG(ENGLISH), 1252 },
+		{ &CTNationOption::JAPAN, TNATION_LANG(JAPANESE), 932 },
+		{ &CTNationOption::POLAND, TNATION_LANG(POLISH), 1250 },
+		{ &CTNationOption::FRANCE, TNATION_LANG(FRENCH), 1252 },
+		{ &CTNationOption::TAIWAN, TNATION_LANG(CHINESE), 950 },
+		{ &CTNationOption::RUSSIA, TNATION_LANG(RUSSIAN), 1251 },
+		{ &CTNationOption::ROMANIA, TNATION_LANG(ROMANIAN), 1250 },
+		{ &CTNationOption::HUNGARY, TNATION_LANG(HUNGARIAN), 1250 },
+		{ &CTNationOption::TURKEY, TNATION_LANG(TURKISH), 1254 },
+		{ &CTNationOption::PORTUGAL, TNATION_LANG(PORTUGUESE), 1252 } };
+
+	for( size_t i=0; i<sizeof(vLOCALE) / sizeof(vLOCALE[0]); i++)
+		if(*vLOCALE[i].m_pNATION)
+		{
+#ifdef _WIN32
+			SetThreadLocale( MAKELCID( MAKELANGID( vLOCALE[i].m_wLANG, SUBLANG_DEFAULT), SORT_DEFAULT));
+#endif
+			CTCodePage::Set(vLOCALE[i].m_nCodePage);
+			return;
+		}
+
+	CTCodePage::Set(949);
 }
 
 BYTE CTClientApp::CreateLoadThread()
 {
-	DWORD dwThread = 0;
+	CTClientWnd *pWnd = (CTClientWnd *) m_pTachyonWnd;
 
-	if(m_hLoadThread)
+	if(!m_vLoadThread.Start( [pWnd]() { pWnd->LoadThread(); }))
 		return FALSE;
 
-	m_hLoadThread = ::CreateThread(
-		NULL, 0,
-		_LoadThread,
-		(LPVOID) m_pTachyonWnd,
-		CREATE_SUSPENDED,
-		&dwThread);
-
-	if(!m_hLoadThread)
-		return FALSE;
-
-	if(!::SetThreadPriority( m_hLoadThread, THREAD_PRIORITY_NORMAL))
-		return FALSE;
-
-	if( ::ResumeThread(m_hLoadThread) < 0 )
-		return FALSE;
-
-	LeaveCriticalSection(&m_cs);
-	EnterCriticalSection(&m_cs);
+	m_cs.Unlock();
+	m_cs.Lock();
 
 	return TRUE;
 }
 
 void CTClientApp::ExitLoadThread( BYTE bCancelCMD)
 {
-	if(!m_hLoadThread)
+	if(!m_vLoadThread.IsRunning())
 		return;
 
 	if(bCancelCMD)
@@ -900,16 +855,13 @@ void CTClientApp::ExitLoadThread( BYTE bCancelCMD)
 
 	m_bCancelLoad = bCancelCMD;
 	m_bLoadRun = FALSE;
-	LeaveCriticalSection(&m_cs);
+	m_cs.Unlock();
 
-	::SetThreadPriority( m_hLoadThread, THREAD_PRIORITY_NORMAL);
-	SetEvent(m_hLoadEvent);
-	WaitForSingleObject(
-		m_hLoadThread,
-		INFINITE);
+	m_vLoadThread.SetPriority(TTHREAD_PRIORITY_NORMAL);
+	m_vLoadEvent.Set();
+	m_vLoadThread.Join();
 
-	EnterCriticalSection(&m_cs);
-	m_hLoadThread = NULL;
+	m_cs.Lock();
 
 	m_bCancelLoad = FALSE;
 	m_bLoadRun = TRUE;
@@ -1359,12 +1311,6 @@ BOOL CTClientApp::IsImeLocalMode()
 	return CTachyonInput::IsImeNativeMode();
 }
 
-DWORD WINAPI CTClientApp::_LoadThread( LPVOID lpParam)
-{
-	CTClientWnd *pWnd = (CTClientWnd *) lpParam;
-	return pWnd->LoadThread();
-}
-
 BYTE CTClientApp::MainProc()
 {
 	//static DWORD dwServiceTick = ((CTClientWnd *) m_pTachyonWnd)->GetTClientTickCount();
@@ -1428,9 +1374,9 @@ BYTE CTClientApp::MainProc()
 		if(!m_pTachyonWnd->m_bActivate)
 		{
 			// Wake up for an event or after a short delay, so the sessions are still polled.
-			LeaveCriticalSection(&m_cs);
+			m_cs.Unlock();
 			CTWindow::WaitEvent(TSESSION_IDLE_WAIT);
-			EnterCriticalSection(&m_cs);
+			m_cs.Lock();
 
 #ifndef TEST_MODE
 			if(!m_pTachyonWnd->IsForeground())
@@ -1504,7 +1450,7 @@ int CTClientApp::Run()
 				((CTClientWnd *) m_pTachyonWnd)->RestoreDevice();
 			else if(m_pTachyonWnd->m_Device.Reset())
 			{
-				SetEvent(((CTClientWnd *) m_pTachyonWnd)->m_hResetEvent);
+				((CTClientWnd *) m_pTachyonWnd)->m_vResetEvent.Set();
 				((CTClientWnd *) m_pTachyonWnd)->m_bResetDevice = FALSE;
 			}
 	}

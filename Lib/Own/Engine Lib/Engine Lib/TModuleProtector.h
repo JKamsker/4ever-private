@@ -7,15 +7,14 @@ private:
 	VTPROTECTED_MODULE m_vTMODULE;
 	VECTORSTRING m_vBLOCK;
 
-	CRITICAL_SECTION m_cs;
-	HANDLE m_hThread;
+	CTCriticalSection m_cs;
+	CTThread m_vThread;
 
 	DWORD m_dwVERSION;
 	DWORD m_dwTICK;
 	BYTE m_bRUN;
 
 private:
-	static DWORD WINAPI _WatchThread( LPVOID lpParam);
 	void WatchThread();
 
 public:

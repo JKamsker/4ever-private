@@ -33,7 +33,7 @@ typedef list<TComponent *>				TCOMP_LIST;
 #define IS_MBCS_BYTE(c)					(BYTE(c) == TCHAR_MBCS_LEAD || BYTE(c) == TCHAR_MBCS_TAIL ? TRUE : FALSE)
 #define IS_MBCS_LEAD(c)					(BYTE(c) == TCHAR_MBCS_LEAD ? TRUE : FALSE)
 #define IS_MBCS_TAIL(c)					(BYTE(c) == TCHAR_MBCS_TAIL ? TRUE : FALSE)
-#define MBCS_LEAD_TEST(c)				( ::IsDBCSLeadByte(c) )
+#define MBCS_LEAD_TEST(c)				( CTCodePage::IsLeadByte(BYTE(c)) )
 
 #include "GDIFont.h"
 #include "TListItem.h"

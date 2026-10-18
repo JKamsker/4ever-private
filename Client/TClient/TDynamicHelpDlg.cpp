@@ -77,8 +77,7 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 	WCHAR pBUF[TGDIBUFFER_SIZE];
 	Release();
 
-	MultiByteToWideChar(
-		CP_ACP, 0,
+	CTCodePage::ToWide(
 		LPCSTR(strTEXT),
 		strTEXT.GetLength() + 1,
 		pBUF, TGDIBUFFER_SIZE);

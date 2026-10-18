@@ -1,6 +1,5 @@
 ﻿#include "StdAfx.h"
 #include <iostream>
-#include "md5.h"
 #include "TBufferedFile.h"
 
 CD3DDevice *CTachyonRes::m_pDEVICE = NULL;
@@ -307,8 +306,8 @@ void CTachyonRes::RenderBACK( BYTE bSTEP,
 #define TPREFETCH_BLOCK			(1024 * 1024)
 #define TPREFETCH_THREAD		2
 
-static HANDLE g_hPREFETCH[TPREFETCH_THREAD] = { NULL, NULL };
-static volatile LONG g_bStopPrefetch = FALSE;
+static CTThread g_vPREFETCH[TPREFETCH_THREAD];
+static std::atomic<BOOL> g_bStopPrefetch(FALSE);
 
 // Appends the data file names listed in a resource index (int count, int total, count x [int len, chars]).
 static void PrefetchIndexFiles( CString strINDEX, VECTORSTRING& vFILE)
@@ -344,9 +343,8 @@ static void PrefetchIndexFiles( CString strINDEX, VECTORSTRING& vFILE)
 }
 
 // Reads each file front to back and throws the data away; the loaders then hit the file cache.
-static DWORD WINAPI PrefetchThread( LPVOID pParam)
+static void PrefetchThread( VECTORSTRING *pFILE)
 {
-	VECTORSTRING *pFILE = (VECTORSTRING *) pParam;
 	LPBYTE pBLOCK = new BYTE[TPREFETCH_BLOCK];
 
 	for( size_t i=0; i<pFILE->size() && !g_bStopPrefetch; i++)
@@ -371,8 +369,6 @@ static DWORD WINAPI PrefetchThread( LPVOID pParam)
 
 	delete[] pBLOCK;
 	delete pFILE;
-
-	return 0;
 }
 
 void CTachyonRes::StartPrefetch( CString strGroupID,
@@ -403,10 +399,8 @@ void CTachyonRes::StartPrefetch( CString strGroupID,
 
 	for( int i=0; i<TPREFETCH_THREAD; i++)
 	{
-		g_hPREFETCH[i] = CreateThread( NULL, 0, PrefetchThread, pLIST[i], 0, NULL);
-
-		if(g_hPREFETCH[i])
-			SetThreadPriority( g_hPREFETCH[i], THREAD_PRIORITY_BELOW_NORMAL);
+		if(g_vPREFETCH[i].Start( PrefetchThread, pLIST[i]))
+			g_vPREFETCH[i].SetPriority(TTHREAD_PRIORITY_BELOW_NORMAL);
 		else
 			delete pLIST[i];
 	}
@@ -416,15 +410,10 @@ void CTachyonRes::StartPrefetch( CString strGroupID,
 // code opens resource files with a plain CFile, whose default share mode is exclusive.
 static void StopPrefetch()
 {
-	InterlockedExchange( &g_bStopPrefetch, TRUE);
+	g_bStopPrefetch = TRUE;
 
 	for( int i=0; i<TPREFETCH_THREAD; i++)
-		if(g_hPREFETCH[i])
-		{
-			WaitForSingleObject( g_hPREFETCH[i], INFINITE);
-			CloseHandle(g_hPREFETCH[i]);
-			g_hPREFETCH[i] = NULL;
-		}
+		g_vPREFETCH[i].Join();
 }
 
 void CTachyonRes::Init( CString strGroupID, BYTE bGroupID)
