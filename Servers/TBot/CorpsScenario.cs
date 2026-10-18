@@ -151,8 +151,9 @@ public static partial class Scenarios
         foreach (var bot in new[] { a, b, c, d }) bot.Discard(CS_CORPSJOIN_ACK);
         c.Send(Req(CS_CORPSLEAVE_REQ, w => w.WriteUInt16(p1)));
         var gone = a.TryWait(CS_DELSQUAD_ACK);
-        var endA = a.TryWait(CS_CORPSJOIN_ACK);
-        var endD = d.TryWait(CS_CORPSJOIN_ACK);
+        // The corps' end (corps id 0) — a late copy of the commander change may still be on its way to D.
+        var endA = a.TryWait(CS_CORPSJOIN_ACK, r => r.ReadUInt16() == 0);
+        var endD = d.TryWait(CS_CORPSJOIN_ACK, r => r.ReadUInt16() == 0);
         Check("corps: C, the new general, takes A's party out and the corps ends (DELSQUAD, CORPSJOIN 0)", gone is not null && Read(gone, r => r.ReadUInt16()) == p2
             && endA is not null && CorpsJoin(endA) == (0, 0) && endD is not null && CorpsJoin(endD).Corps == 0, $"{Describe(gone)} / {Describe(endA)} / {Describe(endD)}");
 
