@@ -59,7 +59,7 @@ INSERT INTO TGUILDMASTERSKILLTABLE (dwGuildID, wSkillID, bLevel, tEndTime) VALUE
             if (leaveB is not null)
                 await db.ExecAsync("UPDATE TCHARTABLE SET bGuildLeave=@p1, dwGuildLeaveTime=@p2 WHERE dwCharID=@p0", (int)idB, leaveB[0], leaveB[1]);
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] tactics fixtures restored; restarting the world and the map ...");
-            await Docker("compose restart worldsvr mapsvr");
+            await RestartWorldAndMap();
         }
     }
 

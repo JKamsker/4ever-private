@@ -47,7 +47,7 @@ public static partial class Scenarios
                 if (row is not null)
                     await db.ExecAsync("UPDATE TCHARTABLE SET dwGold=@p1, dwSilver=@p2, dwCooper=@p3 WHERE dwCharID=@p0", (int)id, row[0], row[1], row[2]);
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] swords, letters and lots removed, money restored");
-            if (left > 0) { Console.WriteLine("lots were left on the map; restarting it ..."); await Docker("compose restart mapsvr"); }
+            if (left > 0) await RestartMap("lots were left on");
         }
         return PrintResults();
     }

@@ -71,7 +71,7 @@ INSERT INTO TGUILDMEMBERTABLE (dwCharID, dwGuildID, bDuty, bPeer, dwService) VAL
                     await db.ExecAsync("UPDATE TCHARTABLE SET wMapID=@p1, fPosX=@p2, fPosY=@p3, fPosZ=@p4, wLastSpawnID=@p5 WHERE dwCharID=@p0",
                         (int)id, p[0], p[1], p[2], p[3], p[4]);
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] fixtures restored; restarting the world and the map ...");
-            await Docker("compose restart worldsvr mapsvr");
+            await RestartWorldAndMap();
         }
 
         Console.WriteLine();

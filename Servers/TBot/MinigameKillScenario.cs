@@ -57,6 +57,15 @@ public static partial class Scenarios
         }
     }
 
+    /// <summary>Restarts the world, waits for it, then restarts the map and waits for it too — so the next scenario does not log in
+    /// while they are still coming back.</summary>
+    private static async Task RestartWorldAndMap()
+    {
+        await Docker("compose restart worldsvr");
+        await WaitForWorld();
+        await RestartMap("the fixtures out of");
+    }
+
     /// <summary>Restarts the map container and waits until it has announced itself to the world again.</summary>
     private static async Task RestartMap(string why)
     {
