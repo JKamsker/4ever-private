@@ -101,6 +101,24 @@ public sealed partial class WorldService
         _log.LogInformation("Nation buckets rebuilt from active-char table: {N} chars.", n);
     }
 
+    /// <summary>C++ <c>RecalcCountryBalance</c> (TWorldSvr.cpp:8079): the online Defugel and Craxion players on the counted map servers,
+    /// sent to every map (<c>MW_RECALCCOUNTRYBALANCE_ACK</c>), which works out the kingdom balance's stage. Fixed: the C++ byte counts
+    /// wrapped past 255; they stop there.</summary>
+    internal void RecalcCountryBalance()
+    {
+        int d = 0, c = 0;
+        foreach (var ch in _state.Characters.Values)
+        {
+            if (_state.CountryBalanceServers is { } servers && !servers.Contains(ch.MainId)) continue;
+            byte country = GetWarCountry(ch);
+            if (country == (byte)Contry.Defugel) d++;
+            else if (country == (byte)Contry.Craxion) c++;
+        }
+        var w = new PacketWriter(Msg.MW_RECALCCOUNTRYBALANCE_ACK);
+        w.WriteByte((byte)Math.Min(d, 255)); w.WriteByte((byte)Math.Min(c, 255));
+        BroadcastServers(w.ToArray());
+    }
+
     /// <summary>A char asks for the nation balance in its level-gap: reply with the online Defugel/Craxion
     /// counts sharing that gap. C++ OnMW_WARCOUNTRYBALANCE_ACK.</summary>
     private void OnMW_WARCOUNTRYBALANCE_ACK(ServerSession session, PacketReader r)

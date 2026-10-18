@@ -35,6 +35,7 @@ public sealed class WorldWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var state = new WorldState();
+        if (_opt.CountryBalanceServers is { Length: > 0 } balance) state.CountryBalanceServers = new HashSet<byte>(balance);
 
         // Phase 1 DB use is limited to the server nation + a connectivity check; the world coordinates
         // in-memory and does not require the DB to accept peers.

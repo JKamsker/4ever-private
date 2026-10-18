@@ -457,7 +457,7 @@ public sealed partial class MapService
         w.WriteFloat(ch.PosZ);
         w.WriteUInt16(ch.Dir);
         w.WriteUInt16((ushort)ch.SkillPoint);   // wSkillPoint (my)
-        w.WriteByte(0);              // bLuckyNumber
+        w.WriteByte(ch.LuckyNumber); // bLuckyNumber (MapService.Events.cs)
         w.WriteUInt32(0);            // aid left time
         foreach (var k in SkillKindPoints(ch)) w.WriteUInt16(k);   // skill kind points 1-4 (GetSkillKindPoint)
         w.WriteUInt32(0);            // dwRankPoint
@@ -507,6 +507,7 @@ public sealed partial class MapService
         w.WriteUInt32(ch.MonthPvPoint);
         w.WriteString(DateTime.Now.ToString("tt hh : mm")); // strTajm (server clock)
         w.WriteUInt32(ch.Medals);    // medals
+        SendBalanceChat(s);          // the kingdom balance line, said just before (MapService.CountryBalance.cs)
         s.Send(w);
     }
 

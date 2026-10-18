@@ -94,7 +94,9 @@ public sealed partial class MapService
     private void AwardKill(Monster mon)
     {
         if (mon.KeeperType == 0) return;                                  // OWNER_NONE — nobody crossed 10%
-        uint getExp = mon.Exp * (uint)MonExpRate(mon.Level) / 100;        // C++ GetExp (non-Korea rate; event/mission 0)
+        uint getExp = mon.Exp * (uint)MonExpRate(mon.Level) / 100;        // C++ GetExp (non-Korea rate)
+        if (mon.MapId is >= 700 and < 800) getExp = getExp * 120 / 100;   // IsInMissionMap
+        getExp += getExp * EventValue(EventExpAdd) / 100;                 // the exp event (MapService.Events.cs)
 
         if (mon.KeeperType == OwnerParty) { AwardPartyKill(mon, getExp); return; }
 
@@ -192,10 +194,13 @@ public sealed partial class MapService
         // (fixed: a party's keeper id was looked up as a character).
         var (country, maxLevel, addMagic, addDrop) = DropContext(mon, killerId);
         if (maxLevel > mon.Level && maxLevel - mon.Level >= 25) return;
+        addDrop += mon.ItemProb * EventValueOnMap(EventItemDrop, mon.MapId) / 100;   // the drop events (MapService.Events.cs)
+        addMagic += EventValueOnMap(EventItemMagicDrop, mon.MapId);
 
         // Money roll: m_bMoneyProb% chance, valid [min, max) range.
         if (mon.MoneyProb > LootRng.Next(100) && mon.MaxMoney > mon.MinMoney)
             mon.CorpseMoney = mon.MinMoney + (uint)LootRng.Next((int)(mon.MaxMoney - mon.MinMoney));
+        mon.CorpseMoney += mon.CorpseMoney * EventValueOnMap(EventMoneyDrop, mon.MapId) / 100;   // the money event
 
         // Item roll: bDropCount attempts, each gated by m_bItemProb; weighted pick + the four "normal" gates.
         for (int i = 0; i < mon.DropCount; i++)

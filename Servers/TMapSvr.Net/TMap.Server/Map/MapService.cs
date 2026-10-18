@@ -245,6 +245,7 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_WARCOUNTRYBALANCE_REQ: OnCS_WARCOUNTRYBALANCE_REQ(session); break;              // MapService.CountryBalance.cs
                 case Msg.CS_MONITEMLOTTERY_REQ: OnCS_MONITEMLOTTERY_REQ(session, r); break;                 // MapService.LootLottery.cs
                 case Msg.CS_RPSSTART_REQ: OnCS_RPSSTART_REQ(session, r); break;                             // MapService.Rps.cs
                 case Msg.CS_RPSGAME_REQ: OnCS_RPSGAME_REQ(session, r); break;
@@ -430,6 +431,11 @@ public sealed partial class MapService
                 case Msg.MW_PARTYMEMBERRECALLANS_REQ: OnMW_PARTYMEMBERRECALLANS_REQ(r); break;
                 case Msg.MW_PARTYMEMBERRECALL_REQ: OnMW_PARTYMEMBERRECALL_REQ(r); break;
                 case Msg.CT_USERMOVE_ACK: OnCT_USERMOVE_ACK(r); break;
+                case Msg.MW_WARCOUNTRYBALANCE_REQ: OnMW_WARCOUNTRYBALANCE_REQ(r); break;                    // MapService.CountryBalance.cs
+                case Msg.MW_RECALCCOUNTRYBALANCE_ACK: OnMW_RECALCCOUNTRYBALANCE_ACK(r); break;
+                case Msg.MW_EVENTUPDATE_REQ: OnMW_EVENTUPDATE_REQ(r); break;                                // MapService.Events.cs
+                case Msg.MW_EVENTMSG_REQ: OnMW_EVENTMSG_REQ(r); break;
+                case Msg.MW_EVENTQUARTER_REQ: OnMW_EVENTQUARTER_REQ(r); break;
                 case Msg.MW_RPSGAME_REQ: OnMW_RPSGAME_REQ(r); break;                                        // MapService.Rps.cs
                 case Msg.MW_RPSGAMECHANGE_REQ: OnMW_RPSGAMECHANGE_REQ(r); break;
                 case Msg.MW_EVENTMSGLOTTERY_REQ: OnMW_EVENTMSGLOTTERY_REQ(r); break;                        // MapService.SoulLottery.cs

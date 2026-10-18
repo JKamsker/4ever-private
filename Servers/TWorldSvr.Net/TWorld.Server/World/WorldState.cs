@@ -129,6 +129,12 @@ public sealed class WorldState
     // --- Event subsystem (m_mapEVENT / m_mapEVQT / m_vExpired). Fed by the control server (CT_EVENT*). ---
     /// <summary>Active server events keyed by index (m_mapEVENT).</summary>
     public Dictionary<uint, EventInfo> EventInfos { get; } = new();
+
+    /// <summary>The map servers counted in the kingdom balance (<see cref="WorldServerOptions.CountryBalanceServers"/>); null = all.</summary>
+    public HashSet<byte>? CountryBalanceServers { get; set; }
+
+    /// <summary>The minute the kingdom balance was last sent (C++ <c>m_bReservedPostMinute</c>'s per-minute block).</summary>
+    public int BalanceMinute { get; set; } = -1;
     /// <summary>Scheduled lucky-event quarters keyed by id (m_mapEVQT); each carries its next-fire time.</summary>
     public Dictionary<ushort, EventQuarter> EventQuarters { get; } = new();
     /// <summary>Timed-expiry queue, kept sorted ascending by fire time (m_vExpired).</summary>

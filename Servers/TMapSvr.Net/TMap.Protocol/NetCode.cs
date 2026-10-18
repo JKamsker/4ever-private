@@ -197,6 +197,12 @@ public static class Msg
     public const ushort CS_COMMENT_REQ = CS_MAP + 0x01E0;           // strComment
     public const ushort CS_COMMENT_ACK = CS_MAP + 0x01E1;           // dwCharID, strComment
     public const ushort CS_QUESTPOSEXEC_REQ = CS_MAP + 0x0354;      // dwQuestID, dwTermID
+    // The kingdom balance, batch S6b (CSProtocol.h / MWProtocol.h; MapService.CountryBalance.cs).
+    public const ushort CS_WARCOUNTRYBALANCE_REQ = CS_MAP + 0x024C;
+    public const ushort CS_WARCOUNTRYBALANCE_ACK = CS_MAP + 0x024D;  // dwCountD, dwCountC
+    public const ushort MW_WARCOUNTRYBALANCE_REQ = MW_BASE + 0x0170; // dwCharID, dwKey, dwCountD, dwCountC, bGap
+    public const ushort MW_WARCOUNTRYBALANCE_ACK = MW_BASE + 0x0171;
+    public const ushort MW_RECALCCOUNTRYBALANCE_ACK = MW_BASE + 0x021E; // bCountD, bCountC
     // Rock-paper-scissors, batch S5c (CSProtocol.h / MWProtocol.h; MapService.Rps.cs).
     public const ushort CS_RPSSTART_REQ = CS_MAP + 0x0246;           // bType, bInven, bItemID
     public const ushort CS_RPSSTART_ACK = CS_MAP + 0x0247;           // bResult, dwGold, dwSilver, dwCooper
@@ -675,6 +681,9 @@ public static class Msg
     public const ushort MW_TMSINVITEASK_REQ = MW_BASE + 0x00CC;
     public const ushort MW_TMSINVITEASK_ACK = MW_BASE + 0x00CD;
     public const ushort MW_SOULMATE_REQ = MW_BASE + 0x0105;
+    public const ushort MW_EVENTQUARTER_REQ = MW_BASE + 0x0100;       // the lucky-ticket draw (MapService.Events.cs)
+    public const ushort MW_EVENTUPDATE_REQ = MW_BASE + 0x012F;        // an event starts or ends
+    public const ushort MW_EVENTMSG_REQ = MW_BASE + 0x0131;           // an event message
     public const ushort MW_EVENTMSGLOTTERY_REQ = MW_BASE + 0x0168;    // the event lottery's winners (MapService.SoulLottery.cs)
     public const ushort MW_SOULMATESEARCH_REQ = MW_BASE + 0x0107;
     public const ushort MW_SOULMATESEARCH_ACK = MW_BASE + 0x0108;

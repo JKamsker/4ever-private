@@ -132,8 +132,7 @@ public sealed partial class WorldService
     /// <summary>A character's country (or aid-country) changed. Leaves the party, drops tactics-wanted apps and
     /// any mercenary membership, re-buckets nation balance, and — for a primary country change — leaves the
     /// guild and erases friends/soulmates (those bonds are country-scoped). Then fans the change to every map
-    /// the char is on. C++ CTWorldSvrModule::ChangeCountry. (The cross-server RecalcCountryBalance is skipped:
-    /// nation balance is recomputed on demand.)</summary>
+    /// the char is on, and sends every map the new kingdom balance. C++ CTWorldSvrModule::ChangeCountry.</summary>
     private void ChangeCountry(Character ch, byte type, byte value)
     {
         if (ch.Party is { } party) LeaveParty(party, ch.CharId, 0);
@@ -190,6 +189,7 @@ public sealed partial class WorldService
         byte[] req = BuildChangeCharBaseReq(ch.CharId, ch.Key, type, value, ch.TitleId, "");
         foreach (var sid in ch.Connections.Keys.ToList())
             if (ch.Connections[sid].Valid) _state.FindMapSvr(sid)?.Send(req);
+        RecalcCountryBalance();
     }
 
     /// <summary>Update a char's name in any guild/tactics wanted application it has open. C++ rename branch.</summary>

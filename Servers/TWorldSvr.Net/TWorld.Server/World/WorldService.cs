@@ -177,6 +177,14 @@ public sealed partial class WorldService
 
         // Where every war stands, and the castle applicant counts (C++ OnMW_CONNECT_ACK, WorldService.Battle.cs).
         SendBattleStateTo(session);
+
+        // The running events (C++ OnMW_CONNECT_ACK, SSHandler.cpp:662): a map that (re)connects applies them too.
+        foreach (var ev in _state.EventInfos.Values)
+        {
+            var w = new PacketWriter(Msg.MW_EVENTUPDATE_REQ);
+            w.WriteByte(ev.Id); w.WriteUInt16(ev.Value); ev.WriteTo(w);
+            session.Send(w.ToArray());
+        }
     }
 
     private void OnMW_ADDCHAR_ACK(ServerSession session, PacketReader r)

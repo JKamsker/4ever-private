@@ -91,6 +91,7 @@ public static class Msg
 
     // --- Phase 5f: nation balance (MWProtocol.h) ---
     public const ushort MW_WARCOUNTRYBALANCE_REQ = MW_BASE + 0x0170;  // world -> map: D/C online counts in a char's level-gap (charId,key,countD,countC,gap)
+    public const ushort MW_RECALCCOUNTRYBALANCE_ACK = MW_BASE + 0x021E; // world -> maps: the kingdom balance (bCountD, bCountC)
     public const ushort MW_WARCOUNTRYBALANCE_ACK = MW_BASE + 0x0171;  // map -> world: char asks for nation balance (charId,key)
 
     // --- Phase 5g: pets / mounts / summons / tame (MWProtocol.h) ---

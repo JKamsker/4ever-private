@@ -23,7 +23,7 @@ namespace TMap.Server.Map;
 /// C++ never loads it); refining with no material is refused (the C++ divides by zero).</para>
 ///
 /// <para>The NPC's discount and success bonus for its fort's guild or the heroes are MapService.Fort.cs'. <b>Not ported:</b>
-/// secure codes, the event bonuses (<c>m_wEventValue</c> = 0), PC-bang.</para>
+/// secure codes, PC-bang. (The event bonuses are in MapService.Events.cs.)</para>
 /// </summary>
 public sealed partial class MapService
 {
@@ -450,6 +450,12 @@ public sealed partial class MapService
     {
         if (npc is null) return 0;
         int w = baseProb + NpcAddProb(ch, npc);                         // the owner guild's / heroes' bonus (MapService.Fort.cs)
+        w += baseProb * (type switch                                     // the crafting events (MapService.Events.cs)
+        {
+            Prob.Magic => EventValue(EventMagicUpgrade), Prob.RareMagic => EventValue(EventRareMagicUpgrade),
+            Prob.Refine => EventValue(EventRefine), Prob.Trans => EventValue(EventTrans),
+            Prob.Upgrade => EventValue(EventItemUpgrade), Prob.Gamble => EventValue(EventGambleOption), _ => 0,
+        }) / 100;
         switch (type)
         {
             case Prob.Magic:

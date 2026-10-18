@@ -133,6 +133,21 @@ drop rows are almost all ranged (no item: a random one of the row's group, drop 
 items drop, that each fits one of the monster's rows (checked against `TITEMCHART`), and that the first one, taken, is saved
 after logout. Nothing is changed in the charts. The item and A's position are put back. 4 checks.
 
+## Scenario: events (the operator's events)
+
+`--Bot:Scenario=events` (same arguments; only A) pushes events to the world the way the control tool does (`WorldTool`:
+`CT_EVENTUPDATE_REQ`, `CT_EVENTMSG_REQ`, `SM_EVENTQUARTER_REQ`). A (set to level 5) stands by spawn 4200 and kills a monster 770
+for its plain exp; a 100% exp event doubles the next kill's exp, and it is plain again once the event ends. A monster-regen event
+places a 770 next to A, and its end kills it. An event message reaches A as a world chat line, and the lucky-ticket draw is shown.
+Every event is ended and A's level, exp and position are put back. 6 checks.
+
+## Scenario: balance (the kingdom balance)
+
+`--Bot:Scenario=balance` (same arguments) logs A in: its character info comes with the operator's world chat line on the kingdom
+balance. A's war-balance window gets no answer — the window counts levels 130 and up, and this game's level chart stops at 125
+(the C++ does the same). After the world's next minute tick (up to a minute), B logs in and its line counts A and B, both
+Craxion ("Derion" 100%, stage 3). Nothing is changed in the database. 3 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

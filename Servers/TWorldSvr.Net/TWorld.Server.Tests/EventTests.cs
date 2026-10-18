@@ -54,6 +54,26 @@ public class EventTests
     }
 
     [Fact]
+    public async Task RunningEvents_AreReplayedToAMapThatConnects()
+    {
+        await using var host = new WorldTestHost();
+        host.State.EventInfos[100] = new EventInfo { Index = 100, Id = 3 /* ITEMDROP */, Value = 50, MapId = 0xFF, Title = "Drops" };
+        using var map = await host.ConnectAsync();
+        ConnectMap(map);
+
+        PacketReader? req = null;
+        for (int i = 0; i < 20 && req is null; i++)
+        {
+            var p = map.Receive(TimeSpan.FromSeconds(5));
+            if (p.Id == Msg.MW_EVENTUPDATE_REQ) req = p;
+        }
+        Assert.NotNull(req);
+        Assert.Equal((byte)3, req!.ReadByte());
+        Assert.Equal((ushort)50, req.ReadUInt16());
+        Assert.Equal(100u, req.ReadUInt32());
+    }
+
+    [Fact]
     public async Task EventQuarterDraw_FansSelectorToMaps()
     {
         await using var host = new WorldTestHost();

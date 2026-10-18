@@ -14,5 +14,9 @@ public sealed class WorldServerOptions
     /// <summary>Optional nation override; when null the value is read from TGetNation.</summary>
     public byte? Nation { get; set; }
 
+    /// <summary>The map servers (main ids) whose players count in the kingdom balance (WorldService.Nation.cs). The C++ counted its own
+    /// deployment's field servers, 4, 5, 6, 7 and 10; null or empty counts every map server.</summary>
+    public byte[]? CountryBalanceServers { get; set; }
+
     public WorldDbOptions Db { get; set; } = new();
 }

@@ -54,7 +54,8 @@ public sealed record DuringItemRow(ushort ItemId, byte Type, uint Remain, long E
 
 /// <summary>What the login reads about premium / exp items: the account's premium (<c>TVIEW_DURINGITEMTABLE</c>), the
 /// character's exp items (<c>TEXPITEMTABLE</c>), and <c>TGetPcBangData</c>'s flags, bonus seconds used today and item count.</summary>
-public sealed record DuringLoad(List<DuringItemRow> Premium, List<DuringItemRow> Exp, byte InPcBang, uint PcBangTime, byte PcBangItemCnt);
+public sealed record DuringLoad(List<DuringItemRow> Premium, List<DuringItemRow> Exp, byte InPcBang, uint PcBangTime, byte PcBangItemCnt,
+    byte LuckyNumber = 0);
 
 /// <summary>One buff of a saved summon (<c>TRECALLMAINTAINTABLE</c>, C++ <c>CTBLRecallMaintain</c>); <c>Remain</c> 0 = for good.</summary>
 public sealed record RecallMaintainRow(uint RecallId, ushort SkillId, byte Level, uint Remain, byte AttackType, uint AttackId,
@@ -1093,7 +1094,7 @@ FROM TCHARTABLE WHERE dwCharID = @dwCharID AND bDelete = 0";
         try { await SqlProc.ExecAsync(c, "TGetPcBangData", SqlProc.Ret(), ps, ct); }
         catch (SqlException) { return new DuringLoad(premium, exp, 0, 0, 0); }
         static uint U(SqlParameter p) => p.Value is DBNull or null ? 0u : unchecked((uint)Convert.ToInt64(p.Value));
-        return new DuringLoad(premium, exp, (byte)U(ps[2]), U(ps[3]), (byte)U(ps[4]));
+        return new DuringLoad(premium, exp, (byte)U(ps[2]), U(ps[3]), (byte)U(ps[4]), (byte)U(ps[5]));
     }
 
     /// <summary>C++ <c>CTBLRecallMon</c> + <c>CTBLRecallMaintain</c> at char load (SSHandler.cpp:3942/3981). The host type is
@@ -1202,6 +1203,17 @@ FROM TCHARTABLE WHERE dwCharID = @dwCharID AND bDelete = 0";
 
     /// <summary>C++ <c>CSPSaveMissionOccupy</c> (DBAccess.h:7369) — <c>TSaveMissionOccupy(wLocalID, bType, dwCharID, bCountry)</c>: the
     /// mission's new owner country.</summary>
+    /// <summary>C++ <c>CSPEventQuarter</c>: the lucky-ticket winner gets the quarter's prize by mail (<c>TEventQuarter</c>).</summary>
+    public async Task EventQuarterAsync(string name, byte day, byte hour, byte minute, CancellationToken ct = default)
+    {
+        await using var c = await OpenAsync(ct);
+        await SqlProc.ExecAsync(c, "TEventQuarter", null, new[]
+        {
+            SqlProc.In("@n", SqlDbType.VarChar, name), SqlProc.In("@d", SqlDbType.TinyInt, day),
+            SqlProc.In("@h", SqlDbType.TinyInt, hour), SqlProc.In("@m", SqlDbType.TinyInt, minute),
+        }, ct);
+    }
+
     public async Task SaveMissionOccupyAsync(ushort localId, byte type, uint charId, byte country, CancellationToken ct = default)
     {
         await using var c = await OpenAsync(ct);

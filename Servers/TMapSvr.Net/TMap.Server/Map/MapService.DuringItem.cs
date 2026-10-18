@@ -252,6 +252,7 @@ public sealed partial class MapService
         ch.InPcBang = load.InPcBang;
         ch.PcBangTime = load.PcBangTime;
         ch.PcBangItemCnt = load.PcBangItemCnt;
+        ch.LuckyNumber = load.LuckyNumber;
         long now = UnixNow();
         foreach (var row in load.Premium.Concat(load.Exp))
         {

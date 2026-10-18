@@ -31,6 +31,52 @@ internal static class WorldTool
         Thread.Sleep(300);
     }
 
+    public const ushort CT_EVENTUPDATE_REQ = 0x9301 + 0x005F, CT_EVENTMSG_REQ = 0x9301 + 0x0065, SM_EVENTQUARTER_REQ = 0x1581 + 0x0017;
+
+    private static void Send(PacketWriter w)
+    {
+        using var tcp = new TcpClient(Host, Port);
+        tcp.GetStream().Write(w.ToArray());
+        tcp.GetStream().Flush();
+        Thread.Sleep(300);                                              // let the world read it before the socket closes
+    }
+
+    /// <summary>C++ <c>CT_EVENTUPDATE_REQ</c> (the operator's tool): an event starts (value ≠ 0) or ends — the world tells every map.
+    /// The body is C++ <c>EVENTINFO::WrapPacketIn</c>; <paramref name="regen"/> places one-monster spawns (a regen event).</summary>
+    public static void EventUpdate(byte id, ushort value, uint index, ushort mapId = 0xFF,
+        IReadOnlyList<(ushort Mon, uint Delay, ushort Map, float X, float Y, float Z)>? regen = null)
+    {
+        var w = new PacketWriter(CT_EVENTUPDATE_REQ);
+        w.WriteByte(id); w.WriteUInt16(value);
+        w.WriteUInt32(index); w.WriteByte(id); w.WriteByte(1); w.WriteByte(0); w.WriteByte(0); w.WriteByte(0);
+        w.WriteInt64(0); w.WriteInt64(0); w.WriteUInt16(value); w.WriteUInt16(mapId); w.WriteUInt32(0); w.WriteUInt32(0);
+        w.WriteString(""); w.WriteString(""); w.WriteString("TBot event"); w.WriteByte(0); w.WriteString("");
+        w.WriteUInt16(0);                                               // cash sale items
+        w.WriteByte(0); w.WriteByte(9);                                 // monster start action (spawn) / end action (AT_DEAD)
+        w.WriteUInt16(0);                                               // spawn ids
+        w.WriteUInt16((ushort)(regen?.Count ?? 0));
+        foreach (var g in regen ?? Array.Empty<(ushort, uint, ushort, float, float, float)>())
+        { w.WriteUInt16(g.Mon); w.WriteUInt32(g.Delay); w.WriteUInt16(g.Map); w.WriteFloat(g.X); w.WriteFloat(g.Y); w.WriteFloat(g.Z); }
+        w.WriteUInt16(0);                                               // lottery items
+        Send(w);
+    }
+
+    /// <summary>C++ <c>CT_EVENTMSG_REQ</c>: an event message for every player.</summary>
+    public static void EventMsg(string msg)
+    {
+        var w = new PacketWriter(CT_EVENTMSG_REQ);
+        w.WriteByte(1); w.WriteByte(0); w.WriteString(msg);
+        Send(w);
+    }
+
+    /// <summary>C++ <c>SM_EVENTQUARTER_REQ</c> (the world's own lucky-ticket timer): draw a lucky number for a quarter.</summary>
+    public static void EventQuarter(byte day, byte hour, byte minute, string present)
+    {
+        var w = new PacketWriter(SM_EVENTQUARTER_REQ);
+        w.WriteByte(day); w.WriteByte(hour); w.WriteByte(minute); w.WriteString(present);
+        Send(w);
+    }
+
     public static void BattleStatus(byte type, byte status, uint start, uint second)
     {
         using var tcp = new TcpClient(Host, Port);

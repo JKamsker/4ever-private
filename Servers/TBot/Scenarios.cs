@@ -123,7 +123,7 @@ public static partial class Scenarios
 
     public static async Task<int> RunAsync(BotConfig cfg, CancellationToken ct)
     {
-        if (cfg.Scenario is not ("features" or "castle" or "guild" or "social" or "corps" or "auction" or "minigame" or "drops")) { Console.Error.WriteLine($"unknown scenario '{cfg.Scenario}'"); return 2; }
+        if (cfg.Scenario is not ("features" or "castle" or "guild" or "social" or "corps" or "auction" or "minigame" or "drops" or "events" or "balance")) { Console.Error.WriteLine($"unknown scenario '{cfg.Scenario}'"); return 2; }
         if (cfg.Account2.Length == 0 || cfg.GameConnectionString.Length == 0)
         {
             Console.Error.WriteLine($"the {cfg.Scenario} scenario needs --Bot:Account2 and --Bot:GameConnectionString");
@@ -136,6 +136,8 @@ public static partial class Scenarios
         if (cfg.Scenario == "auction") return await RunAuctionAsync(cfg);   // AuctionScenario.cs
         if (cfg.Scenario == "minigame") return await RunMinigameAsync(cfg); // MinigameScenario.cs
         if (cfg.Scenario == "drops") return await RunDropsAsync(cfg);       // DropsScenario.cs
+        if (cfg.Scenario == "events") return await RunEventsAsync(cfg);     // EventsScenario.cs
+        if (cfg.Scenario == "balance") return await RunBalanceAsync(cfg);   // BalanceScenario.cs
         var db = new GameDb(cfg.GameConnectionString);
         var cfgA = Clone(cfg, cfg.Account, "[A]");
         var cfgB = Clone(cfg, cfg.Account2, "[B]");

@@ -278,6 +278,9 @@ public sealed class Character
     public byte InPcBang { get; set; }
     public uint PcBangTime { get; set; }
     public byte PcBangItemCnt { get; set; }
+
+    /// <summary>C++ <c>m_bLuckyNumber</c> (<c>TCURRENTUSER.bLuckyNumber</c>, via <c>TGetPcBangData</c>) — the lucky-ticket number (MapService.Events.cs).</summary>
+    public byte LuckyNumber { get; set; }
     public long DuringTick { get; set; }
 
     /// <summary>C++ <c>m_mapItemCoolTime</c> — per item delay group, the map tick its items can be used again.</summary>

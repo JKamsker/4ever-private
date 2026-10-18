@@ -52,7 +52,7 @@ public sealed partial class MapService
     /// the id pool is exhausted (<c>m_mapExtraSpawnID.empty()</c>). The caller instantiates it with
     /// <see cref="AddTimelimitedMon"/>. (<paramref name="roamType"/> is the term count — accepted for parity but
     /// inert here, as the port's roam uses the spawn range.)</summary>
-    public ushort RegenDynamicMonster(ushort mapId, byte country, ushort monId, float x, float y, float z, byte roamType)
+    public ushort RegenDynamicMonster(ushort mapId, byte country, ushort monId, float x, float y, float z, byte roamType, uint delay = 0)
     {
         if (!_templates.MonsterTemplates.ContainsKey(monId)) return 0;   // C++ FindTMonster must resolve
 
@@ -69,7 +69,7 @@ public sealed partial class MapService
 
         _dynamicSpawns[id] = new MonsterSpawnDef(
             new MonSpawnRow(Id: id, MapId: mapId, PosX: x, PosY: y, PosZ: z, Dir: 0, Country: country,
-                Count: 1, Range: 0, Prob: 100, Region: 0, Delay: 0, Event: SeDynamic),
+                Count: 1, Range: 0, Prob: 100, Region: 0, Delay: delay, Event: SeDynamic),
             new List<MapMonRow> { new(SpawnId: id, MonId: monId, Leader: 0, Essential: 0, Prob: 100) });
         return id;
     }
