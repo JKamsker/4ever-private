@@ -197,6 +197,14 @@ public static class Msg
     public const ushort CS_COMMENT_REQ = CS_MAP + 0x01E0;           // strComment
     public const ushort CS_COMMENT_ACK = CS_MAP + 0x01E1;           // dwCharID, strComment
     public const ushort CS_QUESTPOSEXEC_REQ = CS_MAP + 0x0354;      // dwQuestID, dwTermID
+    // Heroes and the warlord's message, batch S6c (CSProtocol.h / MWProtocol.h; MapService.Heroes.cs).
+    public const ushort CS_HEROSELECT_REQ = CS_MAP + 0x01CD;         // wBattleZoneID, strHero
+    public const ushort CS_HEROSELECT_ACK = CS_MAP + 0x01CE;         // bResult (HERO_SELECT_RESULT)
+    public const ushort CS_HEROLIST_REQ = CS_MAP + 0x01CF;
+    public const ushort CS_HEROLIST_ACK = CS_MAP + 0x01D0;           // the forts' and castles' (wLocal, strHero)
+    public const ushort CS_WARLORDSAY_REQ = CS_MAP + 0x021F;         // bType, strSay
+    public const ushort MW_HEROSELECT_ACK = MW_BASE + 0x011C;        // wZone, strHero, tHero
+    public const ushort MW_WARLORDSAY_ACK = MW_BASE + 0x0142;        // bType, bRankMonth, dwCharID, strSay
     // The kingdom balance, batch S6b (CSProtocol.h / MWProtocol.h; MapService.CountryBalance.cs).
     public const ushort CS_WARCOUNTRYBALANCE_REQ = CS_MAP + 0x024C;
     public const ushort CS_WARCOUNTRYBALANCE_ACK = CS_MAP + 0x024D;  // dwCountD, dwCountC

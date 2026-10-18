@@ -44,6 +44,7 @@ public sealed partial class MapService
         GuildSkillStore = gameDb;
         ProtectedStore = gameDb;
         AuctionStore = gameDb;
+        HeroStore = gameDb;
         _templates = templates;
         _log = log;
     }
@@ -245,6 +246,9 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_HEROLIST_REQ: OnCS_HEROLIST_REQ(session); break;                                // MapService.Heroes.cs
+                case Msg.CS_HEROSELECT_REQ: await OnCS_HEROSELECT_REQ(session, r); break;
+                case Msg.CS_WARLORDSAY_REQ: await OnCS_WARLORDSAY_REQ(session, r); break;
                 case Msg.CS_WARCOUNTRYBALANCE_REQ: OnCS_WARCOUNTRYBALANCE_REQ(session); break;              // MapService.CountryBalance.cs
                 case Msg.CS_MONITEMLOTTERY_REQ: OnCS_MONITEMLOTTERY_REQ(session, r); break;                 // MapService.LootLottery.cs
                 case Msg.CS_RPSSTART_REQ: OnCS_RPSSTART_REQ(session, r); break;                             // MapService.Rps.cs

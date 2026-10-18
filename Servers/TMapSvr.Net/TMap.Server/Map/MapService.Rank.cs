@@ -42,7 +42,7 @@ public sealed class MonthRanker
 /// could enter the ladder: its country's slot 0 is the all-time top (the warlord), slots 1..32 the month.</para>
 /// <para>The client asks for the month ladder (<c>CS_MONTHRANKLIST_REQ</c>, its first 17 of each country), last month's
 /// top (<c>CS_FIRSTGRADEGROUP_REQ</c>), a fame list (<c>CS_FAMERANKLIST_REQ</c>) and its own record
-/// (<c>CS_PVPRECORD_REQ</c>). <b>Not ported:</b> writing a warlord's message (<c>CS_WARLORDSAY_REQ</c> — secure code),
+/// (<c>CS_PVPRECORD_REQ</c>). Writing a warlord's message is in MapService.Heroes.cs. <b>Not ported:</b>
 /// the duel record window's content (duel scores are not kept: it shows zeros), and the month-point wipe for a player
 /// not on a map at the month change (<c>DM_MONTHPVPOINTRESET_REQ</c> — the world resets the table itself).</para>
 /// </summary>

@@ -148,6 +148,14 @@ balance. A's war-balance window gets no answer — the window counts levels 130 
 (the C++ does the same). After the world's next minute tick (up to a minute), B logs in and its line counts A and B, both
 Craxion ("Derion" 100%, stage 3). Nothing is changed in the database. 3 checks.
 
+## Scenario: heroes (a fort's hero)
+
+`--Bot:Scenario=heroes` (same arguments) gives the test guild "TBotBlue" (A its chief) fort 1, its next defence in three days,
+and **restarts the world and the map** to load it. A reads the hero list (the forts, then the castles), is refused for fort 2
+(not its guild's), and names B the fort's hero: saved in `TLOCALTABLE` and shown in the list once the world has told the map.
+Needs migration 021 (`THeroSelect` read a missing `TCHARTABLE_PW`). The fort table and the guild are put back and the world and
+the map restarted again. 5 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account
