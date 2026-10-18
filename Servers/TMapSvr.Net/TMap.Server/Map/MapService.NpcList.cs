@@ -14,8 +14,8 @@ namespace TMap.Server.Map;
 /// <item>a teleporter (<c>TNPC_PORTAL</c>) — the destinations whose conditions the character meets, with their price;</item>
 /// <item>a castle guards' shop (<c>TNPC_MONSTER</c>) — its guard posts and their price (MapService.GuildTactics.cs).</item>
 /// </list>
-/// Prices are before discount: the client applies <c>bDiscountRate</c> (<c>GetDiscountRate</c>, MapService.Fort.cs). <b>Not
-/// ported:</b> the magic-item shop (<c>TNPC_MAGICITEM</c>), whose stock is not loaded — it gets no answer. Portal conditions tied to tournaments (unported) never pass.
+/// Prices are before discount: the client applies <c>bDiscountRate</c> (<c>GetDiscountRate</c>, MapService.Fort.cs). The magic
+/// shop (<c>TNPC_MAGICITEM</c>) is in MapService.Gamble.cs. Portal conditions tied to tournaments (unported) never pass.
 /// </summary>
 public sealed partial class MapService
 {
@@ -33,6 +33,7 @@ public sealed partial class MapService
             case TnpcItem or TnpcPvPoint: SendCS_NPCITEMLIST_ACK(s, ch, npc); break;
             case TnpcPortal: SendCS_NPCPORTALLIST_ACK(s, ch, npc); break;
             case TnpcMonster: SendCS_NPCMONSTERLIST_ACK(s, ch, npc); break;   // MapService.GuildTactics.cs
+            case TnpcMagicItem: SendCS_NPCMAGICLIST_ACK(s, ch, npc); break;   // MapService.Gamble.cs
         }
     }
 

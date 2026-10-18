@@ -45,7 +45,7 @@ public sealed class MapServerOptions
     /// </summary>
     public bool NoCrypt { get; set; }
 
-    /// <summary>The auction house (MapService.Auction.cs). The C++ 5.0 has it switched off; on here unless set false.</summary>
+    /// <summary>The auction house (MapService.Auction.cs). On, as in the C++ 5.0 map server, unless set false.</summary>
     public bool AuctionEnabled { get; set; } = true;
 
     public MapDbOptions Db { get; set; } = new();

@@ -53,12 +53,16 @@ public sealed record MonsterTemplate(ushort Id, byte Level, ushort MonAttr,
 
 /// <summary>
 /// One item-drop row from <c>TMONITEMCHART</c> (C++ <c>tagTMONITEM</c>, keyed by <c>wMonID</c>): a candidate
-/// drop with its selection weight and the four "normal" probability gates that must all pass. This slice
-/// handles fixed chart-type items (<see cref="ChartType"/> ≠ 0, <see cref="ItemId"/> set); the ranged
-/// <c>MonChoiceItem</c> pick (ItemID 0 + min/max) and pre-built magic items (ChartType 0) are deferred.
+/// drop with its selection weight and the four "normal" probability gates that must all pass. A chart-type row
+/// (<see cref="ChartType"/> ≠ 0) drops its item, or with no item a random one of that group within the id and drop-level
+/// ranges (C++ <c>MonChoiceItem</c>); a type-0 row drops a prebuilt magic item (<c>TQUESTITEMCHART</c>, C++
+/// <c>MonChoiceMagicItem</c>). <see cref="ProbMagic"/>/<see cref="ProbRare"/> and the option counts drive the magic options
+/// (MapService.Drops.cs).
 /// </summary>
 public sealed record MonItemRow(ushort ItemId, ushort Weight, byte ChartType,
-    byte Prob1, byte Prob2, byte Prob3, byte Prob4);
+    byte Prob1, byte Prob2, byte Prob3, byte Prob4,
+    ushort ItemIdMin = 0, ushort ItemIdMax = 0, byte LevelMin = 0, byte LevelMax = 0,
+    byte ProbMagic = 0, byte ProbRare = 0, byte MagicOpt = 0, byte RareOpt = 0);
 
 /// <summary>
 /// A monster-attribute row from <c>TMONATTRCHART</c> (C++ <c>CTBLMonAttr</c>, keyed by

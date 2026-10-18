@@ -173,11 +173,12 @@ public sealed partial class GameDatabase
                  bLevel, dwClassID, dwSlotID, bPrmSlotID, bSubSlotID, bStack, bKind, wUseValue, dwDelay,
                  fPrice, bCanRepair, wDelayGroupID, bConsumable, bIsSell,
                  bGrade, bCanGrade, bCanMagic, bCanRare, bCanWrap, bCanColor, dwDuraMax, wUseTime, bUseType,
-                 bItemCountry, fPvPrice, bEquipSkill, dwCode FROM TITEMCHART";
+                 bItemCountry, fPvPrice, bEquipSkill, dwCode, bCanGamble, bGambleProb, bDestroyProb,
+                 bGroupID, bDropLevel, bInitState, wWeight, wItemProb_G FROM TITEMCHART";
     // The per-level chart (CTBLLevelChart): the repair-cost coefficient (m_dwRepairCost), dwEXP (the
     // level-up threshold) + bSkillPoint (granted per level), and dwMoney (the base price the item
     // buy/sell math scales by m_fPrice).
-    private const string LevelChartSql = @"SELECT bLevel, dwRepairCost, dwEXP, bSkillPoint, dwMoney, dwRefineCost, dwPvPMoney, wPvPoint, dwSearchCost, dwRegCost FROM TLEVELCHART";
+    private const string LevelChartSql = @"SELECT bLevel, dwRepairCost, dwEXP, bSkillPoint, dwMoney, dwRefineCost, dwPvPMoney, wPvPoint, dwSearchCost, dwRegCost, dwGambleCost, dwRepCost FROM TLEVELCHART";
     // The kill-point chart (CTBLPvPointChart): the rows with no local are the open-field kill table (m_mapTPvPointKill).
     private const string PvPointChartSql = @"SELECT wLocalID, bStatus, bEvent, dwIncPoint, dwDecPoint FROM TPVPOINTCHART";
     private const string TitleChartSql = @"SELECT wTitleID, wCategory, bKind, dwRequirement FROM TTITLECHART";
@@ -217,9 +218,10 @@ public sealed partial class GameDatabase
     private const string AiChartSql =
         @"SELECT dwTriggerID, dwCmdID, dwDelay, bTriggerType, bAIType, bLoop FROM TAICHART";
     // The per-monster item drop table (CTBLMonItemAll → m_vMONITEM). Bulk-loaded, bucketed by wMonID
-    // (like the skill-data rows). We read the fixed-item subset; the ranged / magic-option columns are deferred.
+    // (like the skill-data rows), with the ranged-pick and magic-option columns (MapService.Drops.cs).
     private const string MonItemChartSql =
-        @"SELECT wMonID, bChartType, wItemID, wWeight, bItemProb_N1, bItemProb_N2, bItemProb_N3, bItemProb_N4
+        @"SELECT wMonID, bChartType, wItemID, wWeight, bItemProb_N1, bItemProb_N2, bItemProb_N3, bItemProb_N4,
+                 wItemIDMin, wItemIDMax, bLevelMin, bLevelMax, bItemProb_M, bItemProb_R, bItemMagicOpt, bItemRareOpt
                  FROM TMONITEMCHART ORDER BY wMonID";
     private const string MonAttrChartSql =
         @"SELECT wID, bLevel, dwMaxHP, dwMaxMP, wDP, wAP, wMinWAP, wMaxWAP, dwAtkSpeed, wMDP, wDL, wMDL, bCriticalPP, wAL, wWDP,
@@ -228,7 +230,7 @@ public sealed partial class GameDatabase
         @"SELECT wID, wMapID, fPosX, fPosY, fPosZ, wDir, bCountry, bCount, bRange, bProb, dwRegion, dwDelay, bEvent, bArea, wLocalID FROM TMONSPAWNCHART";
     private const string MapMonChartSql = @"SELECT wSpawnID, wMonID, bLeader, bEssential, bProb FROM TMAPMONCHART ORDER BY wSpawnID";
     private const string MagicChartSql =
-        @"SELECT bMagic, bRvType, wMaxValue, dwKind, bIsMagic, bIsRare, bExclIndex, bOptionKind, wRareBound FROM TITEMMAGICCHART";
+        @"SELECT bMagic, bRvType, wMaxValue, dwKind, bIsMagic, bIsRare, bExclIndex, bOptionKind, wRareBound, bRefine, bMinLevel, wMaxBound FROM TITEMMAGICCHART";
     // Stat / HP-MP charts (FORMULA_TYPE FTYPE_1ST = 34 is the per-level stat-growth factor).
     private const string FormulaChartSql = @"SELECT bID, dwInit, fRateX, fRateY FROM TFORMULACHART";
     private const string ClassChartSql = @"SELECT bClassID, wSTR, wDEX, wCON, wINT, wWIS, wMEN FROM TCLASSCHART";
@@ -322,7 +324,17 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                     Grade: r.GetByteSafe(23), CanGrade: r.GetByteSafe(24), CanMagic: r.GetByteSafe(25),
                     CanRare: r.GetByteSafe(26), CanWrap: r.GetByteSafe(27), CanColor: r.GetByteSafe(28),
                     DuraMax: r.GetUIntSafe(29), UseTime: r.GetUShortSafe(30), UseType: r.GetByteSafe(31),
-                    ItemCountry: r.GetByteSafe(32), PvPrice: r.GetFloatSafe(33), EquipSkill: r.GetByteSafe(34), Code: r.GetUIntSafe(35));
+                    ItemCountry: r.GetByteSafe(32), PvPrice: r.GetFloatSafe(33), EquipSkill: r.GetByteSafe(34), Code: r.GetUIntSafe(35),
+                    CanGamble: r.GetByteSafe(36), GambleProb: r.GetByteSafe(37), DestroyProb: r.GetByteSafe(38),
+                    GroupId: r.GetByteSafe(39), DropLevel: r.GetByteSafe(40), InitState: r.GetByteSafe(41), Weight: r.GetUShortSafe(42),
+                    ItemProbG: r.GetUShortSafe(43));
+                var t = store.Items[id];
+                if (t.DropLevel != 0)                                                        // C++ m_mapTMONITEM (TMapSvr.cpp:1983)
+                {
+                    if (!store.DropItems.TryGetValue(t.GroupId, out var byLevel)) store.DropItems[t.GroupId] = byLevel = new();
+                    if (!byLevel.TryGetValue(t.DropLevel, out var list)) byLevel[t.DropLevel] = list = new();
+                    list.Add(t);
+                }
             }
 
         await using (var cmd = new SqlCommand(MagicChartSql, c))
@@ -332,7 +344,8 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 byte id = r.GetByteSafe(0);
                 var m = new MagicTemplate(id, r.GetByteSafe(1), r.GetUShortSafe(2), Kind: r.GetUIntSafe(3),
                     IsMagic: r.GetByteSafe(4), IsRare: r.GetByteSafe(5), ExclIndex: r.GetByteSafe(6),
-                    OptionKind: r.GetByteSafe(7), RareBound: r.GetUShortSafe(8));
+                    OptionKind: r.GetByteSafe(7), RareBound: r.GetUShortSafe(8), Refine: r.GetByteSafe(9),
+                    MinLevel: r.GetByteSafe(10), MaxBound: r.GetUShortSafe(11));
                 store.Magics[id] = m;
                 // C++ m_vItemMagic[i] for i in 1..IK_HP-1 (IK_HP = 26): one list per item kind the option fits.
                 for (byte k = 1; k < 26; k++)
@@ -399,6 +412,48 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
         await using (var r = await cmd.ExecuteReaderAsync(ct))
             while (await r.ReadAsync(ct))
                 store.AccessoryMagic.Add(new AccessoryMagicRow(r.GetUIntSafe(0), r.GetByteSafe(1), r.GetUShortSafe(2), r.GetUShortSafe(3)));
+
+        await using (var cmd = new SqlCommand("SELECT bType, bKind, wReplaceID, bCountMax, bMinLevel, bMaxLevel, wProb FROM TGAMBLECHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+            {
+                var key = (r.GetByteSafe(0), r.GetByteSafe(1));
+                if (!store.Gambles.TryGetValue(key, out var list)) store.Gambles[key] = list = new();
+                list.Add(new GambleRow(r.GetUShortSafe(2), r.GetByteSafe(3), r.GetByteSafe(4), r.GetByteSafe(5), r.GetUShortSafe(6)));
+            }
+
+        // C++ CTBLRPSGame (DBAccess.h:4545)
+        await using (var cmd = new SqlCommand(@"SELECT bType, bWinCount, wItemID, dwRewardMoney, wRewardItem_1, wRewardItem_2, bItemCount_1,
+                 bItemCount_2, bProb_Win, bProb_Draw, bProb_Lose, wWinKeep, wWinPeriod FROM TRPSGAMECHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+            {
+                var rps = new RpsGame
+                {
+                    Type = r.GetByteSafe(0), WinCount = r.GetByteSafe(1), ItemId = r.GetUShortSafe(2), RewardMoney = r.GetUIntSafe(3),
+                    RewardItem = { [0] = r.GetUShortSafe(4), [1] = r.GetUShortSafe(5) }, ItemCount = { [0] = r.GetByteSafe(6), [1] = r.GetByteSafe(7) },
+                    Prob = { [0] = r.GetByteSafe(8), [1] = r.GetByteSafe(9), [2] = r.GetByteSafe(10) },
+                    WinKeep = r.GetUShortSafe(11), WinPeriod = r.GetUShortSafe(12),
+                };
+                store.RpsGames[(ushort)(rps.Type | rps.WinCount << 8)] = rps;
+            }
+
+        // C++ CTBLQuestMagicItemChart (DBAccess.h:2180)
+        await using (var cmd = new SqlCommand(@"SELECT dwID, wItemID, bLevel, bGLevel, dwDuraMax, dwDuraCur, bRefineCur, wUseTime, bGradeEffect,
+                 bMagic1, bMagic2, bMagic3, bMagic4, bMagic5, bMagic6, wValue1, wValue2, wValue3, wValue4, wValue5, wValue6,
+                 dwTime1, dwTime2, dwTime3, dwTime4, dwTime5, dwTime6, dwMoney, bGem, bDropLevel FROM TQUESTITEMCHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+            {
+                var magic = new byte[6]; var value = new ushort[6]; var ext = new uint[6];
+                for (int i = 0; i < 6; i++) magic[i] = r.GetByteSafe(9 + i);
+                for (int i = 0; i < 6; i++) value[i] = r.GetUShortSafe(15 + i);
+                for (int i = 0; i < 6; i++) ext[i] = r.GetUIntSafe(21 + i);
+                var item = new FullItemRow(0, 0, 0, r.GetUShortSafe(1), r.GetByteSafe(2), 1, r.GetByteSafe(3), r.GetUIntSafe(4),
+                    r.GetUIntSafe(5), r.GetByteSafe(6), 0, r.GetByteSafe(8), magic, value, ext, r.GetByteSafe(28), 0, 0);
+                uint id = r.GetUIntSafe(0);
+                store.QuestItems[id] = new QuestItemRow(id, item, r.GetUShortSafe(7), r.GetUIntSafe(27), r.GetByteSafe(29));
+            }
 
         await using (var cmd = new SqlCommand(CashGambleChartSql, c))
         await using (var r = await cmd.ExecuteReaderAsync(ct))
@@ -503,6 +558,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 store.LevelPvPMoney[level] = r.GetUIntSafe(6);
                 store.LevelPvPoint[level] = r.GetUShortSafe(7);
                 store.SoulmateCost[level] = (r.GetUIntSafe(8), r.GetUIntSafe(9));
+                store.GambleCost[level] = (r.GetUIntSafe(10), r.GetUIntSafe(11));
             }
 
         await using (var cmd = new SqlCommand(PvPointChartSql, c))
@@ -663,7 +719,9 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 ushort monId = r.GetUShortSafe(0);
                 if (store.MonsterTemplates.TryGetValue(monId, out var mt))
                     mt.DropRows.Add(new MonItemRow(r.GetUShortSafe(2), r.GetUShortSafe(3), r.GetByteSafe(1),
-                        r.GetByteSafe(4), r.GetByteSafe(5), r.GetByteSafe(6), r.GetByteSafe(7)));
+                        r.GetByteSafe(4), r.GetByteSafe(5), r.GetByteSafe(6), r.GetByteSafe(7),
+                        ItemIdMin: r.GetUShortSafe(8), ItemIdMax: r.GetUShortSafe(9), LevelMin: r.GetByteSafe(10), LevelMax: r.GetByteSafe(11),
+                        ProbMagic: r.GetByteSafe(12), ProbRare: r.GetByteSafe(13), MagicOpt: r.GetByteSafe(14), RareOpt: r.GetByteSafe(15)));
             }
 
         var spawnRows = new Dictionary<ushort, MonSpawnRow>();

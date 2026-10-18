@@ -131,19 +131,27 @@ public sealed partial class MapService
     }
 
     /// <summary>A package from the operator with an item (C++ <c>SendDM_POSTRECV_REQ(0, …, POST_PACKATE, …, pItem)</c>).</summary>
-    private async Task MailOperatorItem(uint recvId, string recver, string title, string message, ItemTemplate tpl, byte count,
-        uint silver = 0)
+    private Task MailOperatorItem(uint recvId, string recver, string title, string message, ItemTemplate tpl, byte count,
+        uint silver = 0) => MailOperator(recvId, recver, title, message, new[] { (tpl, count) }, 0, silver, 0);
+
+    /// <summary>C++ <c>SendDM_POSTRECVFROMSVR_REQ</c>: a package from the operator with money and new items, one slot each.</summary>
+    private async Task MailOperator(uint recvId, string recver, string title, string message,
+        IReadOnlyList<(ItemTemplate Tpl, byte Count)> items, uint gold, uint silver, uint cooper)
     {
         if (PostStore is not { } db) return;
-        var item = new Item { TemplateId = tpl.ItemId, Count = count, Template = tpl, DuraMax = tpl.DuraMax, DuraCur = tpl.DuraMax };
-        LinkItemAttr(item);
         long now = UnixNow();
         title = NetString(title);                                          // C++ BuildNetString(NAME_NULL, GetSvrMsg(…)), the text as is
         (int saved, uint postId, uint recv) = await Safe(() => db.SavePostAsync(0, recvId, recver, "Operator", title, message,
-            0, PostPackage, 0, silver, 0, now), (PostInternal, 0u, 0u));
+            0, PostPackage, gold, silver, cooper, now), (PostInternal, 0u, 0u));
         if (saved != 0 || postId == 0) return;
-        var row = BuildItemSave(0, item) with { DlId = _itemIdReady ? GenItemId() : 0, StorageType = StoragePost, StorageId = postId };
-        await Safe(async () => { await db.SavePostItemAsync(recv, row); return 0; }, 0);
+        for (int i = 0; i < items.Count; i++)
+        {
+            var (tpl, count) = items[i];
+            var item = new Item { TemplateId = tpl.ItemId, Count = count, Template = tpl, DuraMax = tpl.DuraMax, DuraCur = tpl.DuraMax };
+            LinkItemAttr(item);
+            var row = BuildItemSave(0, item) with { DlId = _itemIdReady ? GenItemId() : 0, StorageType = StoragePost, StorageId = postId, ItemSlot = (byte)i };
+            await Safe(async () => { await db.SavePostItemAsync(recv, row); return 0; }, 0);
+        }
         NotifyPostRecv(postId, "Operator", recver, title, PostPackage, now);
     }
 

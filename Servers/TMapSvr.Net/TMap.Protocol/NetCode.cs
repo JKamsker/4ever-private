@@ -113,6 +113,8 @@ public static class Msg
     public const ushort CS_MONMONEYTAKE_REQ = CS_MAP + 0x0114; // take the corpse's money
     public const ushort CS_MONITEMTAKE_REQ = CS_MAP + 0x008A;  // take a corpse item: bItemID/bInvenID/bSlotID
     public const ushort CS_MONITEMTAKE_ACK = CS_MAP + 0x008B;  // BYTE result (MONITEMTAKE_RESULT)
+    public const ushort CS_MONITEMLOTTERY_REQ = CS_MAP + 0x008C;  // bAnswer, dwMonID, wItemID (MapService.LootLottery.cs)
+    public const ushort CS_MONITEMLOTTERY_ACK = CS_MAP + 0x008D;  // dwMonID + the item block (no slot)
     public const ushort CS_GETITEM_ACK = CS_MAP + 0x0144;      // an item the player received (WrapPacketClient)
     public const ushort CS_MONACTION_ACK = CS_MAP + 0x0013;    // monster AI move/action (dest + action verb + target)
     public const ushort CS_MONATTACK_ACK = CS_MAP + 0x0031;    // monster announces an attack swing (attacker/target/skill)
@@ -195,6 +197,27 @@ public static class Msg
     public const ushort CS_COMMENT_REQ = CS_MAP + 0x01E0;           // strComment
     public const ushort CS_COMMENT_ACK = CS_MAP + 0x01E1;           // dwCharID, strComment
     public const ushort CS_QUESTPOSEXEC_REQ = CS_MAP + 0x0354;      // dwQuestID, dwTermID
+    // Rock-paper-scissors, batch S5c (CSProtocol.h / MWProtocol.h; MapService.Rps.cs).
+    public const ushort CS_RPSSTART_REQ = CS_MAP + 0x0246;           // bType, bInven, bItemID
+    public const ushort CS_RPSSTART_ACK = CS_MAP + 0x0247;           // bResult, dwGold, dwSilver, dwCooper
+    public const ushort CS_RPSGAME_REQ = CS_MAP + 0x0248;            // bRPS (3 = cash out)
+    public const ushort CS_RPSGAME_ACK = CS_MAP + 0x0249;            // bWinCount, bPlayerRPS, bNpcRPS
+    public const ushort MW_RPSGAME_REQ = MW_BASE + 0x016B;
+    public const ushort MW_RPSGAME_ACK = MW_BASE + 0x016C;
+    public const ushort MW_RPSGAMECHANGE_REQ = MW_BASE + 0x016D;
+    // The soul lottery, batch S5b (CSProtocol.h; MapService.SoulLottery.cs).
+    public const ushort CS_SOULUP_ACK = CS_MAP + 0x027A;             // dwCharID — the soul bar is full
+    public const ushort CS_SOULLOTTERY_REQ = CS_MAP + 0x027B;
+    public const ushort CS_SOULLOTTERY_ACK = CS_MAP + 0x027C;        // dwNumber1..4, dwMoney
+    public const ushort CS_SOULLOTTERY_TRIGGER_REQ = CS_MAP + 0x027D;
+    public const ushort CS_SOULLOTTERY_TRIGGER_ACK = CS_MAP + 0x027E; // dwNumber, dwMoney, bWon
+    // The gamble and the magic shop, batch S5a (CSProtocol.h; MapService.Gamble.cs).
+    public const ushort CS_GAMBLECHECK_REQ = CS_MAP + 0x01A4;        // bInven, bItem, wNpcID
+    public const ushort CS_GAMBLECHECK_ACK = CS_MAP + 0x01A5;        // bResult, bInven, bItem, dwMoney, bDiscountRate
+    public const ushort CS_GAMBLEOPEN_REQ = CS_MAP + 0x01A6;         // bInven, bItem, wNpcID, bNpcInvenID, bNpcItemID
+    public const ushort CS_GAMBLEOPEN_ACK = CS_MAP + 0x01A7;         // bResult, dwGold, dwSilver, dwCooper, bInven, bItem [, item]
+    public const ushort CS_MAGICITEMBUY_REQ = CS_MAP + 0x0256;       // wNpcID, dwQItemID, bCount, bNpcInvenID, bNpcItemID
+    public const ushort CS_MAGICITEMBUY_ACK = CS_MAP + 0x0257;       // bResult, dwGold, dwSilver, dwCooper
     // The auction house, batch S4 (CSProtocol.h:3327; MapService.Auction.cs).
     public const ushort CS_AUCTIONREG_REQ = CS_MAP + 0x01FD;
     public const ushort CS_AUCTIONREG_ACK = CS_MAP + 0x01FE;
@@ -652,6 +675,7 @@ public static class Msg
     public const ushort MW_TMSINVITEASK_REQ = MW_BASE + 0x00CC;
     public const ushort MW_TMSINVITEASK_ACK = MW_BASE + 0x00CD;
     public const ushort MW_SOULMATE_REQ = MW_BASE + 0x0105;
+    public const ushort MW_EVENTMSGLOTTERY_REQ = MW_BASE + 0x0168;    // the event lottery's winners (MapService.SoulLottery.cs)
     public const ushort MW_SOULMATESEARCH_REQ = MW_BASE + 0x0107;
     public const ushort MW_SOULMATESEARCH_ACK = MW_BASE + 0x0108;
     public const ushort MW_SOULMATEREG_REQ = MW_BASE + 0x0109;

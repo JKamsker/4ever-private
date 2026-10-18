@@ -286,7 +286,7 @@ public sealed partial class MapService
         AiCommandKind.Leave => ExecLeave(b, mon, eventHost, rhId, rhType),
         AiCommandKind.Remove => ExecRemove(mon),
         AiCommandKind.Regen => ExecRegen(b, mon, eventHost, rhId, rhType),
-        AiCommandKind.Lottery => AiComplete(b, mon, eventHost, rhId, rhType),   // corpse-item roll deferred
+        AiCommandKind.Lottery => ExecLottery(b, mon, eventHost, rhId, rhType),
         _ => AiComplete(b, mon, eventHost, rhId, rhType),                        // the default no-op command
     };
 

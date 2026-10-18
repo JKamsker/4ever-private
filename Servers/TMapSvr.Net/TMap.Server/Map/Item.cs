@@ -33,6 +33,13 @@ public sealed class Item
     /// Phase 37.</summary>
     public uint StItemId { get; set; }
 
+    /// <summary>C++ <c>m_bMaxRouting</c> / <c>m_mapRoutingJoiner</c> — a corpse item being drawn for in a lottery party
+    /// (MapService.LootLottery.cs): how many may still join, and who joined (char id → key). <see cref="RoutingAsked"/> holds the
+    /// members asked who haven't answered yet (added by the port: the C++ took answers from anyone, more than once).</summary>
+    public byte MaxRouting { get; set; }
+    public Dictionary<uint, uint>? RoutingJoiner { get; set; }
+    public HashSet<uint>? RoutingAsked { get; set; }
+
     public byte ItemSlot { get; set; }      // bItemID — slot within its inventory container
     public ushort TemplateId { get; set; }  // wItemID — template id (joins to TItem.tcd)
     public byte Level { get; set; }

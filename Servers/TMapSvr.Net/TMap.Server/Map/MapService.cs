@@ -245,6 +245,14 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_MONITEMLOTTERY_REQ: OnCS_MONITEMLOTTERY_REQ(session, r); break;                 // MapService.LootLottery.cs
+                case Msg.CS_RPSSTART_REQ: OnCS_RPSSTART_REQ(session, r); break;                             // MapService.Rps.cs
+                case Msg.CS_RPSGAME_REQ: OnCS_RPSGAME_REQ(session, r); break;
+                case Msg.CS_SOULLOTTERY_REQ: OnCS_SOULLOTTERY_REQ(session); break;                          // MapService.SoulLottery.cs
+                case Msg.CS_SOULLOTTERY_TRIGGER_REQ: OnCS_SOULLOTTERY_TRIGGER_REQ(session); break;
+                case Msg.CS_GAMBLECHECK_REQ: OnCS_GAMBLECHECK_REQ(session, r); break;                       // MapService.Gamble.cs
+                case Msg.CS_GAMBLEOPEN_REQ: OnCS_GAMBLEOPEN_REQ(session, r); break;
+                case Msg.CS_MAGICITEMBUY_REQ: OnCS_MAGICITEMBUY_REQ(session, r); break;
                 case Msg.CS_AUCTIONREG_REQ: await OnCS_AUCTIONREG_REQ(session, r); break;                   // MapService.Auction.cs
                 case Msg.CS_AUCTIONREGCANCEL_REQ: await OnCS_AUCTIONREGCANCEL_REQ(session, r); break;
                 case Msg.CS_AUCTIONBID_REQ: await OnCS_AUCTIONBID_REQ(session, r); break;
@@ -422,6 +430,9 @@ public sealed partial class MapService
                 case Msg.MW_PARTYMEMBERRECALLANS_REQ: OnMW_PARTYMEMBERRECALLANS_REQ(r); break;
                 case Msg.MW_PARTYMEMBERRECALL_REQ: OnMW_PARTYMEMBERRECALL_REQ(r); break;
                 case Msg.CT_USERMOVE_ACK: OnCT_USERMOVE_ACK(r); break;
+                case Msg.MW_RPSGAME_REQ: OnMW_RPSGAME_REQ(r); break;                                        // MapService.Rps.cs
+                case Msg.MW_RPSGAMECHANGE_REQ: OnMW_RPSGAMECHANGE_REQ(r); break;
+                case Msg.MW_EVENTMSGLOTTERY_REQ: OnMW_EVENTMSGLOTTERY_REQ(r); break;                        // MapService.SoulLottery.cs
                 case Msg.MW_SOULMATE_REQ: OnMW_SOULMATE_REQ(r); break;                                    // MapService.Soulmate.cs
                 case Msg.MW_SOULMATESEARCH_REQ: OnMW_SOULMATESEARCH_REQ(r); break;
                 case Msg.MW_SOULMATEREG_REQ: OnMW_SOULMATEREG_REQ(r); break;

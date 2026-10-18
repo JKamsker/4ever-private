@@ -47,10 +47,11 @@ public sealed partial class MapService
         GemMax = 5, ItemMagicBaseLevel = 70;
     private const ushort EffectChangeId = 24501, GemKeepItem = 18191, GemGuaranteed = 1337;
     // PROB_TYPE and the SDT_STATUS buffs that raise them
-    private enum Prob { Magic, Refine, Trans, Upgrade, ItemGuard, RareMagic }
+    private enum Prob { Magic, Refine, Trans, Upgrade, ItemGuard, RareMagic, Gamble }
     private const byte SdtStatusItemUpgrade = 42, SdtStatusRefineProb = 58, SdtStatusTransProb = 59,
         SdtStatusMagicProb = 60, SdtStatusItemGuard = 64;
     private const byte MipMagic = 0, MipRare = 1;
+    private const byte ImtScroll = 1, ImtRefine = 2, ImtGamble = 3;   // ITEMMAKE_TYPE: which level an option's value rolls from
 
     /// <summary>The crafting dice (C++ <c>rand()</c>). Replaceable in tests.</summary>
     public Random CraftRng { get; set; } = new();
@@ -361,7 +362,7 @@ public sealed partial class MapService
     // ============================== options ==============================
 
     /// <summary>C++ <c>MakeSpecialItem</c> (TMapSvr.cpp:6991) — roll magic (1–2) or rare (up to 5) options.</summary>
-    private bool MakeSpecialItem(Character ch, Item item, byte kind, ushort magicBuff)
+    private bool MakeSpecialItem(Character ch, Item item, byte kind, ushort magicBuff, byte makeType = ImtScroll)
     {
         if (item.Level != 0) return false;
         if (kind == IkMagicGrade)
@@ -369,7 +370,7 @@ public sealed partial class MapService
             if (item.Magic.Count != 0) return false;
             byte cnt = (byte)Math.Min(Math.Max((byte)(ch.Level * 0.1), (byte)1), (byte)2);
             cnt = (byte)Math.Max(Rand() % cnt + 1, 1);
-            for (int i = 0; i < cnt; i++) SetMagicOpt(ch, item, MipMagic);
+            for (int i = 0; i < cnt; i++) SetMagicOpt(ch, item, MipMagic, makeType);
         }
         else if (kind == IkRareGrade)
         {
@@ -381,7 +382,7 @@ public sealed partial class MapService
             cnt = magicBuff != 0 ? (byte)(maxMagic - had) : cnt > had ? (byte)(cnt - had) : (byte)0;
             var added = new List<byte>();
             for (int i = 0; i < cnt; i++)
-                if (SetMagicOpt(ch, item, MipRare) is var id and not 0) added.Add(id);
+                if (SetMagicOpt(ch, item, MipRare, makeType) is var id and not 0) added.Add(id);
             if (item.Magic.Count == had)
             {
                 item.Magic.RemoveAll(m => added.Contains(m.Id));
@@ -391,9 +392,9 @@ public sealed partial class MapService
         return item.Magic.Count != 0;
     }
 
-    /// <summary>C++ <c>SetMagicOpt</c> (TMapSvr.cpp:7054) with <c>IMT_SCROLL</c> — pick one eligible option not
+    /// <summary>C++ <c>SetMagicOpt</c> (TMapSvr.cpp:7054) — pick one eligible option not
     /// already on the item and not sharing an exclusion group, and roll its value.</summary>
-    private byte SetMagicOpt(Character ch, Item item, byte optType)
+    private byte SetMagicOpt(Character ch, Item item, byte optType, byte makeType = ImtScroll)
     {
         var t = item.Template!;
         if (t.CanMagic == 0 || !_templates.MagicsByKind.TryGetValue(t.Kind, out var pool) || pool.Count == 0) return 0;
@@ -417,8 +418,13 @@ public sealed partial class MapService
         }
         if (chosen is null) return 0;
 
-        int baseLevel = Math.Min(ItemMagicBaseLevel, (int)ch.Level)
-                        - Math.Max(0, 34 - Math.Max(item.EquipLevel, item.GetPowerLevel(_templates)));
+        int baseLevel = makeType switch                                   // C++ SetMagicOpt's bMakeType
+        {
+            ImtScroll => Math.Min(ItemMagicBaseLevel, (int)ch.Level) - Math.Max(0, 34 - Math.Max(item.EquipLevel, item.GetPowerLevel(_templates))),
+            ImtGamble => Math.Min(ItemMagicBaseLevel, (int)item.GLevel),
+            ImtRefine => ItemMagicBaseLevel,
+            _ => 0,
+        };
         ushort value = MakeItemMagicValue(baseLevel, chosen.RareBound);
         if (value == 0) return 0;
         item.Magic.Add(new MagicOption(chosen.MagicId, value, chosen));

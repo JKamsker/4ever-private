@@ -34,7 +34,7 @@ public sealed partial class MapService
         AwardKill(mon);   // exp (solo or party split) + the per-recipient hunt-quest advance
         // C++ TMonster.cpp:785 — dwAttackID, the one who struck the last blow (the keeper when it is not known).
         if (SpawnOf(mon.Id) is { Suspended: true }) OnBattleZoneEvent(mon, killerId != 0 ? killerId : mon.KeeperId);
-        RollLoot(mon);
+        RollLoot(mon, killerId);
         foreach (var p in _state.PlayersAround(mon)) SendCS_DIE_ACK(p, mon.Id, Monster.OtMon);
         ReleaseMaintainMonster(mon, notify: false);   // C++ OnDie → ReleaseMaintain: drop the monster's debuffs
 
@@ -156,6 +156,7 @@ public sealed partial class MapService
     private void GainExp(ClientSession s, Character ch, uint gain)
     {
         if (gain == 0) return;
+        FillSoulBar(s, ch, gain);                // C++ GainExp's soul bar (MapService.SoulLottery.cs)
         ch.Exp += gain;
 
         byte oldLevel = ch.Level;
@@ -165,7 +166,10 @@ public sealed partial class MapService
         if (lvl != oldLevel)
         {
             for (byte i = oldLevel; i < lvl; i++) ch.SkillPoint += _templates.SkillPointOf(i);
+            uint oldWidth = SoulBarWidth(ch);
+            float soulShare = oldWidth == 0 ? 0f : (float)ch.SoulLotExp / oldWidth;
             ch.Level = lvl;
+            ch.SoulLotExp = (uint)(SoulBarWidth(ch) * soulShare);   // C++ fOldSoulPercent
             ch.Hp = MaxHpFor(ch);       // full heal on level up (C++ m_dwHP = GetMaxHP())
             ch.Mp = MaxMpFor(ch);
             foreach (var p in _state.InView(s)) SendCS_LEVEL_ACK(p, ch.CharId, ch.Level);
@@ -178,15 +182,16 @@ public sealed partial class MapService
 
     // ---- money loot ----
 
-    private void RollLoot(Monster mon)
+    private void RollLoot(Monster mon, uint killerId = 0)
     {
         // C++ AddItem (TMonster.cpp:1080) early-returns on an empty drop table — so no drop table ⇒ NO loot
         // at all, money included.
         if (mon.MaxWeight == 0) return;
 
-        // Anti-farm (C++ TMonster.cpp:797): no drops when the owner is ≥25 levels above the monster.
-        if (mon.KeeperId != 0 && _state.FindByChar(mon.KeeperId)?.Char is { } owner
-            && owner.Level > mon.Level && owner.Level - mon.Level >= 25) return;
+        // Anti-farm (C++ TMonster.cpp:797): no drops when the best-levelled looter is ≥25 levels above the monster
+        // (fixed: a party's keeper id was looked up as a character).
+        var (country, maxLevel, addMagic, addDrop) = DropContext(mon, killerId);
+        if (maxLevel > mon.Level && maxLevel - mon.Level >= 25) return;
 
         // Money roll: m_bMoneyProb% chance, valid [min, max) range.
         if (mon.MoneyProb > LootRng.Next(100) && mon.MaxMoney > mon.MinMoney)
@@ -195,7 +200,7 @@ public sealed partial class MapService
         // Item roll: bDropCount attempts, each gated by m_bItemProb; weighted pick + the four "normal" gates.
         for (int i = 0; i < mon.DropCount; i++)
         {
-            if (mon.ItemProb <= LootRng.Next(100)) continue;               // C++ if(bItemProb + add > rand%100)
+            if (mon.ItemProb + addDrop <= LootRng.Next(100)) continue;     // C++ if(bItemProb + nAddItemDrop > rand%100)
             byte blank = mon.CorpseInven.GetBlankPos();
             if (blank == Proto.InvalidSlot) return;                        // corpse full
 
@@ -204,11 +209,7 @@ public sealed partial class MapService
             if (!(row.Prob1 > LootRng.Next(100) && row.Prob2 > LootRng.Next(100)
                   && row.Prob3 > LootRng.Next(100) && row.Prob4 > LootRng.Next(100))) continue;
 
-            // This slice: fixed chart-type items only. Ranged MonChoiceItem picks (ItemID 0), pre-built magic
-            // items (ChartType 0), and MakeSpecialItem magic/rare option rolls are deferred.
-            if (row.ChartType == 0 || row.ItemId == 0) continue;
-            var item = new Item { ItemSlot = blank, TemplateId = row.ItemId, Count = 1, Template = _templates.Item(row.ItemId) };
-            LinkItemAttr(item);
+            if (MakeDropItem(mon, row, blank, country, addMagic) is not { } item) return;   // MapService.Drops.cs
             mon.CorpseInven.Items.Add(item);
         }
     }
@@ -333,6 +334,13 @@ public sealed partial class MapService
             SendCS_MONITEMTAKE_ACK(s, MonItemTakeResult.NotFound);
             return;
         }
+        if (item.MaxRouting != 0) return;     // being drawn for (C++ TMapSvr.cpp:9139)
+        if (StartLootLottery(s, ch, mon, item))   // PT_LOTTERY (MapService.LootLottery.cs)
+        {
+            SendCS_MONITEMLIST_ACK(s, mon, update: 1);
+            SendCS_MONITEMTAKE_ACK(s, MonItemTakeResult.Success);
+            return;
+        }
 
         var one = new[] { item };
         if (!CanPush(ch, one)) // bags full ⇒ can't take (C++ MIT_FULLINVEN)
@@ -345,13 +353,17 @@ public sealed partial class MapService
         mon.CorpseInven.Items.Remove(item);   // C++ EraseItem
         PushTItem(s, one);                     // place into the taker's bags (+ CS_ADDITEM/UPDATEITEM)
         SendCS_GETITEM_ACK(s, item, ch.CharId);
-        // Party-loot notification: tell the looter's near party members what was taken (C++ PartyMonItemTake).
-        if (mon.KeeperType == OwnerParty)
-            foreach (var p in _state.Neighbors(s))
-                if (p.Char is { } c && c.GetPartyId() != 0 && c.GetPartyId() == ch.GetPartyId())
-                    SendCS_PARTYITEMTAKE_ACK(p, ch.CharId, item);
+        if (mon.KeeperType == OwnerParty) PartyMonItemTake(s, ch, item);
         SendCS_MONITEMLIST_ACK(s, mon, update: 1);
         SendCS_MONITEMTAKE_ACK(s, MonItemTakeResult.Success);
+    }
+
+    /// <summary>C++ <c>PartyMonItemTake</c>: tell the looter's near party members what was taken.</summary>
+    private void PartyMonItemTake(ClientSession s, Character ch, Item item)
+    {
+        foreach (var p in _state.Neighbors(s))
+            if (p.Char is { } c && c.GetPartyId() != 0 && c.GetPartyId() == ch.GetPartyId())
+                SendCS_PARTYITEMTAKE_ACK(p, ch.CharId, item);
     }
 
     /// <summary>C++ corpse keeper access rule: for a public (owner-0) corpse item, the private keeper char may
@@ -392,7 +404,7 @@ public sealed partial class MapService
         w.WriteUInt32(ch.Exp);                                    // current total exp
         w.WriteUInt32(_templates.LevelExpOf(ch.Level - 1) ?? 0);  // current level's exp floor
         w.WriteUInt32(_templates.LevelExpOf(ch.Level) ?? 0);      // next-level threshold (ceiling)
-        w.WriteUInt32(0);                                         // soul-lot exp (deferred)
+        w.WriteUInt32(ch.SoulLotExp);                             // the soul bar (MapService.SoulLottery.cs)
         s.Send(w);
     }
 
@@ -408,7 +420,7 @@ public sealed partial class MapService
         w.WriteUInt32(cooper);
         // Owner filter (C++ CSSender.cpp:3024): a viewer sees public items (OwnerId 0) + those locked to them.
         uint owner = s.Char?.CharId ?? 0;
-        var items = mon.CorpseInven.Items.Where(it => it.OwnerId == 0 || it.OwnerId == owner).ToList();
+        var items = mon.CorpseInven.Items.Where(it => it.MaxRouting == 0 && (it.OwnerId == 0 || it.OwnerId == owner)).ToList();
         w.WriteByte((byte)items.Count);
         foreach (var it in items) it.WrapPacketClient(w, owner);
         s.Send(w);

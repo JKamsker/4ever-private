@@ -38,7 +38,13 @@ public sealed record ItemTemplate(ushort ItemId, byte RefineMax, float[] Revisio
     // m_bEquipSkill: wearing it needs a weapon mastery for its kind (a learned SDT_EQUIP skill) — else MI_NOSKILL.
     byte EquipSkill = 0,
     // The auction category (m_dwCode: type << 16 | class mask << 8 | kind — MapService.Auction.cs).
-    uint Code = 0);
+    uint Code = 0,
+    // Gambling (MapService.Gamble.cs): whether a sealed item may be unsealed (m_bCanGamble), the chance to turn into another item
+    // (m_bGambleProb) and, when no option comes out, to be destroyed (m_bDestroyProb).
+    byte CanGamble = 0, byte GambleProb = 0, byte DestroyProb = 0,
+    // Monster drops (MapService.Drops.cs): the drop group and level it may be picked from (m_bGroupID / m_bDropLevel, 0 = never),
+    // whether it drops at all (m_bInitState), its pick weight (m_wWeight) and the chance a drop comes sealed (m_wItemProb_G).
+    byte GroupId = 0, byte DropLevel = 0, byte InitState = 0, ushort Weight = 0, ushort ItemProbG = 0);
 
 /// <summary>
 /// An item-attribute row from <c>TITEMATTRCHART</c> (C++ <c>CTBLItemAttrChart</c> → <c>tagITEMATTR</c>,
@@ -58,7 +64,32 @@ public sealed record MagicTemplate(byte MagicId, byte RvType, ushort MaxValue,
     // Crafting (C++ TITEMMAGIC): the item kinds it may appear on (dwKind bit kind-1), whether a magic / rare
     // scroll may roll it, the exclusion group two options on one item may not share, the option kind (non-zero
     // blocks upgrading), and the value bound a rolled option scales from.
-    uint Kind = 0, byte IsMagic = 0, byte IsRare = 0, byte ExclIndex = 0, byte OptionKind = 0, ushort RareBound = 0);
+    uint Kind = 0, byte IsMagic = 0, byte IsRare = 0, byte ExclIndex = 0, byte OptionKind = 0, ushort RareBound = 0,
+    // m_bRefine: an option a catalyst (a gambled refine item) may roll (CTItem::Catalyzer).
+    byte Refine = 0,
+    // Monster drops: the least monster level the option may roll at (m_bMinLevel) and the bound of a normal roll (m_wMaxBound).
+    byte MinLevel = 0, ushort MaxBound = 0);
+
+/// <summary>A gamble outcome (C++ <c>TGAMBLE</c> from <c>TGAMBLECHART</c>): the item it becomes, how many at most, the level band
+/// (unused by the C++) and its weight.</summary>
+public sealed record GambleRow(ushort ReplaceId, byte CountMax, byte MinLevel, byte MaxLevel, ushort Prob);
+
+/// <summary>A rock-paper-scissors step (C++ <c>TRPSGAME</c> from <c>TRPSGAMECHART</c>, keyed by type and wins so far): the ticket (win 0
+/// only), what cashing out pays, and the cumulative odds (win, draw, out of lose) — changed live by the world (<c>MW_RPSGAMECHANGE_REQ</c>).</summary>
+public sealed class RpsGame
+{
+    public byte Type, WinCount;
+    public ushort ItemId;
+    public uint RewardMoney;
+    public ushort[] RewardItem = new ushort[2];
+    public byte[] ItemCount = new byte[2];
+    public byte[] Prob = new byte[3];
+    public ushort WinKeep, WinPeriod;
+}
+
+/// <summary>A prebuilt magic item (C++ <c>m_mapTQuestItem</c> from <c>TQUESTITEMCHART</c>): sold by the magic shops and given by
+/// quests; how long it lasts (days, 0 = forever) and its price.</summary>
+public sealed record QuestItemRow(uint Id, FullItemRow Item, ushort UseTime, uint Money, byte DropLevel = 0);
 
 /// <summary>One cash-gamble prize (C++ <c>TCASHGAMBLE</c> from <c>TVIEW_CASHGAMBLECHART</c>): its weight, how many
 /// days the prize lasts (0 = forever) and the prize item itself.</summary>
@@ -119,6 +150,21 @@ public sealed class TemplateStore
 
     // The soulmate fees (C++ CTBLLevelChart m_dwSearchCost / m_dwRegCost, keyed by bLevel; MapService.Soulmate.cs).
     public Dictionary<int, (uint Search, uint Reg)> SoulmateCost { get; } = new();
+
+    // The gamble fees (C++ CTBLLevelChart m_dwGambleCost / m_dwRepCost, keyed by bLevel = the item's gamble level).
+    public Dictionary<int, (uint Gamble, uint Rep)> GambleCost { get; } = new();
+
+    /// <summary>C++ <c>m_mapTGAMBLE</c>: the outcomes by (item type, item kind).</summary>
+    public Dictionary<(byte Type, byte Kind), List<GambleRow>> Gambles { get; } = new();
+
+    /// <summary>C++ <c>m_mapRPSGame</c>: the rock-paper-scissors steps by <c>MAKEWORD(type, winCount)</c>.</summary>
+    public Dictionary<ushort, RpsGame> RpsGames { get; } = new();
+
+    /// <summary>C++ <c>m_mapTMONITEM[group][dropLevel]</c>: the items a ranged drop row may pick, by group then drop level (ascending).</summary>
+    public Dictionary<byte, SortedDictionary<byte, List<ItemTemplate>>> DropItems { get; } = new();
+
+    /// <summary>C++ <c>m_mapTQuestItem</c>: the prebuilt magic items by id.</summary>
+    public Dictionary<uint, QuestItemRow> QuestItems { get; } = new();
 
     /// <summary>The exp threshold to leave level <paramref name="level"/> (C++ <c>FindTLevel(level)-&gt;m_dwEXP</c>),
     /// or null if the level chart has no such row (DB-free / above the top ⇒ no more level-ups).</summary>

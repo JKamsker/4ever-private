@@ -112,6 +112,27 @@ bid. A puts a second sword up and B buys it at the direct price: A is paid less 
 third lot with no time and no bidder ends on its own and goes back to A. Needs migration 020 (`TSaveTax` overflowed on
 the baseline's tax totals). The swords, letters, lots and both bots' money are put back. 15 checks.
 
+## Scenario: minigame (gamble, magic shop, soul lottery, rock-paper-scissors)
+
+`--Bot:Scenario=minigame` (same arguments; only A plays) has its gamble fee quoted at Naria (22228) and gambles a sealed potion
+(6704, gamble level 40: 2842 copper) that always turns into another (8614) — the change chance needs a real NPC id, as in the
+C++. A buys a sabre at the magic shop (NPC 26319, 10 000 copper, 3 days), asks for the soul lottery with an empty bar (no
+answer), then plays rock-paper-scissors with tickets (9416) until it wins once and cashes out: 2 silver by the operator's mail.
+The potion, sabre, tickets, letter and A's money are put back.
+
+A second part (`MinigameKillScenario.cs`) fights on the field by spawn 4200. A is set to level 1 and kills level-2 monsters
+(770) until its soul bar is full, then draws the soul lottery. A and B form a lottery party; monster 770's drop of item 9407 is
+made sure (its `TMONITEMCHART` odds raised, the map restarted to load it). A takes two drops: B says no the first time (A gets
+it at once) and nothing the second (the corpse's AI draws after its 15 seconds). The odds, A's level, exp and skill points,
+both positions and the drawn items are put back, and the map restarted again. 30 checks in all.
+
+## Scenario: drops (monster drops with the real chart)
+
+`--Bot:Scenario=drops` (same arguments; only A) puts A by spawn 4200 (map 0) and kills up to 20 level-2 monsters (770). Their
+drop rows are almost all ranged (no item: a random one of the row's group, drop levels and id range), so the run checks that
+items drop, that each fits one of the monster's rows (checked against `TITEMCHART`), and that the first one, taken, is saved
+after logout. Nothing is changed in the charts. The item and A's position are put back. 4 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

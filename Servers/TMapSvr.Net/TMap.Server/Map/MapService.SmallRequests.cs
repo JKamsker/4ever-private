@@ -20,7 +20,7 @@ namespace TMap.Server.Map;
 /// <item><b>An event prize by mail</b> (<c>MW_WORLDPOSTSEND_REQ</c> <c>WPT_LOTITEM</c>): the world's lottery winner gets the item
 /// in a package from the operator.</item>
 /// <para><c>CS_ACTEND_REQ</c> is a no-op (its C++ body is commented out). <b>Not ported:</b> the chat-ban check on the comment
-/// (chat bans are not ported), the party loot lottery (<c>CS_MONITEMLOTTERY_REQ</c>, with the party loot modes),
+/// (chat bans are not ported), the chief/order party loot modes,
 /// <c>CS_STOPTHECLOCK_REQ</c> (a cash-shop item), and what only happens across several map servers: <c>MW_ADDITEM_REQ</c>
 /// (loot), <c>MW_MONSTERDIE_REQ</c> (party exp) and <c>MW_MAGICMIRROR_REQ</c> (a reflected hit).</para>
 /// </summary>

@@ -24,9 +24,9 @@ public sealed class Auction
 }
 
 /// <summary>
-/// The auction house (C++ CSHandler.cpp:15495–16330, SSHandler.cpp:16158–17060, TNpc.cpp:105–290, TMapSvr.cpp:4055–4248). <b>The
-/// C++ 5.0 switches it off</b> — every handler returns at once — so this ports the code under that early return, as it would run;
-/// <see cref="AuctionEnabled"/> turns it back off.
+/// The auction house (C++ CSHandler.cpp:15495–16330, SSHandler.cpp:16158–17060, TNpc.cpp:105–290, TMapSvr.cpp:4055–4248). On in
+/// the C++ 5.0 map server (the early returns are only for <c>BOW_COMPILE_MODE</c>, the BoW/BR builds); <see cref="AuctionEnabled"/>
+/// can turn it off.
 /// <list type="bullet">
 /// <item><b>Selling</b> (<c>CS_AUCTIONREG_REQ</c>) at an auctioneer of one's own country: a direct price (≥ the start price), the
 /// item leaves the bag, 2% of the direct price is paid at once. A stack is only sold unit by unit at the start price.</item>

@@ -52,6 +52,9 @@ public sealed partial class MapService
                 foreach (var portal in def.ItemIds)
                     if (_templates.Portals.ContainsKey(portal)) npc.PortalId = portal;
             if (def.Type == TnpcMonster) InitMonsterShop(npc);
+            if (def.Type == TnpcMagicItem)                                                       // MapService.Gamble.cs
+                foreach (var qid in def.ItemIds)
+                    if (_templates.QuestItems.TryGetValue(qid, out var qi)) npc.MagicItems[qid] = qi;
             npc.RequiredItemId = def.ItemId;
             _state.AddNpc(npc);
         }

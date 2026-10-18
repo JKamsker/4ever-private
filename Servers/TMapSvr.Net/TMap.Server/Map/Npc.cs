@@ -32,6 +32,10 @@ public sealed class Npc
     /// NPC's <c>TNPCITEMCHART</c> ids resolved against the loaded item chart.</summary>
     public Dictionary<ushort, ItemTemplate> Items { get; } = new();
 
+    /// <summary>C++ <c>m_mapMagicItem</c> — for a magic shop (<c>TNPC_MAGICITEM</c>), its prebuilt magic items by id
+    /// (MapService.Gamble.cs).</summary>
+    public Dictionary<uint, QuestItemRow> MagicItems { get; } = new();
+
     /// <summary>C++ <c>m_mapSkill</c> — for a skill trainer (<c>TNPC_SKILL_MASTER</c>/<c>TNPC_SKILL_RENT</c>), the skills
     /// it teaches: its <c>TNPCITEMCHART</c> ids resolved against the skill chart.</summary>
     public Dictionary<ushort, SkillTemplate> Skills { get; } = new();

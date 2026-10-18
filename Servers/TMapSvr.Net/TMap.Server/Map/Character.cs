@@ -236,6 +236,16 @@ public sealed class Character
     public List<uint> AuctionInterest = new(), AuctionBid = new(), AuctionReg = new();
     public bool AuctionLoaded;
 
+    /// <summary>C++ <c>m_dwSoulLotEXP</c> / <c>m_bUseLot</c> / <c>m_dwLotNumber1..4</c> / <c>m_dwLotMoney</c> — the soul bar and the soul
+    /// lottery drawn (MapService.SoulLottery.cs). Memory only, as in the C++.</summary>
+    public uint SoulLotExp;
+    public bool UseLot;
+    public uint[]? LotNumbers;
+    public uint LotMoney;
+
+    /// <summary>C++ <c>m_bRPSType</c> / <c>m_bRPSWin</c> — the rock-paper-scissors game being played (MapService.Rps.cs), 0 = none.</summary>
+    public byte RpsType, RpsWin;
+
     /// <summary>C++ <c>m_vRemainSkill</c> — the learned skills whose rows apply for good (<c>IsRemainType</c>). The C++
     /// fills it with every such skill at login and, on learning one, first drops another of the same
     /// <c>m_bPriority</c>; this reads the learned list instead (the live remain skills, 41-46, are one per class).</summary>
