@@ -247,6 +247,16 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTAPPLYINFO_REQ: OnCS_TOURNAMENTAPPLYINFO_REQ(session); break;           // MapService.Tournament.cs
+                case Msg.CS_TOURNAMENTAPPLY_REQ: OnCS_TOURNAMENTAPPLY_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTPARTYLIST_REQ: OnCS_TOURNAMENTPARTYLIST_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTPARTYADD_REQ: OnCS_TOURNAMENTPARTYADD_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTPARTYDEL_REQ: OnCS_TOURNAMENTPARTYDEL_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTEVENTLIST_REQ: OnCS_TOURNAMENTEVENTLIST_REQ(session); break;
+                case Msg.CS_TOURNAMENTEVENTINFO_REQ: OnCS_TOURNAMENTEVENTINFO_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTEVENTJOIN_REQ: OnCS_TOURNAMENTEVENTJOIN_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTCHEER_REQ: OnCS_TOURNAMENTCHEER_REQ(session, r); break;
+                case Msg.CS_TOURNAMENTSCHEDULE_REQ: OnCS_TOURNAMENTSCHEDULE_REQ(session); break;
                 case Msg.CS_ARENA_REQ: OnCS_ARENA_REQ(session, r); break;                                   // MapService.Arena.cs
                 case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
                 case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
@@ -439,6 +449,11 @@ public sealed partial class MapService
                 case Msg.MW_PARTYMEMBERRECALLANS_REQ: OnMW_PARTYMEMBERRECALLANS_REQ(r); break;
                 case Msg.MW_PARTYMEMBERRECALL_REQ: OnMW_PARTYMEMBERRECALL_REQ(r); break;
                 case Msg.CT_USERMOVE_ACK: OnCT_USERMOVE_ACK(r); break;
+                case Msg.MW_TOURNAMENT_REQ: OnMW_TOURNAMENT_REQ(r); break;                                  // MapService.Tournament.cs
+                case Msg.MW_TOURNAMENTINFO_REQ: OnMW_TOURNAMENTINFO_REQ(r); break;
+                case Msg.MW_TOURNAMENTMATCH_REQ: OnMW_TOURNAMENTMATCH_REQ(r); break;
+                case Msg.MW_TOURNAMENTENABLE_REQ: OnMW_TOURNAMENTENABLE_REQ(r); break;
+                case Msg.MW_TOURNAMENTBATPOINT_REQ: OnMW_TOURNAMENTBATPOINT_REQ(r); break;
                 case Msg.MW_WARCOUNTRYBALANCE_REQ: OnMW_WARCOUNTRYBALANCE_REQ(r); break;                    // MapService.CountryBalance.cs
                 case Msg.MW_RECALCCOUNTRYBALANCE_ACK: OnMW_RECALCCOUNTRYBALANCE_ACK(r); break;
                 case Msg.MW_EVENTUPDATE_REQ: OnMW_EVENTUPDATE_REQ(r); break;                                // MapService.Events.cs

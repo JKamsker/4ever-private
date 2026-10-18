@@ -164,6 +164,13 @@ before that does nothing. A and B bring C and D down: C's side is sent out, and 
 A's side, the ranking answers, and A gives up the waiting arena — out, with the fee back by mail. Positions, money, HP and the
 letters are put back. Takes about two minutes. 15 checks.
 
+## Scenario: tournament (the windows)
+
+`--Bot:Scenario=tournament` (same arguments; only A) asks for the tournament schedule (the world's real steps, relayed by the
+map), then for the sign-up window — answered as the world's step allows (sign-up info, party list or match list) — and is
+refused when signing up for an entry that does not exist. Nothing is written. 3 checks. The matches themselves are not yet
+covered (batch S6e-2).
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

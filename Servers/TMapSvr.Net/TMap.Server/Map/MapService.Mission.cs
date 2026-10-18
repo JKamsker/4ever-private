@@ -136,13 +136,13 @@ public sealed partial class MapService
 
     /// <summary>C++ <c>SendDM_POSTRECVFROMSVR_REQ</c>: a package from the operator with money and new items, one slot each.</summary>
     private async Task MailOperator(uint recvId, string recver, string title, string message,
-        IReadOnlyList<(ItemTemplate Tpl, byte Count)> items, uint gold, uint silver, uint cooper)
+        IReadOnlyList<(ItemTemplate Tpl, byte Count)> items, uint gold, uint silver, uint cooper, byte type = PostPackage)
     {
         if (PostStore is not { } db) return;
         long now = UnixNow();
         title = NetString(title);                                          // C++ BuildNetString(NAME_NULL, GetSvrMsg(…)), the text as is
         (int saved, uint postId, uint recv) = await Safe(() => db.SavePostAsync(0, recvId, recver, "Operator", title, message,
-            0, PostPackage, gold, silver, cooper, now), (PostInternal, 0u, 0u));
+            0, type, gold, silver, cooper, now), (PostInternal, 0u, 0u));
         if (saved != 0 || postId == 0) return;
         for (int i = 0; i < items.Count; i++)
         {
@@ -152,7 +152,7 @@ public sealed partial class MapService
             var row = BuildItemSave(0, item) with { DlId = _itemIdReady ? GenItemId() : 0, StorageType = StoragePost, StorageId = postId, ItemSlot = (byte)i };
             await Safe(async () => { await db.SavePostItemAsync(recv, row); return 0; }, 0);
         }
-        NotifyPostRecv(postId, "Operator", recver, title, PostPackage, now);
+        NotifyPostRecv(postId, "Operator", recver, title, type, now);
     }
 
     /// <summary>C++ <c>OnMW_MISSIONOCCUPY_REQ</c> (SSHandler.cpp:11439): the news for everyone (who took it, or that nobody did) and

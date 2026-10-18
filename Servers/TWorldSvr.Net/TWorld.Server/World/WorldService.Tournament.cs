@@ -36,7 +36,7 @@ public sealed partial class WorldService
         switch (protocol)
         {
             case Msg.MW_TOURNAMENTSCHEDULE_ACK:
-                session.Send(BuildTournamentInfo());
+                TournamentSchedule(session, ch);
                 break;
             case Msg.MW_TOURNAMENTAPPLYINFO_ACK:
                 TournamentApplyInfo(session, ch);
@@ -185,6 +185,22 @@ public sealed partial class WorldService
         session.Send(w.ToArray());
 
         TournamentApplyInfo(session, ch);
+    }
+
+    /// <summary>C++ <c>TournamentSchedule</c> (TWorldSvr.cpp:6937): the schedule window — the group and step now, and each step with a
+    /// period and its start — relayed to the asker (fixed: the port sent the whole tournament info, which on the map resets the
+    /// bracket and sends everyone in a tournament map home).</summary>
+    private void TournamentSchedule(ServerSession session, Character ch)
+    {
+        var t = _state.Tournament!;
+        if (t.Steps.Count == 0) return;
+        var w = new PacketWriter(Msg.MW_TOURNAMENT_REQ);
+        w.WriteUInt32(ch.CharId); w.WriteUInt32(ch.Key); w.WriteUInt16(Msg.MW_TOURNAMENTSCHEDULE_REQ);
+        w.WriteByte(t.Group); w.WriteByte(t.Step);
+        var steps = t.Steps.Where(st => st.Period != 0).ToList();
+        w.WriteByte((byte)steps.Count);
+        foreach (var st in steps) { w.WriteByte(st.Group); w.WriteByte(st.StepId); w.WriteInt64(st.Start); }
+        session.Send(w.ToArray());
     }
 
     private void TournamentApplyInfo(ServerSession session, Character ch)

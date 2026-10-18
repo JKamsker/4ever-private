@@ -55,7 +55,7 @@ public sealed partial class MapService
     private readonly MonthRanker[,] _monthRank = NewBoard(CountryCount, MonthRankCount);
     private readonly MonthRanker[,] _firstGrade = NewBoard(CountryCount, FirstGradeGroupCount);
     private readonly MonthRanker[,,] _fameRank = NewFame();
-    private const byte FirstGroupCount = FirstGradeGroupCount;    // C++ m_bFirstGroupCount, never changed
+    private byte FirstGroupCount { get; set; } = FirstGradeGroupCount;   // C++ m_bFirstGroupCount (set by MW_TOURNAMENTINFO_REQ)
 
     private static MonthRanker[,] NewBoard(int a, int b)
     {

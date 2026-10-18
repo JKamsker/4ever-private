@@ -94,6 +94,34 @@ public class TournamentTests
     }
 
     [Fact]
+    public async Task Schedule_AnswersWithTheStepsNotTheWholeInfo()
+    {
+        const uint charId = 9602, key = 0xCE;
+        await using var host = new WorldTestHost(s =>
+        {
+            var t = SeedTournament();
+            t.Group = 1; t.Step = (byte)TnmtStep.Normal;
+            t.Steps.Add(new TournamentStep { Group = 1, StepId = 2, Period = 3600, Start = 1_000 });
+            t.Steps.Add(new TournamentStep { Group = 1, StepId = 3, Period = 0, Start = 5_000 });      // no period: not shown
+            s.Tournament = t;
+        });
+        using var map = await host.ConnectAsync();
+        Connect(map, 1);
+        Assert.Equal(Msg.MW_TOURNAMENTINFO_REQ, map.Receive(TimeSpan.FromSeconds(5)).Id);
+        EnterChar(map, charId, key);
+
+        var req = new PacketWriter(Msg.MW_TOURNAMENT_ACK);
+        req.WriteUInt32(charId); req.WriteUInt32(key); req.WriteUInt16(Msg.MW_TOURNAMENTSCHEDULE_ACK);
+        map.Send(req);
+
+        var res = map.Receive(TimeSpan.FromSeconds(5));
+        Assert.Equal(Msg.MW_TOURNAMENT_REQ, res.Id);
+        Assert.Equal((charId, key, Msg.MW_TOURNAMENTSCHEDULE_REQ), (res.ReadUInt32(), res.ReadUInt32(), res.ReadUInt16()));
+        Assert.Equal(((byte)1, (byte)TnmtStep.Normal, (byte)1), (res.ReadByte(), res.ReadByte(), res.ReadByte()));
+        Assert.Equal(((byte)1, (byte)2, 1_000L), (res.ReadByte(), res.ReadByte(), res.ReadInt64()));
+    }
+
+    [Fact]
     public async Task Apply_DuringNormalStep_RegistersPlayer()
     {
         const uint charId = 9601, key = 0xCD;
