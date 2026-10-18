@@ -1147,7 +1147,7 @@ ITDetailInfoPtr CQuestNewDlg::GetTInfoKey(const CPoint& point)
 		if (!pTREWARD)
 			continue;
 
-		if (pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1))
+		if (pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1))
 		{
 			switch (pTREWARD->m_bType)
 			{
@@ -2171,7 +2171,7 @@ void CQuestList::DeleteQuestList()
 void CQuestList::LoadComponent()
 {
 	if (!m_pFrame)
-		::MessageBox( NULL, "No Component(ASSERT)", NULL, MB_OK);
+		CTWindow::ShowMessageBox("No Component(ASSERT)");
 
 	for (BYTE i = 0; i < 255; ++i)
 	{

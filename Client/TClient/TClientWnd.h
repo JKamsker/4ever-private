@@ -19,7 +19,7 @@ public:
 	CReleaseChart m_vReleaseChart;
 
 public:
-	HCURSOR m_vTCURSOR[TCURSOR_COUNT];						// Cursor pool
+	HTCURSOR m_vTCURSOR[TCURSOR_COUNT];						// Cursor pool
 
 	VTCHARINFO m_vTCHARINFO;								// Character information pool
 	TCHARINFO m_vNEWTCHAR;									// New character pool

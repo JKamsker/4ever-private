@@ -16,7 +16,7 @@ public:
 		INT				m_nIndex;
 		FP_BTN_ACT		m_fpAct;
 		BOOL			m_bDown;
-		DWORD			m_dwUser;
+		DWORD_PTR			m_dwUser;
 		DWORD			m_dwMenuID;
 	
 	private:
@@ -25,7 +25,7 @@ public:
 
 	public:
 		INT GetButtonIndex() const	{ return m_nIndex; }
-		DWORD GetUserData() const	{ return m_dwUser; }
+		DWORD_PTR GetUserData() const	{ return m_dwUser; }
 
 	private:
 		CTButtonMP(CTMiniPopupDlg* pHost, FRAMEDESC_SHAREDPTR pDesc);
@@ -49,7 +49,7 @@ public:
 
 public:
 	void AddButton(const CString& strTitle, DWORD dwMenuID);
-	void AddButton(const CString& strTitle, FP_BTN_ACT pBtnFunc, DWORD dwUserData=0);
+	void AddButton(const CString& strTitle, FP_BTN_ACT pBtnFunc, DWORD_PTR dwUserData=0);
 	void ClearButtons();
 	
 	void SetButtonColor(INT nIdx, DWORD dwColor);

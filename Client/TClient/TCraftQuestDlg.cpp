@@ -194,7 +194,7 @@ HRESULT CTCraftQuestDlg::Render( DWORD dwTickCount )
 		{
 			if( m_pRewardList->GetItemCount() > 0 && nIndex >= 0 )
 			{
-				DWORD dwValue = m_pRewardList->GetItemData( nIndex, i);
+				DWORD_PTR dwValue = m_pRewardList->GetItemData( nIndex, i);
 
 				if( dwValue == -1 )
                     pTREWARD[i] = NULL;
@@ -348,7 +348,7 @@ ITDetailInfoPtr CTCraftQuestDlg::GetTInfoKey(const CPoint& point)
 		if( m_pRewardList->GetItemCount() > 0 && nIndex >= 0 )
 			pTREWARD = (LPTREWARD) m_pRewardList->GetItemData( nIndex, i );
 
-		if(pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) )
+		if(pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) )
 		{
 			switch(pTREWARD->m_bType)
 			{
@@ -389,7 +389,7 @@ BOOL CTCraftQuestDlg::GetTChatInfo(const CPoint& point, TCHATINFO& outInfo)
 		if( m_pRewardList->GetItemCount() > 0 && nIndex >= 0 )
 			pTREWARD = (LPTREWARD) m_pRewardList->GetItemData( nIndex, i );
 
-		if(pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) )
+		if(pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) )
 		{
 			if( m_pITEM[i]->HitTest(point) )
 			{
@@ -609,7 +609,7 @@ void CTCraftQuestDlg::ResetTQUEST( LPTQUEST pTQuest )
 					m_pRewardList->SetItemString( nLine, nCol, (LPCTSTR)strREWARD );
 				}
 
-				m_pRewardList->SetItemData( nLine, nCol, (DWORD) pTQuest->m_vTREWARD[i] );
+				m_pRewardList->SetItemData( nLine, nCol, (DWORD_PTR) pTQuest->m_vTREWARD[i] );
 				++nRewardItemCount;
 			}
 		}
@@ -940,8 +940,8 @@ void CTCraftQuestDlg::AddItemToCategory( DWORD dwCategoryID, LPTQUEST pTQuest )
 
 void CTCraftQuestDlg::AddItemToList( LPTQUEST pTQuest )
 {
-	int index = m_pQLIST->AddItem( pTQuest->m_strTITLE, (DWORD)pTQuest, COL_ITEM );
-	m_pQLIST->SetItemDataAllColumn( index, (DWORD)pTQuest );
+	int index = m_pQLIST->AddItem( pTQuest->m_strTITLE, (DWORD_PTR)pTQuest, COL_ITEM );
+	m_pQLIST->SetItemDataAllColumn( index, (DWORD_PTR)pTQuest );
 	m_pQLIST->SetUserColor( index, COL_ITEM, TCOLOR_QUESTCLASS );
 }
 
@@ -976,7 +976,7 @@ void CTCraftQuestDlg::OpenCategory( DWORD dwCategoryID )
 
 LPTQUEST CTCraftQuestDlg::GetTQUEST(INT nIdx)
 {
-	DWORD dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
+	DWORD_PTR dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
 
 	if( dwDATA != (DWORD)-1 )
 		return (LPTQUEST) dwDATA;
@@ -986,7 +986,7 @@ LPTQUEST CTCraftQuestDlg::GetTQUEST(INT nIdx)
 
 CTClientQClass* CTCraftQuestDlg::GetQCLASS(INT nIdx)
 {
-	DWORD dwDATA = m_pQLIST->GetItemData(nIdx, COL_CATEGORY);
+	DWORD_PTR dwDATA = m_pQLIST->GetItemData(nIdx, COL_CATEGORY);
 	if( dwDATA != (DWORD)-1 )
 		return (CTClientQClass*)(dwDATA);
 	else

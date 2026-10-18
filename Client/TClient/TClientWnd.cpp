@@ -10,6 +10,7 @@
 #include "TClient.h"
 #include "TClientWnd.h"
 #include "TClientWnd.h"
+#include "TClientCursors.h"
 #include "TMiniPopupDlg.h"
 #include "SHA1.h"
 #include "TItemUpDlg.h"
@@ -180,7 +181,7 @@ CReleaseChart::~CReleaseChart()
 }
 
 #ifdef ADD_SNOW
-CString _on_chatcmd_snow(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_snow(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame *pTGAME = (CTClientGame *) dwUSER;
 	pTGAME->m_bSnowEventUserOn = !pTGAME->m_bSnowEventUserOn;
@@ -1449,13 +1450,18 @@ void CTClientWnd::InitResource( CString strGroupID,
 		ID_FRAME_NOTIFY};			// TGAUGE_FRAME_NOTIFY
 #endif
 
-	static DWORD dwCursorID[] = {
-		IDC_HAND_CUR,
-		IDC_SWORD,
-		IDC_TALK,
-		IDC_HAND_CUR,
-		IDC_ROUTING,
-		IDC_DRAGSIZE};
+	// The cursor files of TCURSOR_TYPE (TClientCursors.h).
+	static const struct
+	{
+		const BYTE *m_pData;
+		DWORD m_dwSize;
+	} vCursorFile[] = {
+		{ s_vCURSOR_Hand_cur, sizeof(s_vCURSOR_Hand_cur) },
+		{ s_vCURSOR_Sword_cur, sizeof(s_vCURSOR_Sword_cur) },
+		{ s_vCURSOR_Talk_cur, sizeof(s_vCURSOR_Talk_cur) },
+		{ s_vCURSOR_Hand_cur, sizeof(s_vCURSOR_Hand_cur) },
+		{ s_vCURSOR_ROUTING_CUR, sizeof(s_vCURSOR_ROUTING_CUR) },
+		{ s_vCURSOR_cursor1_cur, sizeof(s_vCURSOR_cursor1_cur) }};
 
 	static CString strTextures[TCUSTOMTEX_COUNT] =
 	{
@@ -1499,7 +1505,7 @@ void CTClientWnd::InitResource( CString strGroupID,
 	CTachyonHUGEMAP::m_nIndexCount = DEF_INDEXCNT;
 	CTachyonHUGEMAP::m_fCullDIST = TCAM_LENGTH*2;
 
-	::SetCursor(NULL);
+	CTachyonInput::SetCursor(NULL);
 	srand((INT) time(NULL));
 	InitTRESIMG();
 	InitTCUSTOMCLOAKTEX();
@@ -2336,7 +2342,7 @@ void CTClientWnd::InitResource( CString strGroupID,
 	InitChatProc();
 
 #ifdef ADD_SNOW
-	m_MainGame.m_pChatFrame->AddChatCmdProc( "snow", _on_chatcmd_snow, (DWORD)(&m_MainGame));
+	m_MainGame.m_pChatFrame->AddChatCmdProc( "snow", _on_chatcmd_snow, (DWORD_PTR)(&m_MainGame));
 #endif
 
 	m_MainGame.m_pRankTexture = new CBattleRankTex(pMainUI->m_pRankImage);
@@ -2344,8 +2350,8 @@ void CTClientWnd::InitResource( CString strGroupID,
 	m_MainGame.m_vTMONINVEN.m_wItemID = TMONINVEN_ID;
 
 	for( BYTE i=0; i<TCURSOR_COUNT; i++)
-		m_vTCURSOR[i] = LoadCursor( theApp.m_hInstance, MAKEINTRESOURCE(dwCursorID[i]));
-	::SetCursor(m_vTCURSOR[TCURSOR_HAND]);
+		m_vTCURSOR[i] = CTachyonInput::LoadCursor( vCursorFile[i].m_pData, vCursorFile[i].m_dwSize);
+	CTachyonInput::SetCursor(m_vTCURSOR[TCURSOR_HAND]);
 
 	TButton::m_dwDOWNSND = ID_SND_PUSH_BUTTON2;
 	TFrame::m_dwCLOSESND = ID_SND_CLOSE_WND2;
@@ -4330,7 +4336,7 @@ void CTClientWnd::InitChart()
 		for(; it != end ; ++it )
 		{
 			LPTMINIMAP pTMINIMAP = it->second;
-			DWORD dwTexID = (DWORD) pTMINIMAP->m_pTEX;
+			DWORD dwTexID = (DWORD)(DWORD_PTR) pTMINIMAP->m_pTEX;
 
 			MAPRES::iterator finder = m_RES.m_mapTEX.find(dwTexID);	
 			if( finder != m_RES.m_mapTEX.end() )
@@ -4403,7 +4409,7 @@ void CTClientWnd::InitChart()
 
 		for(; itTSFX != end ; ++itTSFX )
 		{
-			DWORD dwSFX = (DWORD) itTSFX->second->m_pTSFX;
+			DWORD dwSFX = (DWORD)(DWORD_PTR) itTSFX->second->m_pTSFX;
 
 			MAPRES::iterator finder = m_RES.m_mapSFX.find( dwSFX );
 			if( finder != m_RES.m_mapSFX.end() )
@@ -4425,7 +4431,7 @@ void CTClientWnd::InitChart()
 		{
 			TITEMGRADEVISUAL& item = it->second;
 
-			DWORD dwTextureID = (DWORD) item.m_pSkinTex;
+			DWORD dwTextureID = (DWORD)(DWORD_PTR) item.m_pSkinTex;
 
 			MAPRES::iterator finder = m_RES.m_mapTEX.find( dwTextureID );
 			if( finder == m_RES.m_mapTEX.end() || finder->second == NULL )
@@ -4677,7 +4683,7 @@ void CTClientWnd::OnDestroy()
 
 	for( BYTE i=0; i<TCURSOR_COUNT; i++)
 	{
-		DestroyCursor(m_vTCURSOR[i]);
+		CTachyonInput::DestroyCursor(m_vTCURSOR[i]);
 		m_vTCURSOR[i] = NULL;
 	}
 
@@ -6103,7 +6109,7 @@ BOOL CTClientWnd::OnSetCursor( HWND pWnd, UINT nHitTest, UINT message)
 	CPoint point = CTachyonInput::GetCursorPos();
 
 	if( m_MainGame.m_vKEY.m_vSTATE[TKEY_ROT] || m_MainGame.m_vKEY.m_vSTATE[TKEY_CAM_ROT] || m_TNet.m_bROT || m_TNet.m_bCharROT )
-		::SetCursor(NULL);
+		CTachyonInput::SetCursor(NULL);
 	else if( !m_pMainFrame || !m_pMainFrame->OnSetCursor( pWnd, nHitTest, message, point) )
 		SetCursor();
 
@@ -6164,7 +6170,7 @@ void CTClientWnd::SetCursor()
 			bCursorID = (BYTE) eCursorType;
 	}
 
-	::SetCursor(m_vTCURSOR[bCursorID]);
+	CTachyonInput::SetCursor(m_vTCURSOR[bCursorID]);
 }
 
 BOOL CTClientWnd::IsLoading()
@@ -6270,7 +6276,7 @@ void CTClientWnd::OnAgreementPage()
 void CTClientWnd::OpenURL( const CString& strURL)
 {
 	if(!strURL.IsEmpty())
-		ShellExecute( NULL, _T("open"), strURL, NULL, NULL, SW_SHOWNORMAL);
+		CTWindow::OpenURL(strURL);
 }
 
 CString CTClientWnd::CaptureIMG()
@@ -7021,38 +7027,20 @@ void CTClientWnd::OnChangeResolutionCmdBtnDown(CTMiniPopupDlg* pPopupDlg, CTMini
 
 void CTClientWnd::CollectResolution()
 {
-	DEVMODE devMode;
-	::EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &devMode);
-	INT nCurrentFrequently = devMode.dmDisplayFrequency;
+	std::vector<CSize> vMODES;
+	CTWindow::GetDisplayModes(vMODES);
 
-	UINT uCount = m_Device.m_pD3D->GetAdapterModeCount(
-		D3DADAPTER_DEFAULT,
-		m_Device.m_vPRESENT.BackBufferFormat);
-
-	for( UINT i=0 ; i < uCount ; ++i )
-	{
-		D3DDISPLAYMODE Mode;
-		
-		if( D3D_OK  == m_Device.m_pD3D->EnumAdapterModes(
-			D3DADAPTER_DEFAULT,
-			m_Device.m_vPRESENT.BackBufferFormat,
-			i,
-			&Mode) )
+	for( size_t i=0; i < vMODES.size(); ++i )
+		if( vMODES[i].cx >= TBASE_SCREEN_X &&
+			vMODES[i].cy >= TBASE_SCREEN_Y )
 		{
-			if( Mode.Width >= TBASE_SCREEN_X &&
-				Mode.Height >= TBASE_SCREEN_Y &&
-				Mode.Format == m_Device.m_vPRESENT.BackBufferFormat &&
-				Mode.RefreshRate == nCurrentFrequently )
-			{
-				CString strFMT;
-				strFMT = CTChart::Format( TSTR_FMT_RESOLUTION,
-					Mode.Width,
-					Mode.Height );
+			CString strFMT;
+			strFMT = CTChart::Format( TSTR_FMT_RESOLUTION,
+				vMODES[i].cx,
+				vMODES[i].cy );
 
-				m_vResolutionModes.push_back( TRESOLUTIONMODE(strFMT, Mode.Width, Mode.Height));
-			}
+			m_vResolutionModes.push_back( TRESOLUTIONMODE(strFMT, vMODES[i].cx, vMODES[i].cy));
 		}
-	}
 
 	CTMiniPopupDlg *pPopup = m_MainGame.GetResolutionListPopup();
 	if(pPopup)
@@ -7203,7 +7191,7 @@ LRESULT CTClientWnd::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 
 // TEST 용 채팅 명령어
 // ------------------------------------------------------------------------------------------
-CString _on_chatcmd_fps(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_fps(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pGame = (CTClientGame*)dwUSER;
 	pGame->SetShowDebugInfo( !pGame->IsShowDebugInfo() );
@@ -7211,7 +7199,7 @@ CString _on_chatcmd_fps(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD
 	return "";
 }
 
-CString _on_chatcmd_f(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_f(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame *pTGAME = (CTClientGame *) dwUSER;
 
@@ -7226,21 +7214,21 @@ CString _on_chatcmd_f(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD d
 
 #ifdef TEST_MODE
 
-CString _on_chatcmd_mon_roaming_off(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_mon_roaming_off(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pGame = (CTClientGame*)dwUSER;
 
 	return "";
 }
 
-CString _on_chatcmd_mon_roaming_on(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_mon_roaming_on(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pGame = (CTClientGame*)dwUSER;
 	
 	return "";
 }
 
-CString _on_chatcmd_draw_object(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_draw_object(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pGame = (CTClientGame*)dwUSER;
 	pGame->SetDrawOBJ( !pGame->IsDrawOBJ() );
@@ -7248,7 +7236,7 @@ CString _on_chatcmd_draw_object(const CString& strCMD, const VECTORSTRING& vPARA
 	return "";
 }
 
-CString _on_chatcmd_spawn_edit_start(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_spawn_edit_start(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame *pTGAME = (CTClientGame *) dwUSER;
 
@@ -7258,7 +7246,7 @@ CString _on_chatcmd_spawn_edit_start(const CString& strCMD, const VECTORSTRING& 
 	return "";
 }
 
-CString _on_chatcmd_spawn_edit_end(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_spawn_edit_end(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame *pTGAME = (CTClientGame *) dwUSER;
 
@@ -7266,7 +7254,7 @@ CString _on_chatcmd_spawn_edit_end(const CString& strCMD, const VECTORSTRING& vP
 	return "";
 }
 
-CString _on_chatcmd_spawn_edit_save(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_spawn_edit_save(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame *pTGAME = (CTClientGame *) dwUSER;
 
@@ -7274,7 +7262,7 @@ CString _on_chatcmd_spawn_edit_save(const CString& strCMD, const VECTORSTRING& v
 	return "";
 }
 
-CString _on_chatcmd_rm(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_rm(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 	static BOOL bResetMAP = TRUE;
@@ -7284,7 +7272,7 @@ CString _on_chatcmd_rm(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD 
 	return "";
 }
 
-CString _on_chatcmd_fog(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_fog(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	/*CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 	if( vPARAM.size() >= 1 )
@@ -7324,7 +7312,7 @@ CString _on_chatcmd_fog(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD
 
 }
 
-CString _on_chatcmd_dist(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_dist(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 
@@ -7353,7 +7341,7 @@ CString _on_chatcmd_dist(const CString& strCMD, const VECTORSTRING& vPARAM, DWOR
 	return "";
 }
 
-CString _on_chatcmd_far(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_far(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 	if( vPARAM.size() >= 1 )
@@ -7372,7 +7360,7 @@ CString _on_chatcmd_far(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD
 	return "";
 }
 
-CString _on_chatcmd_test(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_test(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 	LPTASSISTANT pNew = new TASSISTANT;
@@ -7408,7 +7396,7 @@ CString _on_chatcmd_test(const CString& strCMD, const VECTORSTRING& vPARAM, DWOR
 	return "";
 }
 
-CString _on_chatcmd_move_node_line(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_move_node_line(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 
@@ -7439,7 +7427,7 @@ CString _on_chatcmd_move_node_line(const CString& strCMD, const VECTORSTRING& vP
 	return "";
 }
 
-CString _on_chatcmd_save_node_line(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_chatcmd_save_node_line(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*) dwUSER;
 
@@ -7488,7 +7476,7 @@ CString _on_chatcmd_save_node_line(const CString& strCMD, const VECTORSTRING& vP
 
 #endif
 
-CString _on_teleport_bow(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_teleport_bow(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*)dwUSER;
 	if (pTGAME->GetSession())
@@ -7497,7 +7485,7 @@ CString _on_teleport_bow(const CString& strCMD, const VECTORSTRING& vPARAM, DWOR
 	return "";
 }
 
-CString _on_teleport_br(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString _on_teleport_br(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pTGAME = (CTClientGame*)dwUSER;
 	if (pTGAME->GetSession())
@@ -7512,33 +7500,33 @@ void CTClientWnd::InitChatProc()
 
 
 	// fps : 프레임,위치 정보 보기
-	pChat->AddChatCmdProc("fps", _on_chatcmd_fps, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("fps", _on_chatcmd_fps, (DWORD_PTR)(&m_MainGame));
 
-	pChat->AddChatCmdProc("f", _on_chatcmd_f, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("f", _on_chatcmd_f, (DWORD_PTR)(&m_MainGame));
 
-	pChat->AddChatCmdProc("teleportbow", _on_teleport_bow, (DWORD)(&m_MainGame));
-	pChat->AddChatCmdProc("teleportbr", _on_teleport_br, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("teleportbow", _on_teleport_bow, (DWORD_PTR)(&m_MainGame));
+	pChat->AddChatCmdProc("teleportbr", _on_teleport_br, (DWORD_PTR)(&m_MainGame));
 
 #ifdef TEST_MODE
 	// mon_roaming_off : 몬스터 로밍 끔
-	pChat->AddChatCmdProc("mon_roaming_off", _on_chatcmd_mon_roaming_off, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("mon_roaming_off", _on_chatcmd_mon_roaming_off, (DWORD_PTR)(&m_MainGame));
 
 	// mon_roaming_on : 몬스터 로밍 켬
-	pChat->AddChatCmdProc("mon_roaming_on", _on_chatcmd_mon_roaming_on, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("mon_roaming_on", _on_chatcmd_mon_roaming_on, (DWORD_PTR)(&m_MainGame));
 
 
 	// draw_object : 오브젝트 렌더링 여부
-	pChat->AddChatCmdProc("draw_object", _on_chatcmd_draw_object, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("draw_object", _on_chatcmd_draw_object, (DWORD_PTR)(&m_MainGame));
 
 	// spawn_edit_start : 스폰 에디트 시작
-	pChat->AddChatCmdProc("spawn_edit_start", _on_chatcmd_spawn_edit_start, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("spawn_edit_start", _on_chatcmd_spawn_edit_start, (DWORD_PTR)(&m_MainGame));
 
 
 	// spawn_edit_end : 스폰 에디트 종료
-	pChat->AddChatCmdProc("spawn_edit_end", _on_chatcmd_spawn_edit_end, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("spawn_edit_end", _on_chatcmd_spawn_edit_end, (DWORD_PTR)(&m_MainGame));
 
 	// spawn_edit_save : 스폰 에디트 저장
-	pChat->AddChatCmdProc("spawn_edit_save", _on_chatcmd_spawn_edit_save, (DWORD)(&m_MainGame));
+	pChat->AddChatCmdProc("spawn_edit_save", _on_chatcmd_spawn_edit_save, (DWORD_PTR)(&m_MainGame));
 
 	pChat->AddChatCmdProc( "rm", _on_chatcmd_rm, (DWORD)(&m_MainGame) );
 

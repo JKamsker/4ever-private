@@ -34,18 +34,18 @@ public:
 	MAP_LISTITEM* SetCurSelItem( int nLine );
 
 	int AddString( LPCTSTR strText, int nColumn = 0 );
-	int AddItem( LPCTSTR strText, DWORD data, int nColumn = 0 );
+	int AddItem( LPCTSTR strText, DWORD_PTR data, int nColumn = 0 );
 	int DelString(int nLine);
 	int DelItem( int nLine );
 
 	int GetSel();
 	void RemoveAll();
-	DWORD GetItemData( int nLine, int nColumn );
+	DWORD_PTR GetItemData( int nLine, int nColumn );
 
 	MAP_LISTITEM* GetItem( int nLine );
 
 	BOOL SetItemString( int nLine, int nColumn, LPCTSTR strText );
-	BOOL SetItemData( int nLine, int nColumn, DWORD data );
+	BOOL SetItemData( int nLine, int nColumn, DWORD_PTR data );
 
 public://Message Handler	
 	virtual void OnKeyDown(UINT nChar, int nRepCnt, UINT nFlags);

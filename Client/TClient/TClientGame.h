@@ -76,7 +76,7 @@ public:
 	static CString OnActCmdByMsg(
 		const CString& strMSG,
 		const VECTORSTRING& vPARAM,
-		DWORD dwUSER);
+		DWORD_PTR dwUSER);
 
 	static void OnActionCmdBtnDown(
 		CTMiniPopupDlg *pPopupDlg,

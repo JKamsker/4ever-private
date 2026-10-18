@@ -214,11 +214,11 @@ void CTArenaRegDlg::OnLButtonDown(UINT nFlags, CPoint point)
 	TButton* Down = (TButton*)m_pTSCROLL->FindKid(40805);
 
 	if (Up->HitTest(point))
-		OnNotify((DWORD) this, TNM_LINEUP, nullptr);
+		OnNotify(m_id, TNM_LINEUP, nullptr);
 	else if(Scroll->HitTest(point))
-		OnNotify((DWORD) this, TNM_VSCROLL, nullptr);
+		OnNotify(m_id, TNM_VSCROLL, nullptr);
 	else if(Down->HitTest(point))
-		OnNotify((DWORD) this, TNM_LINEDOWN, nullptr);
+		OnNotify(m_id, TNM_LINEDOWN, nullptr);
 
 	if (FindKid(21)->HitTest(point))
 		CTClientGame::GetInstance()->OnGM_CHALLENGE_JOIN();

@@ -60,7 +60,7 @@ public:
 	CSize GetItemSize(int nColumn);
 	void GetItemSize(LPSIZE lpSize);
 	MAP_LISTITEM* GetCurSelItem();
-	DWORD GetItemData(int nLine, int nColumn);
+	DWORD_PTR GetItemData(int nLine, int nColumn);
 	MAP_LISTITEM* GetItem(int nLine);
 	INT GetCurSelIndex() { return m_nCurSel; }
 
@@ -71,15 +71,15 @@ public:
 
 	int AddString(LPCTSTR strText, int nColumn = 0);
 	int AddInt(int nText, int nColumn = 0);
-	int AddItem(LPCTSTR strText, DWORD data, int nColumn = 0);
+	int AddItem(LPCTSTR strText, DWORD_PTR data, int nColumn = 0);
 	int DelItem(int nLine);
 	int DelString(int nLine);
 
 	BOOL SetItemString(int nLine, int nColumn, LPCTSTR strText);
 	BOOL SetItemInt(int nLine, int nColumn, int nText);
-	BOOL SetItemData(int nLine, int nColumn, DWORD data);
+	BOOL SetItemData(int nLine, int nColumn, DWORD_PTR data);
 	BOOL SetImageIndex(int nLine, int nColumn, BOOL blIsImageList, int nImageIndex);
-	BOOL SetItemDataAllColumn(int nLine, DWORD data);
+	BOOL SetItemDataAllColumn(int nLine, DWORD_PTR data);
 	CString GetItemString(int nLine, int nColumn);
 
 	void ApplyUserColor(BOOL blUserColor);

@@ -2849,7 +2849,7 @@ void CTChart::InitTSFXTEMP( CString strPath )
 
 
 
-		pTSFX->m_pTSFX = (tagSFX*)( dwSFX );
+		pTSFX->m_pTSFX = (tagSFX*)(DWORD_PTR)( dwSFX );
 
 		CTChart::m_mapTSFXTEMP.insert( MAPTSFXTEMP::value_type( pTSFX->m_dwID, pTSFX));
 	}
@@ -4050,7 +4050,7 @@ void CTChart::InitTITEMGRADEVISUAL( CString strPath )
 		
 		TITEMGRADEVISUAL Data;
 		Data.m_bPSTYPE = (INT) bOPCode;
-		Data.m_pSkinTex = (tagTEXTURESET*) dwTextureID;
+		Data.m_pSkinTex = (tagTEXTURESET*)(DWORD_PTR) dwTextureID;
 
 		CTChart::m_mapTITEMGRADEVISUAL.insert(
 			make_pair( Key, Data ) );
@@ -10246,7 +10246,7 @@ void CTChart::InitTMINIMAP( CString strPath )
 			>> pTMINIMAP->m_dwWorldButtonID
 			>> pTMINIMAP->m_bWorldMapLevel
 			>> bla;
-		pTMINIMAP->m_pTEX = (tagTEXTURESET*) dwTexID;
+		pTMINIMAP->m_pTEX = (tagTEXTURESET*)(DWORD_PTR) dwTexID;
 
 		CTChart::m_mapTMINIMAP.insert( std::make_pair( pTMINIMAP->m_dwUnitID, pTMINIMAP));
 	}

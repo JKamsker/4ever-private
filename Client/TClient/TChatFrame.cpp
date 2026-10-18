@@ -327,7 +327,7 @@ CTChatFrame::CTChatFrame(TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc, CTClien
 		while( !strTOK.IsEmpty() )
 		{
 			strTOK.Trim();
-			AddChatCmdProc(strTOK, OnChatModeCmd, (DWORD)this);	
+			AddChatCmdProc(strTOK, OnChatModeCmd, (DWORD_PTR) this);	
 			strTOK = strCMD.Tokenize(strTMARK, nPOS);
 		}
 	}
@@ -340,7 +340,7 @@ CTChatFrame::CTChatFrame(TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc, CTClien
 	while( !strTOK.IsEmpty())
 	{
 		strTOK.Trim();
-		AddChatCmdProc( strTOK, OnChatTitleCmd, (DWORD) this);
+		AddChatCmdProc( strTOK, OnChatTitleCmd, (DWORD_PTR) this);
 		strTOK = strCMD.Tokenize( strTMARK, nPOS);
 	}
 
@@ -1968,7 +1968,7 @@ void CTChatFrame::SetChatTarget(const CString& strTarget, DWORD dwTargetID)
 	m_dwChatTargetID = dwTargetID;
 }
 // -------------------------------------------------------------------------------
-CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTChatFrame* pChatFrame = (CTChatFrame*)dwUSER;
 	
@@ -2013,7 +2013,7 @@ CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vP
 	return CString("");
 }
 // ===============================================================================
-CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTChatFrame* pChatFrame = (CTChatFrame*)dwUSER;
 
@@ -2078,7 +2078,7 @@ CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& v
 	return CString("");
 }
 // ===============================================================================
-void CTChatFrame::AddChatCmdProc(const CString& strMSG, FP_CHATCMDPROC fp, DWORD dwUser)
+void CTChatFrame::AddChatCmdProc(const CString& strMSG, FP_CHATCMDPROC fp, DWORD_PTR dwUser)
 {
 	CString strMSG_UPPER( strMSG);
 	strMSG_UPPER.MakeUpper();
@@ -2986,7 +2986,7 @@ CTChatFrame::CTChatFrame(TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc, CTClien
 		while( !strTOK.IsEmpty() )
 		{
 			strTOK.Trim();
-			AddChatCmdProc(strTOK, OnChatModeCmd, (DWORD)this);	
+			AddChatCmdProc(strTOK, OnChatModeCmd, (DWORD_PTR) this);	
 			strTOK = strCMD.Tokenize(strTMARK, nPOS);
 		}
 	}
@@ -2999,7 +2999,7 @@ CTChatFrame::CTChatFrame(TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc, CTClien
 	while( !strTOK.IsEmpty())
 	{
 		strTOK.Trim();
-		AddChatCmdProc( strTOK, OnChatTitleCmd, (DWORD) this);
+		AddChatCmdProc( strTOK, OnChatTitleCmd, (DWORD_PTR) this);
 		strTOK = strCMD.Tokenize( strTMARK, nPOS);
 	}
 }
@@ -4401,7 +4401,7 @@ void CTChatFrame::SetChatTarget(const CString& strTarget, DWORD dwTargetID)
 	m_dwChatTargetID = dwTargetID;
 }
 // -------------------------------------------------------------------------------
-CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTChatFrame* pChatFrame = (CTChatFrame*)dwUSER;
 	
@@ -4446,7 +4446,7 @@ CString CTChatFrame::OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vP
 	return CString("");
 }
 // ===============================================================================
-CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTChatFrame* pChatFrame = (CTChatFrame*)dwUSER;
 
@@ -4502,7 +4502,7 @@ CString CTChatFrame::OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& v
 	return CString("");
 }
 // ===============================================================================
-void CTChatFrame::AddChatCmdProc(const CString& strMSG, FP_CHATCMDPROC fp, DWORD dwUser)
+void CTChatFrame::AddChatCmdProc(const CString& strMSG, FP_CHATCMDPROC fp, DWORD_PTR dwUser)
 {
 	CString strMSG_UPPER( strMSG);
 	strMSG_UPPER.MakeUpper();

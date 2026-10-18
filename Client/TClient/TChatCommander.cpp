@@ -43,7 +43,7 @@ void CTChatCommander::ChatSysMSG( const CString& strMSG)
 }
 // ====================================================================
 // ====================================================================
-CString CTChatCommander::OnMessengerCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTChatCommander::OnMessengerCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	GetInstance()->DoMessengerCommand((CmdEnum)dwUSER, vPARAM);
 	return CString("");

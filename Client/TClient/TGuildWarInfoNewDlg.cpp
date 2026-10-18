@@ -335,7 +335,7 @@ ITDetailInfoPtr CTGuildWarInfoNewDlg::GetTInfoKey(const CPoint& point)
 
 	if (pHITITEM || nIndex != -1)
 	{
-		if (m_pList && (DWORD)(m_pList) != (DWORD)(-1))
+		if (m_pList && (DWORD_PTR)(m_pList) != (DWORD_PTR)(-1))
 		{
 			DWORD dwParam = 0;
 
@@ -367,7 +367,7 @@ ITDetailInfoPtr CTGuildWarInfoNewDlg::GetTInfoKey(const CPoint& point)
 
 	if (pHITITEM2 || nIndex2 != -1)
 	{
-		if (m_pList2 && (DWORD)(m_pList2) != (DWORD)(-1))
+		if (m_pList2 && (DWORD_PTR)(m_pList2) != (DWORD_PTR)(-1))
 		{
 			DWORD dwParam = 0;
 
@@ -419,7 +419,7 @@ ITDetailInfoPtr CTGuildWarInfoNewDlg::GetTInfoKey(const CPoint& point)
 
 	if (pHITITEM3 || nIndex3 != -1)
 	{
-		if (m_pList3 && (DWORD)(m_pList3) != (DWORD)(-1))
+		if (m_pList3 && (DWORD_PTR)(m_pList3) != (DWORD_PTR)(-1))
 		{
 			DWORD dwParam = 0;
 			if (pHITITEM3 != NULL)

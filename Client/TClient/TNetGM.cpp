@@ -22,70 +22,18 @@ int CTClientWnd::OnGM_START_4STORY()
 
 int CTClientWnd::OnGM_TOGGLE_SCREEN_MODE()
 {
-	
+	CSize vSCREEN = CTWindow::GetScreenSize();
 
-
-
-
-
-
-
-
-
-	DWORD dwStyle = WS_POPUP|WS_VISIBLE|WS_CLIPCHILDREN; 
-	HWND pWND = HWND_TOPMOST;
-	CRect rect(
-		0, 0,
-		m_Device.m_option.m_dwScreenX,
-		m_Device.m_option.m_dwScreenY);
-
-
-
-
-
-
-
-
-
-
-
-	if (m_Device.m_option.m_bWindowedMode)
-	{
-		if (m_Device.m_option.m_dwScreenX != GetSystemMetrics(SM_CXSCREEN) &&
-			m_Device.m_option.m_dwScreenY != GetSystemMetrics(SM_CYSCREEN))
-		{
-			dwStyle |= WS_OVERLAPPED | WS_CAPTION;
-		}
-
-		pWND = HWND_NOTOPMOST;
-	}
-
-
-
-
-	AdjustWindowRect(
-		&rect,
-		dwStyle,
-		FALSE);
-
-	rect.OffsetRect(
-		-rect.left,
-		-rect.top);
-
-	SetWindowLong(
-		GetSafeHwnd(),
-		GWL_STYLE,
-		dwStyle);
+	// Like the window's creation: a caption when windowed at another size than the screen.
+	SetCaption( m_Device.m_option.m_bWindowedMode &&
+		m_Device.m_option.m_dwScreenX != DWORD(vSCREEN.cx) &&
+		m_Device.m_option.m_dwScreenY != DWORD(vSCREEN.cy));
 	RestoreDevice();
 
-	SetWindowPos(
-		pWND,
-		0, 0,
-		0, 0,
-		SWP_NOMOVE|
-		SWP_NOREDRAW|
-		SWP_NOSIZE);
-	MoveWindow(&rect);
+	SetTopMost(!m_Device.m_option.m_bWindowedMode);
+	SetFrameSize(
+		m_Device.m_option.m_dwScreenX,
+		m_Device.m_option.m_dwScreenY);
 
 	return TERR_NONE;
 }
@@ -183,7 +131,7 @@ int CTClientWnd::OnGM_EXIT()
 		CHCEnd();	
 #endif
 	SaveCustomCompPos();
-	PostQuitMessage(0);
+	CTWindow::PostQuit();
 	return TERR_NONE;
 }
 
@@ -291,7 +239,7 @@ int CTClientWnd::OnGM_SELECT_CHANNEL()
 
 	TFrame *pFRAME = m_TNet.FindFrame(ID_FRAME_SERVER_NEW);
 	TList *pLIST = (TList *) pFRAME->FindKid(ID_CTRLINST_LIST);
-	DWORD dwItemData = pLIST->GetItemData( pLIST->GetSel(), 0);
+	DWORD_PTR dwItemData = pLIST->GetItemData( pLIST->GetSel(), 0);
 	if( dwItemData == (DWORD)(-1) )
 		return TERR_NONE;
 

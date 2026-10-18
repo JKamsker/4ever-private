@@ -258,13 +258,13 @@ public:
 	void SetChatTarget(const CString& strTarget, DWORD dwTargetID=0);
 
 	/// 채팅 모드 변경 커맨드 이벤트를 처리한다.
-	static CString OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER);
+	static CString OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 
 	/// 호칭 변경
-	static CString OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER);
+	static CString OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 
 	/// 메시지에 따른 함수 포인터를 설정한다.
-	void AddChatCmdProc(const CString& strCMD, FP_CHATCMDPROC fp, DWORD dwUSER=0);
+	void AddChatCmdProc(const CString& strCMD, FP_CHATCMDPROC fp, DWORD_PTR dwUSER=0);
 	/// 설정된 메시지 함수 포인터 테이블을 모두 제거한다.
 	void ClearChatCmdProc();
 
@@ -613,13 +613,13 @@ public:
 	void SetChatTarget(const CString& strTarget, DWORD dwTargetID=0);
 
 	/// 채팅 모드 변경 커맨드 이벤트를 처리한다.
-	static CString OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER);
+	static CString OnChatModeCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 
 	/// 호칭 변경
-	static CString OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER);
+	static CString OnChatTitleCmd(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 
 	/// 메시지에 따른 함수 포인터를 설정한다.
-	void AddChatCmdProc(const CString& strCMD, FP_CHATCMDPROC fp, DWORD dwUSER=0);
+	void AddChatCmdProc(const CString& strCMD, FP_CHATCMDPROC fp, DWORD_PTR dwUSER=0);
 	/// 설정된 메시지 함수 포인터 테이블을 모두 제거한다.
 	void ClearChatCmdProc();
 

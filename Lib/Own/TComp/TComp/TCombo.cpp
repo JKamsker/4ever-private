@@ -176,7 +176,7 @@ int TCombo::AddString( LPCTSTR strText, int nColumn )
 	return ((TList*) m_pDownList)->AddString( strText, nColumn );
 }
 
-int TCombo::AddItem(LPCTSTR strText, DWORD data, int nColumn )
+int TCombo::AddItem(LPCTSTR strText, DWORD_PTR data, int nColumn )
 {
 	if( !m_pDownList ||
 		!m_pDownList->IsTypeOf( TCML_TYPE_LIST ) ) return -1;
@@ -229,7 +229,7 @@ int TCombo::GetSel()
 	return ((TList*) m_pDownList)->GetSel();
 }
 
-DWORD TCombo::GetItemData( int nLine, int nColumn )
+DWORD_PTR TCombo::GetItemData( int nLine, int nColumn )
 {
 	if( !m_pDownList ||
 		!m_pDownList->IsTypeOf( TCML_TYPE_LIST ) )
@@ -256,7 +256,7 @@ BOOL TCombo::SetItemString( int nLine, int nColumn, LPCTSTR strText)
 	return ((TList*) m_pDownList)->SetItemString( nLine, nColumn, strText );
 }
 
-BOOL TCombo::SetItemData( int nLine, int nColumn, DWORD data )
+BOOL TCombo::SetItemData( int nLine, int nColumn, DWORD_PTR data )
 {
 	if( !m_pDownList ||
 		!m_pDownList->IsTypeOf( TCML_TYPE_LIST ) )

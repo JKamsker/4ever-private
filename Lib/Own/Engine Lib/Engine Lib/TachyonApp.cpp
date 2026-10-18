@@ -179,7 +179,7 @@ void CTachyonApp::LoadStdProfileSettings()
 	if(!dwValue)
 	{
 		// No resolution in config.ini -> adapt to the primary display on first run.
-		m_pTachyonWnd->m_Device.m_option.m_dwScreenX = GetSystemMetrics(SM_CXSCREEN);
+		m_pTachyonWnd->m_Device.m_option.m_dwScreenX = CTWindow::GetScreenSize().cx;
 		WriteProfileInt(
 			_T("Settings"),
 			_T("ScreenX"),
@@ -195,7 +195,7 @@ void CTachyonApp::LoadStdProfileSettings()
 	if(!dwValue)
 	{
 		// No resolution in config.ini -> adapt to the primary display on first run.
-		m_pTachyonWnd->m_Device.m_option.m_dwScreenY = GetSystemMetrics(SM_CYSCREEN);
+		m_pTachyonWnd->m_Device.m_option.m_dwScreenY = CTWindow::GetScreenSize().cy;
 		WriteProfileInt(
 			_T("Settings"),
 			_T("ScreenY"),
@@ -223,9 +223,9 @@ void CTachyonApp::LoadStdProfileSettings()
 	{
 		m_pTachyonWnd->m_Device.m_option.m_bWindowedMode = TRUE;
 
-		m_pTachyonWnd->m_Device.m_option.m_dwScreenX = GetSystemMetrics(SM_CXSCREEN);
+		m_pTachyonWnd->m_Device.m_option.m_dwScreenX = CTWindow::GetScreenSize().cx;
 
-		m_pTachyonWnd->m_Device.m_option.m_dwScreenY = GetSystemMetrics(SM_CYSCREEN);
+		m_pTachyonWnd->m_Device.m_option.m_dwScreenY = CTWindow::GetScreenSize().cy;
 	}
 
 }
@@ -315,14 +315,14 @@ BYTE CTachyonApp::MainProc()
 			CTWindow::WaitEvent(TSESSION_IDLE_WAIT);
 
 #ifndef TEST_MODE
-			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+			if(!m_pTachyonWnd->IsForeground())
 				m_dwSLEEP = 100;
 #endif
 		}
 		else if(!m_pTachyonWnd->m_bOnMovie)
 		{
 #ifndef TEST_MODE
-			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+			if(!m_pTachyonWnd->IsForeground())
 				m_dwSLEEP = 10;
 #endif
 

@@ -58,7 +58,7 @@ void CTMiniPopupDlg::AddButton(const CString& strTitle, DWORD dwMenuID)
 	ReFitSize();
 }
 // --------------------------------------------------------------------------------------
-void CTMiniPopupDlg::AddButton(const CString& strTitle, FP_BTN_ACT pBtnFunc, DWORD dwUserData)
+void CTMiniPopupDlg::AddButton(const CString& strTitle, FP_BTN_ACT pBtnFunc, DWORD_PTR dwUserData)
 {
 	AddButton(strTitle, (DWORD)0);
 	CTButtonMP* pBtn = m_vButtons.back();

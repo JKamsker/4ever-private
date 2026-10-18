@@ -732,7 +732,7 @@ void CTTournament::UpdateMatch( TTMODE mode )
 		m_pMATCHLIST->SetItemString( nLine, 3, (*itMATCH)->m_bMyApplied ? CTChart::LoadString(TSTR_TOURNAMENT_JOIN) : _T("") );
 
 		for( int i=0 ; i < 5 ; ++i )
-			m_pMATCHLIST->SetItemData( nLine, i, (DWORD) (*itMATCH) );
+			m_pMATCHLIST->SetItemData( nLine, i, (DWORD_PTR) (*itMATCH) );
 
 		if( (*itMATCH)->m_bMyApplied )
 			m_bShowJoinBtn = FALSE;
@@ -808,7 +808,7 @@ void CTTournament::OnSelectMatch( TMATCH* pMATCH )
 					if( pMainChar->m_dwID == (*itPLAYER)->m_dwCharID )
 					{
 						int nLine = m_pENTRY_PLAYER_LIST->AddString( (*itPLAYER)->m_strName );
-						m_pENTRY_PLAYER_LIST->SetItemData( nLine, 0, (DWORD) (*itPLAYER) );
+						m_pENTRY_PLAYER_LIST->SetItemData( nLine, 0, (DWORD_PTR) (*itPLAYER) );
 						m_pENTRY_PLAYER_LIST->SetItemString( nLine, 1, CTChart::LoadString( (TSTRING) CTClientGame::m_vTCOUNTRYSTR[(*itPLAYER)->m_bCountry] ) );
 						CString strFMT;
 						strFMT.Format( "%d", (*itPLAYER)->m_bLevel );
@@ -830,7 +830,7 @@ void CTTournament::OnSelectMatch( TMATCH* pMATCH )
 						continue;
 
 					int nLine = m_pENTRY_PLAYER_LIST->AddString( (*itPLAYER)->m_strName );
-					m_pENTRY_PLAYER_LIST->SetItemData( nLine, 0, (DWORD) (*itPLAYER) );
+					m_pENTRY_PLAYER_LIST->SetItemData( nLine, 0, (DWORD_PTR) (*itPLAYER) );
 					m_pENTRY_PLAYER_LIST->SetItemString( nLine, 1, CTChart::LoadString( (TSTRING) CTClientGame::m_vTCOUNTRYSTR[(*itPLAYER)->m_bCountry] ) );
 					CString strFMT;
 					strFMT.Format( "%d", (*itPLAYER)->m_bLevel );
@@ -1056,7 +1056,7 @@ void CTTournament::OnSelectMatch( TMATCH* pMATCH )
 						(LPCTSTR) strFMT );
 				}
 
-				m_pREWARD->SetItemData( nLine, nCol, (DWORD) (*itREWARD) );
+				m_pREWARD->SetItemData( nLine, nCol, (DWORD_PTR) (*itREWARD) );
 				++nRewardItemCount;
 			}
 		}
@@ -1206,7 +1206,7 @@ HRESULT CTTournament::Render( DWORD dwTickCount )
 		{
 			if( m_pREWARD->GetItemCount() > 0 && nIndex >= 0 )
 			{
-				DWORD dwValue = m_pREWARD->GetItemData( nIndex, i);
+				DWORD_PTR dwValue = m_pREWARD->GetItemData( nIndex, i);
 
 				if( dwValue == -1 )
 					pTREWARD[i] = NULL;
@@ -1573,7 +1573,7 @@ void CTTournament::ResetParty()
 			m_pENTRY_PARTY_LIST->SetItemString( nLine, 4, strFMT );
 			strFMT.Format( "%d", pPARTY->m_dwMonthRank );
 			m_pENTRY_PARTY_LIST->SetItemString( nLine, 5, strFMT );
-			m_pENTRY_PARTY_LIST->SetItemData( nLine, 0, (DWORD) (pPARTY) );
+			m_pENTRY_PARTY_LIST->SetItemData( nLine, 0, (DWORD_PTR) (pPARTY) );
 			m_pBTN_REMOVE_PARTY[ n++ ]->ShowComponent( bPartyLeader || pMainChar->m_strNAME == pPARTY->m_strName );
 		}
 	}
@@ -1597,7 +1597,7 @@ ITDetailInfoPtr CTTournament::GetTInfoKey(const CPoint& point)
 		if( m_pREWARD->GetItemCount() > 0 && nIndex >= 0 )
 			pTREWARD = (LPTMATCHREWARD) m_pREWARD->GetItemData( nIndex, i );
 
-		if(pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) )
+		if(pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) )
 		{
 			switch(pTREWARD->m_bChartType)
 			{
@@ -1668,7 +1668,7 @@ ITDetailInfoPtr CTTournament::GetTInfoKey(const CPoint& point)
 						return CTDetailInfoManager::NewTournamentPlayerInst(
 							strText,
 							"",
-							(int) pTMATCH,
+							(int)(DWORD_PTR) pTMATCH,
 							rc );
 					}
 				}

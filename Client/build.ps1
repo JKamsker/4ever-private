@@ -1,4 +1,6 @@
-# Builds the client with CMake + Ninja inside an x86 Visual Studio developer shell.
+# Builds the client with CMake + Ninja inside a Visual Studio developer shell of the preset's
+# architecture (x86, or x64 for the *-x64 presets).
+#   .\Client\build.ps1 -Preset clang-x64          # 64-bit clang-cl build into build\clang-x64\bin\
 #   .\Client\build.ps1                  # Release build into build\msvc-x86\bin\TClient.exe
 #   .\Client\build.ps1 -Preset msvc-x86 -Deploy   # also copies TClient.exe into Game\
 #   .\Client\build.ps1 -Preset clang-x86          # clang-cl build into build\clang-x86\bin\
@@ -13,12 +15,13 @@ $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.e
 $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
 if (-not $vs) { throw "Visual Studio with the C++ x86/x64 tools was not found." }
 
-# Enter the x86 developer environment (cl, rc, link, INCLUDE/LIB with ATL/MFC, cmake, ninja).
+# Enter the developer environment of the target (cl, rc, link, INCLUDE/LIB with ATL, cmake, ninja).
 # VsDevCmd itself calls vswhere, so it must be on PATH.
+$arch = if ($Preset -like "*-x64") { "amd64" } else { "x86" }
 $env:PATH = "$(Split-Path $vswhere);$env:PATH"
 Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments "-arch=x86 -host_arch=x64" | Out-Null
-# clang-cl / lld-link for the clang-x86 preset (64-bit host tools; the preset targets i686).
+Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments "-arch=$arch -host_arch=x64" | Out-Null
+# clang-cl / lld-link for the clang presets (64-bit host tools; the preset names the target).
 $llvm = "$vs\VC\Tools\Llvm\x64\bin"
 if (Test-Path $llvm) { $env:PATH = "$llvm;$env:PATH" }
 

@@ -310,13 +310,13 @@ BOOL CTClientApp::InitInstance()
 	
 	if( !CTChart::InitTString( _T(".\\Tcd\\TString.tcd") ))
 	{
-		MessageBox( NULL, "TString.tcd not found", CTNationOption::m_strAppTitle, MB_OK);
+		CTWindow::ShowMessageBox( "TString.tcd not found", CTNationOption::m_strAppTitle, MB_OK);
 		return FALSE;
 	}
 
 	if( !CTNationOption::SetNation( CTChart::m_strNationCode ) )
 	{
-		MessageBox( NULL, "Invalid Nation,", CTNationOption::m_strAppTitle, MB_OK);
+		CTWindow::ShowMessageBox( "Invalid Nation,", CTNationOption::m_strAppTitle, MB_OK);
 		return FALSE;
 	}
 
@@ -587,7 +587,7 @@ BOOL CTClientApp::InitInstance()
 		m_pMainWnd->GetWindowText(strTITLE);
 		m_pMainWnd->ShowWindow(SW_HIDE);
 
-		MessageBox( NULL, strMSG, strTITLE, MB_OK);
+		CTWindow::ShowMessageBox( strMSG, strTITLE, MB_OK);
 		return FALSE;
 	}
 
@@ -607,7 +607,7 @@ BOOL CTClientApp::InitInstance()
 			strMsg.Format( "Error Code : %d", dwErrorCode );
 			strTitle = "Error";
 
-			MessageBox( NULL, strMsg, strTitle, MB_OK );
+			CTWindow::ShowMessageBox( strMsg, strTitle, MB_OK );
 			
 			return FALSE;
 		}
@@ -723,8 +723,8 @@ BOOL CTClientApp::InitInstance()
 
 		CString msg;
 		msg = CTChart::Format( TSTR_ERROR_FILE, (LPCTSTR)fe->m_strFileName);
-		::MessageBox(NULL, msg, "ERROR", MB_OK|MB_ICONERROR);
-		::PostQuitMessage(0);
+		CTWindow::ShowMessageBox( msg, "ERROR", MB_OK|MB_ICONERROR);
+		CTWindow::PostQuit();
 
 		return FALSE;
 	}
@@ -736,8 +736,8 @@ BOOL CTClientApp::InitInstance()
 
 		CString msg;
 		msg = CTChart::LoadString( TSTR_ERROR_MEMORY);
-		::MessageBox( NULL, msg, "ERROR", MB_OK|MB_ICONERROR);
-		::PostQuitMessage(0);
+		CTWindow::ShowMessageBox( msg, "ERROR", MB_OK|MB_ICONERROR);
+		CTWindow::PostQuit();
 
 		return FALSE;
 	}
@@ -748,7 +748,6 @@ BOOL CTClientApp::InitInstance()
 	else
 		m_pTachyonWnd->ShowWindow(SW_MAXIMIZE);
 
-	m_pTachyonWnd->UpdateWindow();
 	m_pTachyonWnd->SetFocus();
 
 /*#ifndef WINFIX
@@ -789,7 +788,7 @@ int CTClientApp::ExitInstance()
 			::fprintf(pFile, strURL);
 			::fclose(pFile);
 
-			::ShellExecute(NULL, "open", ".\\_event.url", NULL, NULL, SW_MAXIMIZE);
+			CTWindow::OpenURL(_T(".\\_event.url"));
 			::DeleteFile(".\\_event.url");
 		}
 	}
@@ -1434,14 +1433,14 @@ BYTE CTClientApp::MainProc()
 			EnterCriticalSection(&m_cs);
 
 #ifndef TEST_MODE
-			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+			if(!m_pTachyonWnd->IsForeground())
 				m_dwSLEEP = 100;
 #endif
 		}
 		else if(!m_pTachyonWnd->m_bOnMovie)
 		{
 #ifndef TEST_MODE
-			if(!m_pTachyonWnd->IsThis(::GetForegroundWindow()))
+			if(!m_pTachyonWnd->IsForeground())
 				m_dwSLEEP = 10;
 #endif
 

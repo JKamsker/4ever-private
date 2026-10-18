@@ -49,48 +49,58 @@ public:
 	static void WaitEvent( DWORD dwTimeout);
 	static void PostQuit();
 
-public:
-	BOOL CreateEx(
-		DWORD dwExStyle,
-		LPCTSTR lpszTitle,
-		DWORD dwStyle,
-		const RECT& rect,
-		HWND hParent);
+	// The size of the main display, in pixels, and its modes at the current refresh rate
+	// (smallest first).
+	static CSize GetScreenSize();
+	static void GetDisplayModes( std::vector<CSize>& vMODES);
 
+	// MB_ styles and ID results, like the Win32 call; texts in the game's ANSI code page.
+	static int ShowMessageBox( LPCTSTR lpszText, LPCTSTR lpszCaption = NULL, UINT nType = MB_OK, SDL_Window *pParent = NULL);
+	static BOOL OpenURL( LPCTSTR lpszURL);
+	static BOOL SetClipboardText( LPCTSTR lpszText);
+
+public:
+	// A hidden window of this client size, with a caption or borderless.
+	BOOL Create( LPCTSTR lpszTitle, int nWidth, int nHeight, BOOL bCaption, BOOL bTopMost);
 	BOOL DestroyWindow();
 
 	HWND GetSafeHwnd() const { return m_hWnd; }
 	SDL_Window *GetSDLWindow() const { return m_pSDL; }
 
-	void SetWindowText( LPCTSTR lpszText) { ::SetWindowText( m_hWnd, lpszText); }
+	void SetWindowText( LPCTSTR lpszText);
 	void GetWindowText( CString& strText) const;
-	int MessageBox( LPCTSTR lpszText, LPCTSTR lpszCaption = NULL, UINT nType = MB_OK) { return ::MessageBox( m_hWnd, lpszText, lpszCaption, nType); }
-	BOOL UpdateWindow() { return ::UpdateWindow(m_hWnd); }
+	int MessageBox( LPCTSTR lpszText, LPCTSTR lpszCaption = NULL, UINT nType = MB_OK) { return ShowMessageBox( lpszText, lpszCaption, nType, m_pSDL); }
 	HICON SetIcon( HICON hIcon, BOOL bBigIcon) { return (HICON) ::SendMessage( m_hWnd, WM_SETICON, bBigIcon ? ICON_BIG : ICON_SMALL, (LPARAM) hIcon); }
 
-	BOOL ShowWindow( int nCmdShow) { return ::ShowWindow( m_hWnd, nCmdShow); }
-	BOOL IsWindowVisible() const { return ::IsWindowVisible(m_hWnd); }
-	BOOL IsIconic() const { return ::IsIconic(m_hWnd); }
+	// SW_HIDE, SW_SHOW, SW_SHOWNORMAL, SW_RESTORE, SW_MINIMIZE, SW_MAXIMIZE.
+	BOOL ShowWindow( int nCmdShow);
+	BOOL IsWindowVisible() const;
+	BOOL IsIconic() const;
+	BOOL IsForeground() const;
+	void SetFocus();
 
-	void MoveWindow( int x, int y, int nWidth, int nHeight, BOOL bRepaint = TRUE) { ::MoveWindow( m_hWnd, x, y, nWidth, nHeight, bRepaint); }
-	void MoveWindow( LPCRECT lpRect, BOOL bRepaint = TRUE) { MoveWindow( lpRect->left, lpRect->top, lpRect->right - lpRect->left, lpRect->bottom - lpRect->top, bRepaint); }
-	BOOL SetWindowPos( HWND hWndInsertAfter, int x, int y, int cx, int cy, UINT nFlags) { return ::SetWindowPos( m_hWnd, hWndInsertAfter, x, y, cx, cy, nFlags); }
+	// The caption, the client size with the frame at the top left of the screen, topmost or not.
+	void SetCaption( BOOL bCaption);
+	void SetFrameSize( int nWidth, int nHeight);
+	void SetTopMost( BOOL bTopMost);
 
-	void GetClientRect( LPRECT lpRect) const { ::GetClientRect( m_hWnd, lpRect); }
-	void GetWindowRect( LPRECT lpRect) const { ::GetWindowRect( m_hWnd, lpRect); }
+	// The window rectangle includes the frame, like Win32's.
+	void MoveWindow( int x, int y, int nWidth, int nHeight);
+	void MoveWindow( LPCRECT lpRect) { MoveWindow( lpRect->left, lpRect->top, lpRect->right - lpRect->left, lpRect->bottom - lpRect->top); }
 
-	void ClientToScreen( LPPOINT lpPoint) const { ::ClientToScreen( m_hWnd, lpPoint); }
-	void ClientToScreen( LPRECT lpRect) const { ::MapWindowPoints( m_hWnd, NULL, (LPPOINT) lpRect, 2); }
-	void ScreenToClient( LPPOINT lpPoint) const { ::ScreenToClient( m_hWnd, lpPoint); }
-	void ScreenToClient( LPRECT lpRect) const { ::MapWindowPoints( NULL, m_hWnd, (LPPOINT) lpRect, 2); }
+	void GetClientRect( LPRECT lpRect) const;
+	void GetWindowRect( LPRECT lpRect) const;
+
+	void ClientToScreen( LPPOINT lpPoint) const;
+	void ClientToScreen( LPRECT lpRect) const;
+	void ScreenToClient( LPPOINT lpPoint) const;
+	void ScreenToClient( LPRECT lpRect) const;
 
 	BOOL ModifyStyle( DWORD dwRemove, DWORD dwAdd) { return ::SetWindowLongPtr( m_hWnd, GWL_STYLE, (::GetWindowLongPtr( m_hWnd, GWL_STYLE) & ~LONG_PTR(dwRemove)) | dwAdd) != 0; }
 
-	HWND SetCapture() { return ::SetCapture(m_hWnd); }
-	HWND SetFocus() { return ::SetFocus(m_hWnd); }
-
-	LRESULT SendMessage( UINT message, WPARAM wParam = 0, LPARAM lParam = 0) { return ::SendMessage( m_hWnd, message, wParam, lParam); }
-	BOOL PostMessage( UINT message, WPARAM wParam = 0, LPARAM lParam = 0) { return ::PostMessage( m_hWnd, message, wParam, lParam); }
+	// To this window's WindowProc: now, or through the event queue (WM_QUIT quits).
+	LRESULT SendMessage( UINT message, WPARAM wParam = 0, LPARAM lParam = 0);
+	BOOL PostMessage( UINT message, WPARAM wParam = 0, LPARAM lParam = 0);
 
 	// Whether hWnd is this window (MFC code compared CWnd pointers).
 	BOOL IsThis( HWND hWnd) const { return m_hWnd && hWnd == m_hWnd; }

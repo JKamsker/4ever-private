@@ -74,7 +74,7 @@ target_include_directories(EngineLib
         # TComp and Engine Lib include each other's headers.
         "${TCLIENT_LIB_OWN}/TComp/TComp"
 )
-target_link_directories(EngineLib PUBLIC "${TCLIENT_LIB_3RD}/zlib/lib/x86")
+target_link_directories(EngineLib PUBLIC "${TCLIENT_LIB_3RD}/zlib/lib/${TCLIENT_ARCH}")
 target_link_libraries(EngineLib
     PUBLIC
         tclient_dxsdk

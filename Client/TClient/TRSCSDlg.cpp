@@ -242,7 +242,7 @@ void CTRSCSDlg::ResetCORPS()
 			m_vTCORPS.m_vTSQUAD[i]->m_dwChiefID);
 		CString strNAME;
 
-		m_pTSQUAD->SetItemData( nIndex, 0, (DWORD) m_vTCORPS.m_vTSQUAD[i]);
+		m_pTSQUAD->SetItemData( nIndex, 0, (DWORD_PTR) m_vTCORPS.m_vTSQUAD[i]);
 		if(pTUNIT)
 		{
 			strNAME = CTChart::Format( TSTR_FMT_SQUAD_NAME, (LPCTSTR)pTUNIT->m_strNAME);
@@ -323,7 +323,7 @@ void CTRSCSDlg::ResetUNIT()
 	for(auto i=0; i<INT(m_pTCURSQUAD->m_vTUNIT.size()); i++)
 	{
 		int nIndex = m_pTUNIT->AddString("");
-		m_pTUNIT->SetItemData( nIndex, 0, (DWORD) m_pTCURSQUAD->m_vTUNIT[i]);
+		m_pTUNIT->SetItemData( nIndex, 0, (DWORD_PTR) m_pTCURSQUAD->m_vTUNIT[i]);
 
 		m_pTUNITNAME[i]->m_strText = m_pTCURSQUAD->m_vTUNIT[i]->m_strNAME;
 		m_pTUNITNAME[i]->ShowComponent(!m_bMinimize && !m_bHideSquad);
@@ -901,7 +901,7 @@ void CTRSCSDlg::OnRButtonUp( UINT nFlags, CPoint pt)
 
 		ComponentToScreen(&point);
 		MoveCursor(point);
-		ReleaseCapture();
+		CTachyonInput::SetCapture(FALSE);
 		CTachyonInput::ShowCursor(TRUE);
 
 		m_bMOVE = FALSE;
@@ -1726,7 +1726,7 @@ void CTRSCSDlg::OnRButtonUp( UINT nFlags, CPoint pt)
 
 		ComponentToScreen(&point);
 		MoveCursor(point);
-		ReleaseCapture();
+		CTachyonInput::SetCapture(FALSE);
 		CTachyonInput::ShowCursor(TRUE);
 
 		m_bMOVE = FALSE;

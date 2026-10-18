@@ -102,7 +102,7 @@ void CTFameBaseDlg::ResetRankInfo()
 			if( !pRank->strName.IsEmpty() )
 			{
 				int nLine = m_pLIST->AddString( GetFameTitle(m_bType, i ), 0 );
-				m_pLIST->SetItemData( nLine, 0, (DWORD)pRank );
+				m_pLIST->SetItemData( nLine, 0, (DWORD_PTR)pRank );
 				m_pLIST->SetItemString( nLine, 1, pRank->strName ); 
 				m_pLIST->SetItemString( nLine, 2, pRank->strGuild ); 
 
@@ -145,7 +145,7 @@ void CTFameBaseDlg::ResetRankInfo()
 				if( !pRank->strName.IsEmpty() )
 				{
 					int nLine = m_pLIST->AddString( GetFameTitle(m_bType, pRank->dwMonthRank ), 0 );
-					m_pLIST->SetItemData( nLine, 0, (DWORD)pRank );
+					m_pLIST->SetItemData( nLine, 0, (DWORD_PTR)pRank );
 					m_pLIST->SetItemString( nLine, 1, pRank->strName ); 
 					m_pLIST->SetItemString( nLine, 2, pRank->strGuild ); 
 

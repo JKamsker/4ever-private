@@ -83,7 +83,7 @@ CTGuildCommander* CTGuildCommander::GetInstance()
 // ====================================================================
 
 // ====================================================================
-CString CTGuildCommander::OnGuildCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTGuildCommander::OnGuildCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CString strParam("");
 	if( !vPARAM.empty() )

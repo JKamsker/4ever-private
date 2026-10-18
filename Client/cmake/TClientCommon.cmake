@@ -9,6 +9,13 @@ set(TCLIENT_LIB_OWN "${TCLIENT_ROOT}/Lib/Own")
 set(TCLIENT_LIB_3RD "${TCLIENT_ROOT}/Lib/3rdParty")
 set(TCLIENT_DXSDK "${TCLIENT_LIB_3RD}/DirectX9 (June 2010)")
 
+# x86 or x64: the folder of the prebuilt libraries (DirectX SDK, zlib).
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(TCLIENT_ARCH x64)
+else()
+    set(TCLIENT_ARCH x86)
+endif()
+
 # No MFC: TAfx.h (Engine Lib) gives its core classes, on top of ATL's CString/CRect/CTime.
 
 # /MT everywhere (RuntimeLibrary=MultiThreaded).
@@ -50,6 +57,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 else()
     # -ferror-limit=0: report every error of a file, not only the first 20.
     target_compile_options(tclient_options INTERFACE /execution-charset:utf-8 -ferror-limit=0)
+
+    # A 64-bit audit build: warns on every implicit 64 to 32-bit narrowing (very verbose).
+    option(TCLIENT_WARN_SHORTEN "Warn on implicit 64 to 32-bit conversions (clang)" OFF)
+    if(TCLIENT_WARN_SHORTEN)
+        target_compile_options(tclient_options INTERFACE -Wshorten-64-to-32)
+    endif()
 endif()
 
 # Ninja runs one compiler per file; MSBuild needs /MP to compile files in parallel.
@@ -60,7 +73,7 @@ endif()
 # Old DirectX SDK headers (d3dx9, dsound, ...). They must come AFTER the Windows SDK headers,
 # whose newer dxgi/d3d headers they would otherwise shadow (MSBuild: IncludePath=$(IncludePath);DX).
 add_library(tclient_dxsdk INTERFACE)
-target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/x86")
+target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/${TCLIENT_ARCH}")
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     set(CMAKE_VS_SDK_INCLUDE_DIRECTORIES "$(VC_IncludePath);$(WindowsSDK_IncludePath);${TCLIENT_DXSDK}/Include")
 else()

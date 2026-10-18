@@ -15,12 +15,10 @@ CTachyonWnd::CTachyonWnd()
 {
 	m_bActivate = FALSE;
 	m_bOnMovie = FALSE;
-	m_bNcMove = FALSE;
 
 	m_pMainFrame = NULL;
 	m_pTParser = NULL;
 
-	m_vNcPOS = CPoint( 0, 0);
 	m_vCOMMAND.clear();
 
 	m_bDirectLogin = FALSE;
@@ -169,54 +167,32 @@ BOOL CTachyonWnd::ResetThreadDevices()
 
 BOOL CTachyonWnd::Create()
 {
-	DWORD dwStyle = WS_POPUP|WS_VISIBLE|WS_CLIPCHILDREN;
+	CSize vSCREEN = CTWindow::GetScreenSize();
+	BOOL bCaption = FALSE;
 	CString strTitle;
-	CRect rect(
-		0, 0,
-		m_Device.m_option.m_dwScreenX,
-		m_Device.m_option.m_dwScreenY);
 
-
-
-
-	if (m_Device.m_option.m_bWindowedMode)
-	{
-		if (m_Device.m_option.m_dwScreenX != GetSystemMetrics(SM_CXSCREEN) &&
-			m_Device.m_option.m_dwScreenY != GetSystemMetrics(SM_CYSCREEN))
-		{
-			dwStyle |= WS_OVERLAPPED | WS_CAPTION;
-		}
-	}
+	// A window of another size than the screen has a caption; full screen stays on top.
+	if( m_Device.m_option.m_bWindowedMode &&
+		m_Device.m_option.m_dwScreenX != DWORD(vSCREEN.cx) &&
+		m_Device.m_option.m_dwScreenY != DWORD(vSCREEN.cy) )
+		bCaption = TRUE;
 
 	strTitle.LoadString(AFX_IDS_APP_TITLE);
 
-	::AdjustWindowRect(
-		&rect,
-		dwStyle,
-		FALSE);
-
-	rect.OffsetRect(
-		-rect.left,
-		-rect.top);
-
-	BOOL bResult = CTWindow::CreateEx(
-		0,
+	BOOL bResult = CTWindow::Create(
 		strTitle,
-		dwStyle,
-		rect,
-		NULL);
+		m_Device.m_option.m_dwScreenX,
+		m_Device.m_option.m_dwScreenY,
+		bCaption,
+		!m_Device.m_option.m_bWindowedMode);
 
 #ifdef USE_CONSOLE
 	CTConsole* pConsole = CTConsole::GetInstance();
 	pConsole->Create("Output", true);
 #endif
 
-	if(!m_Device.m_option.m_bWindowedMode)
-	{
-		SetWindowPos( HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOREDRAW|SWP_NOSIZE);
-		MoveWindow(&rect);
-	}
-
+	if(bResult)
+		ShowWindow(SW_SHOW);
 
 	return bResult;
 }
@@ -287,7 +263,7 @@ BOOL CTachyonWnd::InitDevices()
 	m_FontFPS.SetFont(&m_Font);
 	m_bActivate = TRUE;
 
-	CTachyonInput::SetWindow(m_hWnd);
+	CTachyonInput::SetWindow(this);
 	CTachyonObject::m_pMedia = &CTachyonRes::m_MEDIA;
 	CTachyonMesh::InitGlobalVB();
 
@@ -301,34 +277,12 @@ BOOL CTachyonWnd::InitDevices()
 
 BOOL CTachyonWnd::AdjustWindowSize(INT nWidth, INT nHeight)
 {
-	CRect rect(
-		0, 0,
-		nWidth,
-		nHeight);
+	CSize vSCREEN = CTWindow::GetScreenSize();
 
-	DWORD dwStyle = WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN;
-
-
-
-	if (m_Device.m_option.m_bWindowedMode)
-	{
-		if (m_Device.m_option.m_dwScreenX != GetSystemMetrics(SM_CXSCREEN) &&
-			m_Device.m_option.m_dwScreenY != GetSystemMetrics(SM_CYSCREEN))
-		{
-			dwStyle |= WS_OVERLAPPED | WS_CAPTION;
-		}
-	}
-
-	::AdjustWindowRect(
-		&rect,
-		dwStyle,
-		FALSE);
-
-	rect.OffsetRect(
-		-rect.left,
-		-rect.top);
-
-	MoveWindow(&rect);
+	SetCaption( m_Device.m_option.m_bWindowedMode &&
+		m_Device.m_option.m_dwScreenX != DWORD(vSCREEN.cx) &&
+		m_Device.m_option.m_dwScreenY != DWORD(vSCREEN.cy));
+	SetFrameSize( nWidth, nHeight);
 
 	return TRUE;
 }
@@ -489,63 +443,11 @@ LRESULT CTachyonWnd::OnNcHitTest( CPoint point)
 	return nHIT;
 }
 
-void CTachyonWnd::OnNcLButtonDown( UINT nHitTest, CPoint point)
-{
-	if( nHitTest == HTCAPTION )
-	{
-		m_vNcPOS = point;
-		m_bNcMove = TRUE;
-
-		SetCapture();
-	}
-
-	CTWindow::OnNcLButtonDown( nHitTest, point);
-}
-
-void CTachyonWnd::OnLButtonUp( UINT nFlags, CPoint point)
-{
-	if(m_bNcMove)
-	{
-		m_bNcMove = FALSE;
-		ReleaseCapture();
-	}
-
-	CTWindow::OnLButtonUp( nFlags, point);
-}
-
-void CTachyonWnd::OnMouseMove( UINT nFlags, CPoint point)
-{
-	if(m_bNcMove)
-	{
-		CPoint screen = point;
-		CRect rect;
-
-		ClientToScreen(&screen);
-		GetWindowRect(&rect);
-
-		screen -= m_vNcPOS;
-		m_vNcPOS += screen;
-
-		rect.OffsetRect(
-			screen.x,
-			screen.y);
-
-		MoveWindow(
-			rect.left,
-			rect.top,
-			rect.Width(),
-			rect.Height(),
-			TRUE);
-	}
-
-	CTWindow::OnMouseMove( nFlags, point);
-}
-
 void CTachyonWnd::OnActivate( UINT nState, HWND hWndOther, BOOL bMinimized)
 {
 	CTWindow::OnActivate( nState, hWndOther, bMinimized);
 
-	BYTE bBACK = IsThis(::GetForegroundWindow()) ? FALSE : TRUE;
+	BYTE bBACK = IsForeground() ? FALSE : TRUE;
 	if(m_bActivate)
 	{
 		if(m_pMainFrame)

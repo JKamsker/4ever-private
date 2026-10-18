@@ -1,17 +1,28 @@
 #pragma once
 
-// Keyboard and mouse queries of the platform layer. Every OS call for key
-// states, the cursor position and the scan code mapping goes through here so
-// the SDL3 port only has to replace this file. Key codes are Windows VK_
-// values (the key settings store them) and points are in the client area of
-// the main window.
+struct SDL_Cursor;
+struct SDL_Window;
+
+// A mouse cursor image (CTachyonInput::LoadCursor).
+typedef SDL_Cursor *HTCURSOR;
+
+// Keyboard and mouse of the platform layer, on SDL. Key codes are Windows VK_
+// values (the key settings store them), the key messages' flags carry the PC
+// scan code of the key, and points are in the client area of the main window.
 class CTachyonInput
 {
 public:
 	static HWND m_hWND;
+	static SDL_Window *m_pWINDOW;
 
 public:
-	static void SetWindow( HWND hWND);
+	// After SDL_Init: the scan code tables.
+	static void InitPlatform();
+	static void SetWindow( CTWindow *pWnd);
+
+	// The VK_ code and the PC scan code (0xE0xx when extended) of an SDL key.
+	static UINT GetVirtualKey( int nScancode, int nKeycode, int nMod);
+	static WORD GetPCScanCode( int nScancode);
 
 	static BYTE IsKeyDown( BYTE bVKey);
 	static BYTE IsCtrlDown();
@@ -22,7 +33,15 @@ public:
 
 	static CPoint GetCursorPos();
 	static void SetCursorPos( CPoint point);
+	static void SetCapture( BOOL bCapture);
+
+	// Like Win32: ShowCursor counts, SetCursor(NULL) hides the image.
 	static void ShowCursor( BOOL bShow);
+	static void SetCursor( HTCURSOR hCursor);
+
+	// A .cur or an animated .ani file in memory.
+	static HTCURSOR LoadCursor( LPCVOID pData, DWORD dwSize);
+	static void DestroyCursor( HTCURSOR hCursor);
 
 	static WORD ScanToVKey( UINT nFlags);
 	static CHAR ScanToChar( UINT nFlags);
@@ -52,6 +71,11 @@ public:
 	static CString FromUTF8( LPCSTR lpszUTF8);
 
 protected:
+	static void UpdateCursor();
+
+	static HTCURSOR m_hCURSOR;
+	static int m_nShowCursor;
+
 	static CString m_strImeComposition;
 	static CString m_strImeResult;
 	static std::vector<BYTE> m_vImeAttr;

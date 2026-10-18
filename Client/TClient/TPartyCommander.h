@@ -22,7 +22,7 @@ public:
 	static CTPartyCommander* GetInstance();
 
 	/// 채팅 메시지에 의한 파티 명령 이벤트를 처리한다.
-	static CString OnPartyCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER);
+	static CString OnPartyCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 	/// 채팅 메시지 커맨드를 등록한다.
 	static void RegChatCmds();
 

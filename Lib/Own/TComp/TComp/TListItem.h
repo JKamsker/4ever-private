@@ -15,7 +15,7 @@ class TListItem
 {
 public:
 	CString m_strText;
-	DWORD m_param;
+	DWORD_PTR m_param;
 	DWORD m_dwTextColor;
 	BOOL m_blIsImageList;
 	int m_nImageIndex;

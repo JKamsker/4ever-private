@@ -35,7 +35,7 @@ void SmoothScrolling::Setup(CRect rArea, DWORD* All, BYTE bDynObjects, CTClientU
 		{
 			TComponent* pComponentBase = pSource->FindKid(All[i]);
 			if (!pComponentBase) {
-				::MessageBox( NULL, ":D", NULL, MB_OK);
+				CTWindow::ShowMessageBox(":D");
 				continue;
 			}
 

@@ -2119,7 +2119,7 @@ void CTachyonRes::ComplateTEX()
 			
 			for( int i=0; i<nCount; i++)
 			{
-				MAPRES::iterator finder = m_mapTEXSRC.find((DWORD) pTEX->GetTexturePtr(i));
+				MAPRES::iterator finder = m_mapTEXSRC.find((DWORD)(DWORD_PTR) pTEX->GetTexturePtr(i));
 
 				CT3DTexture *pText = nullptr;
 
@@ -2146,7 +2146,7 @@ void CTachyonRes::ComplateIMG()
 
 			for( int i=0; i<nCount; i++)
 			{
-				MAPRES::iterator finder = m_mapIMGSRC.find((DWORD) pIMG->m_vImage[i]);
+				MAPRES::iterator finder = m_mapIMGSRC.find((DWORD)(DWORD_PTR) pIMG->m_vImage[i]);
 
 				CD3DImage *pImg = nullptr;
 
@@ -2173,7 +2173,7 @@ void CTachyonRes::ComplateANI()
 
 			for( int i=0; i<nCount; i++)
 			{
-				MAPRES::iterator finder = m_mapANISRC.find((DWORD) pANI->m_vAni[i]->m_pAni);
+				MAPRES::iterator finder = m_mapANISRC.find((DWORD)(DWORD_PTR) pANI->m_vAni[i]->m_pAni);
 
 				CTachyonAnimation *pAni = nullptr;
 
@@ -2202,7 +2202,7 @@ void CTachyonRes::ComplateOBJ()
 
 			for( itSFX = pOBJ->m_mapSFX.begin(); itSFX != pOBJ->m_mapSFX.end(); itSFX++)
 			{
-				MAPRES::iterator itRES = m_mapSFX.find((DWORD) (*itSFX).second->m_pSFX);
+				MAPRES::iterator itRES = m_mapSFX.find((DWORD)(DWORD_PTR) (*itSFX).second->m_pSFX);
 
 				LPSFX pSFX = nullptr;
 
@@ -2219,7 +2219,7 @@ void CTachyonRes::ComplateOBJ()
 
 				for( itSFX = pACT->m_mapSFX.begin(); itSFX != pACT->m_mapSFX.end(); itSFX++)
 				{
-					MAPRES::iterator itRES = m_mapSFX.find((DWORD) (*itSFX).second->m_pSFX);
+					MAPRES::iterator itRES = m_mapSFX.find((DWORD)(DWORD_PTR) (*itSFX).second->m_pSFX);
 
 					LPSFX pSFX = nullptr;
 
@@ -2231,7 +2231,7 @@ void CTachyonRes::ComplateOBJ()
 
 				for( itANI = pACT->m_mapANI.begin(); itANI != pACT->m_mapANI.end(); itANI++)
 				{
-					MAPRES::iterator finder = m_mapANI.find((DWORD) (*itANI).second->m_pANI);
+					MAPRES::iterator finder = m_mapANI.find((DWORD)(DWORD_PTR) (*itANI).second->m_pANI);
 
 					LPANISET pAniSet = nullptr;
 
@@ -2242,7 +2242,7 @@ void CTachyonRes::ComplateOBJ()
 
 					for( itSFX = (*itANI).second->m_mapSFX.begin(); itSFX != (*itANI).second->m_mapSFX.end(); itSFX++)
 					{
-						MAPRES::iterator itRES = m_mapSFX.find((DWORD) (*itSFX).second->m_pSFX);
+						MAPRES::iterator itRES = m_mapSFX.find((DWORD)(DWORD_PTR) (*itSFX).second->m_pSFX);
 
 						LPSFX pSFX = nullptr;
 
@@ -2268,7 +2268,7 @@ void CTachyonRes::ComplateOBJ()
 					{
 						LPMESH pMESH = (*itMESH).second;
 
-						MAPRES::iterator finder = m_mapMESH.find((DWORD) pMESH->m_pMESH);
+						MAPRES::iterator finder = m_mapMESH.find((DWORD)(DWORD_PTR) pMESH->m_pMESH);
 						int nCount = INT(pMESH->m_vTEX.size());
 
 						CTachyonMesh *pMesh = nullptr;
@@ -2281,11 +2281,11 @@ void CTachyonRes::ComplateOBJ()
 
 						for( int i=0; i<nCount; i++)
 						{
-							finder = m_mapTEX.find((DWORD) pMESH->m_vTEX[i]->m_pTEX[0]);
+							finder = m_mapTEX.find((DWORD)(DWORD_PTR) pMESH->m_vTEX[i]->m_pTEX[0]);
 							if( finder != m_mapTEX.end() )
 								pMESH->m_vTEX[i]->m_pTEX[0] = (LPTEXTURESET) (*finder).second;
 
-							finder = m_mapTEX.find((DWORD) pMESH->m_vTEX[i]->m_pTEX[1]);
+							finder = m_mapTEX.find((DWORD)(DWORD_PTR) pMESH->m_vTEX[i]->m_pTEX[1]);
 							if( finder != m_mapTEX.end() )
 								pMESH->m_vTEX[i]->m_pTEX[1] = (LPTEXTURESET) (*finder).second;
 						}
@@ -2307,7 +2307,7 @@ void CTachyonRes::ComplateSFX()
 
 		for( int i=0; i<nCount; i++)
 		{
-			MAPRES::iterator finder = m_mapSFX.find((DWORD) pSFX->m_vSFX[i]);
+			MAPRES::iterator finder = m_mapSFX.find((DWORD)(DWORD_PTR) pSFX->m_vSFX[i]);
 
 			if( finder != m_mapSFX.end() )
 				pSFX->m_vSFX[i] = (LPSFX) (*finder).second;
@@ -2319,7 +2319,7 @@ void CTachyonRes::ComplateSFX()
 		{
 		case SFXSRC_TEX	:
 			{
-				MAPRES::iterator finder = m_mapTEX.find((DWORD) pSFX->m_SRC.m_pTEX);
+				MAPRES::iterator finder = m_mapTEX.find((DWORD)(DWORD_PTR) pSFX->m_SRC.m_pTEX);
 
 				if( finder != m_mapTEX.end() )
 					pSFX->m_SRC.m_pTEX = (LPTEXTURESET) (*finder).second;
@@ -2331,7 +2331,7 @@ void CTachyonRes::ComplateSFX()
 
 		case SFXSRC_OBJ	:
 			{
-				MAPRES::iterator finder = m_mapOBJ.find((DWORD) pSFX->m_SRC.m_pTEX);
+				MAPRES::iterator finder = m_mapOBJ.find((DWORD)(DWORD_PTR) pSFX->m_SRC.m_pTEX);
 
 				if( finder != m_mapOBJ.end() )
 				{
@@ -2346,7 +2346,7 @@ void CTachyonRes::ComplateSFX()
 
 		case SFXSRC_SFX	:
 			{
-				MAPRES::iterator finder = m_mapSFX.find((DWORD) pSFX->m_SRC.m_pTEX);
+				MAPRES::iterator finder = m_mapSFX.find((DWORD)(DWORD_PTR) pSFX->m_SRC.m_pTEX);
 
 				if( finder != m_mapSFX.end() )
 					pSFX->m_SRC.m_pSFX = (LPSFX) (*finder).second;
@@ -2357,13 +2357,13 @@ void CTachyonRes::ComplateSFX()
 			break;
 		}
 
-		MAPRES::iterator finder = m_mapANI.find((DWORD) pSFX->m_pANISRC);
+		MAPRES::iterator finder = m_mapANI.find((DWORD)(DWORD_PTR) pSFX->m_pANISRC);
 		if( finder != m_mapANI.end() )
 			pSFX->m_pANISRC = (LPANISET) (*finder).second;
 		else
 			pSFX->m_pANISRC = NULL;
 
-		finder = m_mapANI.find((DWORD) pSFX->m_pSprayANI);
+		finder = m_mapANI.find((DWORD)(DWORD_PTR) pSFX->m_pSprayANI);
 		if( finder != m_mapANI.end() )
 			pSFX->m_pSprayANI = (LPANISET) (*finder).second;
 		else

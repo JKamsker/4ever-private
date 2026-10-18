@@ -31,11 +31,37 @@
         "CMAKE_C_COMPILER_TARGET": "i686-pc-windows-msvc",
         "CMAKE_CXX_COMPILER_TARGET": "i686-pc-windows-msvc"
       }
+    },
+    {
+      "name": "msvc-x64",
+      "displayName": "Ninja + MSVC, x64 (run from an x64 developer shell, see build.ps1)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/msvc-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "clang-x64",
+      "displayName": "Ninja + clang-cl, x64 (run from an x64 developer shell, see build.ps1)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/clang-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_C_COMPILER_TARGET": "x86_64-pc-windows-msvc",
+        "CMAKE_CXX_COMPILER_TARGET": "x86_64-pc-windows-msvc"
+      }
     }
   ],
   "buildPresets": [
     { "name": "vs-x86", "configurePreset": "vs-x86", "configuration": "Release" },
     { "name": "msvc-x86", "configurePreset": "msvc-x86" },
-    { "name": "clang-x86", "configurePreset": "clang-x86" }
+    { "name": "clang-x86", "configurePreset": "clang-x86" },
+    { "name": "msvc-x64", "configurePreset": "msvc-x64" },
+    { "name": "clang-x64", "configurePreset": "clang-x64" }
   ]
 }

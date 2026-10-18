@@ -4,10 +4,6 @@
 cmake_minimum_required(VERSION 3.25)
 project(TClient LANGUAGES C CXX RC)
 
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-    message(FATAL_ERROR "The client is 32-bit only for now: configure with an x86 toolchain (-A Win32 or an x86 developer shell).")
-endif()
-
 include(cmake/TClientCommon.cmake)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

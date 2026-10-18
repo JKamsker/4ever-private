@@ -6045,8 +6045,8 @@ int CTClientGame::OnGM_TOGGLE_CASH_SHOP()
 
 
 
-	ShowWindow(GetActiveWindow(), SW_MINIMIZE);
-	ShellExecute(NULL, _T("open"), "http://4story.com/pvp/user_cp.php?m=cash_overview",NULL,NULL,SW_SHOWDEFAULT);
+	m_pMainWnd->ShowWindow(SW_MINIMIZE);
+	CTWindow::OpenURL("http://4story.com/pvp/user_cp.php?m=cash_overview");
 
 	return TERR_NONE;
 }
@@ -11663,16 +11663,16 @@ int CTClientGame::OnGM_SC_RIGHTBTN()
 
 int CTClientGame::OnGM_TOGGLE_TWITTER()
 {
-	ShowWindow(GetActiveWindow(), SW_MINIMIZE);
-	ShellExecute(NULL, _T("open"), TSTR_TWITTERLINK ,NULL,NULL,SW_SHOWDEFAULT);
+	m_pMainWnd->ShowWindow(SW_MINIMIZE);
+	CTWindow::OpenURL(TSTR_TWITTERLINK);
 
 	return TERR_NONE;
 }
 
 int CTClientGame::OnGM_TOGGLE_FACEBOOK()
 {
-	ShowWindow(GetActiveWindow(), SW_MINIMIZE);
-	ShellExecute(NULL, _T("open"), TSTR_FACEBOOKLINK ,NULL,NULL,SW_SHOWNORMAL);
+	m_pMainWnd->ShowWindow(SW_MINIMIZE);
+	CTWindow::OpenURL(TSTR_FACEBOOKLINK);
 
 	return TERR_NONE;
 }

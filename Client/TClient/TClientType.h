@@ -2562,12 +2562,12 @@ struct TMAGICOPTION
 	WORD	m_wValue;
 };
 
-typedef CString (*FP_CHATCMDPROC)(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER);
+typedef CString (*FP_CHATCMDPROC)(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER);
 
 struct ChatCmdData
 {
 	FP_CHATCMDPROC	pfProc;
-	DWORD			dwUser;
+	DWORD_PTR			dwUser;
 };
 
 struct TOP3

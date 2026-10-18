@@ -122,7 +122,7 @@ void CTMessengerCommander::ChatSysMSG( const CString& strMSG)
 // ====================================================================
 
 // ====================================================================
-CString CTMessengerCommander::OnMessengerCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTMessengerCommander::OnMessengerCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CString strParam1(""), strParam2("");
 	if( !vPARAM.empty() )

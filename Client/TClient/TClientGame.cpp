@@ -25811,7 +25811,7 @@ void CTClientGame::DoDEFACTION(BOOL FromKeyPress)
 				OnCommand( GM_NPC_TALK );
 			}
 
-			::SetCursor( m_pMainWnd->m_vTCURSOR[TCURSOR_HAND] );
+			CTachyonInput::SetCursor( m_pMainWnd->m_vTCURSOR[TCURSOR_HAND] );
 		}
 
 		break;
@@ -26112,7 +26112,7 @@ CString CTClientGame::ToTimeOneString(DWORD dwTick)
 	return strResult;
 }
 
-CString CTClientGame::OnActCmdByMsg(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTClientGame::OnActCmdByMsg(const CString& strMSG, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CTClientGame* pGame = CTClientGame::GetInstance();
 	pGame->DoActCmd(strMSG);
@@ -27007,54 +27007,8 @@ void CTClientGame::ChangeResolution(
 #ifdef TEST_MODE
 void CTClientGame::CopyToClipboard( CString strTEXT )
 {
-	if(!strTEXT.IsEmpty())
-	{
-		HGLOBAL hHANDLE = GlobalAlloc(
-			GMEM_MOVEABLE,
-			strTEXT.GetLength() + 1);
-
-		if(!hHANDLE)
-		{
-			::MessageBox( NULL, "Cannot GlobalAlloc", NULL, MB_OK);
-			return;
-		}
-		LPTSTR pSTR = (LPTSTR) GlobalLock(hHANDLE);
-
-		if(!pSTR)
-		{
-			GlobalFree(hHANDLE);
-			::MessageBox( NULL, "Cannot GlobalLock", NULL, MB_OK);
-			return;
-		}
-		memcpy( pSTR, LPCTSTR(strTEXT), strTEXT.GetLength() * sizeof(TCHAR));
-		pSTR[strTEXT.GetLength()] = (TCHAR) 0;
-		GlobalUnlock(hHANDLE);
-
-		if(!OpenClipboard(TSAFE_HWND(m_pMainWnd)))
-		{
-			GlobalFree(hHANDLE);
-			::MessageBox( NULL, "Cannot open the Clipboard", NULL, MB_OK);
-			return;
-		}
-
-		if( !EmptyClipboard() )
-		{
-			GlobalFree(hHANDLE);
-			::MessageBox( NULL, "Cannot empty the Clipboard", NULL, MB_OK);
-			return;  
-		}
-
-		if ( ::SetClipboardData( CF_TEXT, hHANDLE) == NULL )
-		{
-			GlobalFree(hHANDLE);
-			::MessageBox( NULL, "Unable to set Clipboard data", NULL, MB_OK);
-			CloseClipboard();
-			return;  
-		}  
-
-		CloseClipboard();
-		return;
-	}
+	if( !strTEXT.IsEmpty() && !CTWindow::SetClipboardText(strTEXT) )
+		CTWindow::ShowMessageBox( "Unable to set Clipboard data");
 }
 #endif
 
@@ -28287,7 +28241,7 @@ DWORD WINAPI CTClientGame::_OpenWebsiteSafely( LPVOID lpParam)
 
 void CTClientGame::OpenWebsiteSafely()
 {
-	ShellExecute(NULL, _T("open"), "http://4story.com/pvp/user_cp.php?m=cash_overview", NULL, NULL, SW_SHOWDEFAULT);
+	CTWindow::OpenURL(_T("http://4story.com/pvp/user_cp.php?m=cash_overview"));
 	CloseHandle(GetInstance()->m_hWebsiteOpener);
 	GetInstance()->m_hWebsiteOpener = NULL;
 

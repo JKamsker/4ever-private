@@ -2268,7 +2268,7 @@ void CTClientNET::InitGroupUI()
 			(LPCTSTR)pGroup->m_strNAME,
 			pGroup->m_bCharCnt);
 
-		int nIndex = pLIST->AddItem(strFMT, (DWORD)pGroup);
+		int nIndex = pLIST->AddItem(strFMT, (DWORD_PTR)pGroup);
 		pLIST->SetUserColor(nIndex, 0, D3DCOLOR_ARGB(255, 219, 214, 202));
 	}
 

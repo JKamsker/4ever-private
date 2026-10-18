@@ -261,7 +261,7 @@ int TList::AddInt(int nText, int nColumn)
 	return AddString(strText, nColumn);
 }
 
-int TList::AddItem(LPCTSTR strText, DWORD data, int nColumn)
+int TList::AddItem(LPCTSTR strText, DWORD_PTR data, int nColumn)
 {
 	int nSize = AddString(strText, nColumn);
 
@@ -360,7 +360,7 @@ BOOL TList::SetItemInt(int nLine, int nColumn, int nText)
 	return SetItemString(nLine, nColumn, strText);
 }
 
-BOOL TList::SetItemData(int nLine, int nColumn, DWORD data)
+BOOL TList::SetItemData(int nLine, int nColumn, DWORD_PTR data)
 {
 	if (nLine < 0 || nLine >= m_items.size() ||
 		nColumn < 0 || nColumn >= m_nColumnCount)
@@ -414,7 +414,7 @@ BOOL TList::SetImageIndex(int nLine, int nColumn, BOOL blIsImageList, int nImage
 	return TRUE;
 }
 
-BOOL TList::SetItemDataAllColumn(int nLine, DWORD data)
+BOOL TList::SetItemDataAllColumn(int nLine, DWORD_PTR data)
 {
 	if (nLine < 0 || nLine >= m_items.size())
 		return FALSE;
@@ -840,7 +840,7 @@ void TList::UpdateScrollPosition()
 	m_bNeedUpdateRender = TRUE;
 }
 
-DWORD TList::GetItemData(int nLine, int nColumn)
+DWORD_PTR TList::GetItemData(int nLine, int nColumn)
 {
 	if (nLine < 0 || nLine >= GetItemCount() ||
 		nColumn <0 || nColumn >= m_nColumnCount)

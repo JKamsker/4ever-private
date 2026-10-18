@@ -4,186 +4,18 @@
 
 #include "StdAfx.h"
 #include <windowsx.h>
+#include <algorithm>
 #include <SDL3/SDL.h>
 
 #define TWINDOW_PROP				"TachyonWnd"
 #define TWINDOW_PROPW				L"TachyonWnd"
 
 
-// The Win32 scan code of each SDL scancode is the index in this table, copied from SDL's
-// src/events/scancodes_windows.h: 0x00-0x7F, then 0xE000-0xE07F (extended keys).
-static const SDL_Scancode s_vWINSCAN[256] = {
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_ESCAPE, SDL_SCANCODE_1, SDL_SCANCODE_2,
-	SDL_SCANCODE_3, SDL_SCANCODE_4, SDL_SCANCODE_5, SDL_SCANCODE_6,
-	SDL_SCANCODE_7, SDL_SCANCODE_8, SDL_SCANCODE_9, SDL_SCANCODE_0,
-	SDL_SCANCODE_MINUS, SDL_SCANCODE_EQUALS, SDL_SCANCODE_BACKSPACE, SDL_SCANCODE_TAB,
-	SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
-	SDL_SCANCODE_T, SDL_SCANCODE_Y, SDL_SCANCODE_U, SDL_SCANCODE_I,
-	SDL_SCANCODE_O, SDL_SCANCODE_P, SDL_SCANCODE_LEFTBRACKET, SDL_SCANCODE_RIGHTBRACKET,
-	SDL_SCANCODE_RETURN, SDL_SCANCODE_LCTRL, SDL_SCANCODE_A, SDL_SCANCODE_S,
-	SDL_SCANCODE_D, SDL_SCANCODE_F, SDL_SCANCODE_G, SDL_SCANCODE_H,
-	SDL_SCANCODE_J, SDL_SCANCODE_K, SDL_SCANCODE_L, SDL_SCANCODE_SEMICOLON,
-	SDL_SCANCODE_APOSTROPHE, SDL_SCANCODE_GRAVE, SDL_SCANCODE_LSHIFT, SDL_SCANCODE_BACKSLASH,
-	SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V,
-	SDL_SCANCODE_B, SDL_SCANCODE_N, SDL_SCANCODE_M, SDL_SCANCODE_COMMA,
-	SDL_SCANCODE_PERIOD, SDL_SCANCODE_SLASH, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_KP_MULTIPLY,
-	SDL_SCANCODE_LALT, SDL_SCANCODE_SPACE, SDL_SCANCODE_CAPSLOCK, SDL_SCANCODE_F1,
-	SDL_SCANCODE_F2, SDL_SCANCODE_F3, SDL_SCANCODE_F4, SDL_SCANCODE_F5,
-	SDL_SCANCODE_F6, SDL_SCANCODE_F7, SDL_SCANCODE_F8, SDL_SCANCODE_F9,
-	SDL_SCANCODE_F10, SDL_SCANCODE_NUMLOCKCLEAR, SDL_SCANCODE_SCROLLLOCK, SDL_SCANCODE_KP_7,
-	SDL_SCANCODE_KP_8, SDL_SCANCODE_KP_9, SDL_SCANCODE_KP_MINUS, SDL_SCANCODE_KP_4,
-	SDL_SCANCODE_KP_5, SDL_SCANCODE_KP_6, SDL_SCANCODE_KP_PLUS, SDL_SCANCODE_KP_1,
-	SDL_SCANCODE_KP_2, SDL_SCANCODE_KP_3, SDL_SCANCODE_KP_0, SDL_SCANCODE_KP_PERIOD,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_NONUSBACKSLASH, SDL_SCANCODE_F11,
-	SDL_SCANCODE_F12, SDL_SCANCODE_KP_EQUALS, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_INTERNATIONAL6, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_F13, SDL_SCANCODE_F14, SDL_SCANCODE_F15, SDL_SCANCODE_F16,
-	SDL_SCANCODE_F17, SDL_SCANCODE_F18, SDL_SCANCODE_F19, SDL_SCANCODE_F20,
-	SDL_SCANCODE_F21, SDL_SCANCODE_F22, SDL_SCANCODE_F23, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_INTERNATIONAL2, SDL_SCANCODE_LANG2, SDL_SCANCODE_LANG1, SDL_SCANCODE_INTERNATIONAL1,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_F24, SDL_SCANCODE_LANG4,
-	SDL_SCANCODE_LANG3, SDL_SCANCODE_INTERNATIONAL4, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_INTERNATIONAL5,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_INTERNATIONAL3, SDL_SCANCODE_KP_COMMA, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_AGAIN,
-	SDL_SCANCODE_UNDO, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_PASTE, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_MEDIA_PREVIOUS_TRACK, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_CUT,
-	SDL_SCANCODE_COPY, SDL_SCANCODE_MEDIA_NEXT_TRACK, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_KP_ENTER, SDL_SCANCODE_RCTRL, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_MUTE, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_MEDIA_PLAY_PAUSE, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_MEDIA_STOP, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_MEDIA_EJECT, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_VOLUMEDOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_VOLUMEUP, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_AC_HOME, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_KP_DIVIDE, SDL_SCANCODE_RSHIFT, SDL_SCANCODE_PRINTSCREEN,
-	SDL_SCANCODE_RALT, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_HELP,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_AC_NEW, SDL_SCANCODE_AC_OPEN,
-	SDL_SCANCODE_AC_CLOSE, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_NUMLOCKCLEAR, SDL_SCANCODE_PAUSE, SDL_SCANCODE_HOME,
-	SDL_SCANCODE_UP, SDL_SCANCODE_PAGEUP, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_LEFT,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_RIGHT, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_END,
-	SDL_SCANCODE_DOWN, SDL_SCANCODE_PAGEDOWN, SDL_SCANCODE_INSERT, SDL_SCANCODE_DELETE,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_AC_SAVE,
-	SDL_SCANCODE_AC_PRINT, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_LGUI,
-	SDL_SCANCODE_RGUI, SDL_SCANCODE_APPLICATION, SDL_SCANCODE_POWER, SDL_SCANCODE_SLEEP,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_WAKE,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_AC_SEARCH, SDL_SCANCODE_AC_BOOKMARKS, SDL_SCANCODE_AC_REFRESH,
-	SDL_SCANCODE_AC_STOP, SDL_SCANCODE_AC_FORWARD, SDL_SCANCODE_AC_BACK, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_MEDIA_SELECT, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN,
-	SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN, SDL_SCANCODE_UNKNOWN
-};
-
-static WORD s_vSCANCODE[SDL_SCANCODE_COUNT];
 static Uint32 s_dwMSGEVENT = 0;
 static WORD s_wPROCESSKEY = 0;
 static UINT s_nCHARFLAGS = 0;
 static BOOL s_bQUIT = FALSE;
 
-
-// The virtual key of a Win32 key message for an SDL key.
-static UINT GetVirtualKey( SDL_Scancode nScan, SDL_Keycode nKey, SDL_Keymod nMod)
-{
-	// Letters follow the keyboard layout, like Windows' virtual keys.
-	if( nKey >= 'a' && nKey <= 'z' )
-		return UINT(nKey - 'a' + 'A');
-
-	if( nScan >= SDL_SCANCODE_1 && nScan <= SDL_SCANCODE_9 )
-		return UINT(nScan - SDL_SCANCODE_1 + '1');
-
-	if( nScan >= SDL_SCANCODE_F1 && nScan <= SDL_SCANCODE_F12 )
-		return UINT(nScan - SDL_SCANCODE_F1 + VK_F1);
-
-	if( nScan >= SDL_SCANCODE_F13 && nScan <= SDL_SCANCODE_F24 )
-		return UINT(nScan - SDL_SCANCODE_F13 + VK_F13);
-
-	// The keypad without Num Lock moves, like Windows.
-	if(!(nMod & SDL_KMOD_NUM))
-	{
-		switch(nScan)
-		{
-		case SDL_SCANCODE_KP_7			: return VK_HOME;
-		case SDL_SCANCODE_KP_8			: return VK_UP;
-		case SDL_SCANCODE_KP_9			: return VK_PRIOR;
-		case SDL_SCANCODE_KP_4			: return VK_LEFT;
-		case SDL_SCANCODE_KP_5			: return VK_CLEAR;
-		case SDL_SCANCODE_KP_6			: return VK_RIGHT;
-		case SDL_SCANCODE_KP_1			: return VK_END;
-		case SDL_SCANCODE_KP_2			: return VK_DOWN;
-		case SDL_SCANCODE_KP_3			: return VK_NEXT;
-		case SDL_SCANCODE_KP_0			: return VK_INSERT;
-		case SDL_SCANCODE_KP_PERIOD		: return VK_DELETE;
-		default							: break;
-		}
-	}
-
-	if( nScan >= SDL_SCANCODE_KP_1 && nScan <= SDL_SCANCODE_KP_9 )
-		return UINT(nScan - SDL_SCANCODE_KP_1 + VK_NUMPAD1);
-
-	switch(nScan)
-	{
-	case SDL_SCANCODE_0					: return '0';
-	case SDL_SCANCODE_RETURN			:
-	case SDL_SCANCODE_KP_ENTER			: return VK_RETURN;
-	case SDL_SCANCODE_ESCAPE			: return VK_ESCAPE;
-	case SDL_SCANCODE_BACKSPACE			: return VK_BACK;
-	case SDL_SCANCODE_TAB				: return VK_TAB;
-	case SDL_SCANCODE_SPACE				: return VK_SPACE;
-	case SDL_SCANCODE_MINUS				: return VK_OEM_MINUS;
-	case SDL_SCANCODE_EQUALS			: return VK_OEM_PLUS;
-	case SDL_SCANCODE_LEFTBRACKET		: return VK_OEM_4;
-	case SDL_SCANCODE_RIGHTBRACKET		: return VK_OEM_6;
-	case SDL_SCANCODE_BACKSLASH			:
-	case SDL_SCANCODE_NONUSHASH			: return VK_OEM_5;
-	case SDL_SCANCODE_SEMICOLON			: return VK_OEM_1;
-	case SDL_SCANCODE_APOSTROPHE		: return VK_OEM_7;
-	case SDL_SCANCODE_GRAVE				: return VK_OEM_3;
-	case SDL_SCANCODE_COMMA				: return VK_OEM_COMMA;
-	case SDL_SCANCODE_PERIOD			: return VK_OEM_PERIOD;
-	case SDL_SCANCODE_SLASH				: return VK_OEM_2;
-	case SDL_SCANCODE_NONUSBACKSLASH	: return VK_OEM_102;
-	case SDL_SCANCODE_CAPSLOCK			: return VK_CAPITAL;
-	case SDL_SCANCODE_PRINTSCREEN		: return VK_SNAPSHOT;
-	case SDL_SCANCODE_SCROLLLOCK		: return VK_SCROLL;
-	case SDL_SCANCODE_PAUSE				: return VK_PAUSE;
-	case SDL_SCANCODE_INSERT			: return VK_INSERT;
-	case SDL_SCANCODE_HOME				: return VK_HOME;
-	case SDL_SCANCODE_PAGEUP			: return VK_PRIOR;
-	case SDL_SCANCODE_DELETE			: return VK_DELETE;
-	case SDL_SCANCODE_END				: return VK_END;
-	case SDL_SCANCODE_PAGEDOWN			: return VK_NEXT;
-	case SDL_SCANCODE_RIGHT				: return VK_RIGHT;
-	case SDL_SCANCODE_LEFT				: return VK_LEFT;
-	case SDL_SCANCODE_DOWN				: return VK_DOWN;
-	case SDL_SCANCODE_UP				: return VK_UP;
-	case SDL_SCANCODE_NUMLOCKCLEAR		: return VK_NUMLOCK;
-	case SDL_SCANCODE_KP_DIVIDE			: return VK_DIVIDE;
-	case SDL_SCANCODE_KP_MULTIPLY		: return VK_MULTIPLY;
-	case SDL_SCANCODE_KP_MINUS			: return VK_SUBTRACT;
-	case SDL_SCANCODE_KP_PLUS			: return VK_ADD;
-	case SDL_SCANCODE_KP_0				: return VK_NUMPAD0;
-	case SDL_SCANCODE_KP_PERIOD			: return VK_DECIMAL;
-	case SDL_SCANCODE_APPLICATION		: return VK_APPS;
-	case SDL_SCANCODE_LCTRL				:
-	case SDL_SCANCODE_RCTRL				: return VK_CONTROL;
-	case SDL_SCANCODE_LSHIFT			:
-	case SDL_SCANCODE_RSHIFT			: return VK_SHIFT;
-	case SDL_SCANCODE_LALT				:
-	case SDL_SCANCODE_RALT				: return VK_MENU;
-	case SDL_SCANCODE_LGUI				: return VK_LWIN;
-	case SDL_SCANCODE_RGUI				: return VK_RWIN;
-	case SDL_SCANCODE_LANG1				: return VK_HANGUL;
-	case SDL_SCANCODE_LANG2				: return VK_HANJA;
-	default								: break;
-	}
-
-	return 0;
-}
 
 // The flags of a mouse message: buttons held and modifiers.
 static UINT GetMouseFlags( DWORD dwButtons)
@@ -257,7 +89,6 @@ static BOOL IsWindowMessage( UINT message)
 	case WM_IME_NOTIFY				:
 	case WM_INPUTLANGCHANGEREQUEST	:
 	case WM_INPUTLANGCHANGE			:
-	case WM_SETCURSOR				:
 	case WM_NCHITTEST				:
 	case WM_NCLBUTTONDOWN			:
 	case WM_NCRBUTTONDOWN			:
@@ -295,14 +126,7 @@ BOOL CTWindow::InitPlatform()
 	if(!SDL_Init(SDL_INIT_VIDEO))
 		return FALSE;
 
-	for( int i=0; i<256; i++)
-		if( s_vWINSCAN[i] != SDL_SCANCODE_UNKNOWN && !s_vSCANCODE[s_vWINSCAN[i]] )
-			s_vSCANCODE[s_vWINSCAN[i]] = WORD(i < 0x80 ? i : 0xE000 | (i - 0x80));
-
-	// What Windows' key messages say for these two: Pause 0x45, Num Lock 0x45 extended.
-	s_vSCANCODE[SDL_SCANCODE_PAUSE] = 0x45;
-	s_vSCANCODE[SDL_SCANCODE_NUMLOCKCLEAR] = 0xE045;
-
+	CTachyonInput::InitPlatform();
 	s_dwMSGEVENT = SDL_RegisterEvents(1);
 	SDL_SetWindowsMessageHook( WindowsMessageHook, NULL);
 
@@ -358,36 +182,121 @@ CTWindow *CTWindow::FromSDLWindow( SDL_Window *pSDL)
 	return pSDL ? (CTWindow *) SDL_GetPointerProperty( SDL_GetWindowProperties(pSDL), TWINDOW_PROP, NULL) : NULL;
 }
 
-BOOL CTWindow::CreateEx( DWORD dwExStyle,
-						 LPCTSTR lpszTitle,
-						 DWORD dwStyle,
-						 const RECT& rect,
-						 HWND hParent)
+// SDL's strings are UTF-8; the game's are in the ANSI code page.
+static CStringA ToUTF8( LPCTSTR lpszText)
 {
-	CRect rcFRAME( 0, 0, 0, 0);
-	CStringW strTitleW(lpszTitle);
-	CStringA strTitle;
+	CStringW strW(lpszText ? lpszText : _T(""));
+	CStringA strUTF8;
+	int nLength = ::WideCharToMultiByte( CP_UTF8, 0, strW, -1, NULL, 0, NULL, NULL);
 
-	// The Win32 style gives the frame: the client size is what the window keeps.
-	::AdjustWindowRectEx( &rcFRAME, dwStyle, FALSE, dwExStyle);
+	::WideCharToMultiByte( CP_UTF8, 0, strW, -1, strUTF8.GetBufferSetLength(nLength), nLength, NULL, NULL);
+	strUTF8.ReleaseBuffer();
 
+	return strUTF8;
+}
+
+CSize CTWindow::GetScreenSize()
+{
+	const SDL_DisplayMode *pMode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+	return pMode ? CSize( pMode->w, pMode->h) : CSize( 0, 0);
+}
+
+void CTWindow::GetDisplayModes( std::vector<CSize>& vMODES)
+{
+	SDL_DisplayID nDisplay = SDL_GetPrimaryDisplay();
+	const SDL_DisplayMode *pCurrent = SDL_GetCurrentDisplayMode(nDisplay);
+	int nCount = 0;
+	SDL_DisplayMode **pModes = SDL_GetFullscreenDisplayModes( nDisplay, &nCount);
+
+	vMODES.clear();
+	for( int i=nCount - 1; i >= 0 && pCurrent; --i )
+	{
+		CSize vMODE( pModes[i]->w, pModes[i]->h);
+
+		if( pModes[i]->refresh_rate == pCurrent->refresh_rate &&
+			std::find( vMODES.begin(), vMODES.end(), vMODE) == vMODES.end() )
+			vMODES.push_back(vMODE);
+	}
+
+	SDL_free(pModes);
+}
+
+int CTWindow::ShowMessageBox( LPCTSTR lpszText, LPCTSTR lpszCaption, UINT nType, SDL_Window *pParent)
+{
+	static const SDL_MessageBoxButtonData vOK[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT|SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDOK, "OK" }};
+	static const SDL_MessageBoxButtonData vOKCANCEL[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDOK, "OK" },
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDCANCEL, "Cancel" }};
+	static const SDL_MessageBoxButtonData vABORTRETRYIGNORE[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDABORT, "Abort" },
+		{ 0, IDRETRY, "Retry" },
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDIGNORE, "Ignore" }};
+	static const SDL_MessageBoxButtonData vYESNOCANCEL[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDYES, "Yes" },
+		{ 0, IDNO, "No" },
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDCANCEL, "Cancel" }};
+	static const SDL_MessageBoxButtonData vYESNO[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDYES, "Yes" },
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDNO, "No" }};
+	static const SDL_MessageBoxButtonData vRETRYCANCEL[] = {
+		{ SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, IDRETRY, "Retry" },
+		{ SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, IDCANCEL, "Cancel" }};
+
+	CStringA strText = ToUTF8(lpszText);
+	CStringA strCaption = ToUTF8(lpszCaption ? lpszCaption : _T("Error"));
+
+	SDL_MessageBoxData vDATA;
+	SDL_zero(vDATA);
+	vDATA.window = pParent;
+	vDATA.title = strCaption;
+	vDATA.message = strText;
+
+	switch( nType & MB_ICONMASK )
+	{
+	case MB_ICONERROR		: vDATA.flags = SDL_MESSAGEBOX_ERROR; break;
+	case MB_ICONWARNING		: vDATA.flags = SDL_MESSAGEBOX_WARNING; break;
+	default					: vDATA.flags = SDL_MESSAGEBOX_INFORMATION; break;
+	}
+
+	switch( nType & MB_TYPEMASK )
+	{
+	case MB_OKCANCEL			: vDATA.buttons = vOKCANCEL; vDATA.numbuttons = 2; break;
+	case MB_ABORTRETRYIGNORE	: vDATA.buttons = vABORTRETRYIGNORE; vDATA.numbuttons = 3; break;
+	case MB_YESNOCANCEL			: vDATA.buttons = vYESNOCANCEL; vDATA.numbuttons = 3; break;
+	case MB_YESNO				: vDATA.buttons = vYESNO; vDATA.numbuttons = 2; break;
+	case MB_RETRYCANCEL			: vDATA.buttons = vRETRYCANCEL; vDATA.numbuttons = 2; break;
+	default						: vDATA.buttons = vOK; vDATA.numbuttons = 1; break;
+	}
+
+	int nButton = 0;
+	if(!SDL_ShowMessageBox( &vDATA, &nButton))
+		return 0;
+
+	return nButton;
+}
+
+BOOL CTWindow::OpenURL( LPCTSTR lpszURL)
+{
+	return SDL_OpenURL(ToUTF8(lpszURL)) ? TRUE : FALSE;
+}
+
+BOOL CTWindow::SetClipboardText( LPCTSTR lpszText)
+{
+	return SDL_SetClipboardText(ToUTF8(lpszText)) ? TRUE : FALSE;
+}
+
+BOOL CTWindow::Create( LPCTSTR lpszTitle, int nWidth, int nHeight, BOOL bCaption, BOOL bTopMost)
+{
 	SDL_WindowFlags dwFlags = SDL_WINDOW_HIDDEN;
-	if( (dwStyle & WS_CAPTION) != WS_CAPTION )
+
+	if(!bCaption)
 		dwFlags |= SDL_WINDOW_BORDERLESS;
 
-	if( dwExStyle & WS_EX_TOPMOST )
+	if(bTopMost)
 		dwFlags |= SDL_WINDOW_ALWAYS_ON_TOP;
 
-	int nLength = ::WideCharToMultiByte( CP_UTF8, 0, strTitleW, -1, NULL, 0, NULL, NULL);
-	::WideCharToMultiByte( CP_UTF8, 0, strTitleW, -1, strTitle.GetBufferSetLength(nLength), nLength, NULL, NULL);
-	strTitle.ReleaseBuffer();
-
-	m_pSDL = SDL_CreateWindow(
-		strTitle,
-		rect.right - rect.left - rcFRAME.Width(),
-		rect.bottom - rect.top - rcFRAME.Height(),
-		dwFlags);
-
+	m_pSDL = SDL_CreateWindow( ToUTF8(lpszTitle), nWidth, nHeight, dwFlags);
 	if(!m_pSDL)
 		return FALSE;
 
@@ -399,20 +308,198 @@ BOOL CTWindow::CreateEx( DWORD dwExStyle,
 
 	// SDL keeps the IME off until text input starts.
 	SDL_StartTextInput(m_pSDL);
-	SDL_SetWindowPosition( m_pSDL, rect.left - rcFRAME.left, rect.top - rcFRAME.top);
-
-	if( dwStyle & WS_VISIBLE )
-		SDL_ShowWindow(m_pSDL);
+	SetFrameSize( nWidth, nHeight);
 
 	return TRUE;
 }
 
+void CTWindow::SetWindowText( LPCTSTR lpszText)
+{
+	if(m_pSDL)
+		SDL_SetWindowTitle( m_pSDL, ToUTF8(lpszText));
+}
+
 void CTWindow::GetWindowText( CString& strText) const
 {
-	int nLength = ::GetWindowTextLength(m_hWnd);
+	strText = m_pSDL ? CTachyonInput::FromUTF8(SDL_GetWindowTitle(m_pSDL)) : CString();
+}
 
-	::GetWindowText( m_hWnd, strText.GetBufferSetLength(nLength + 1), nLength + 1);
-	strText.ReleaseBuffer();
+BOOL CTWindow::ShowWindow( int nCmdShow)
+{
+	BOOL bVisible = IsWindowVisible();
+
+	if(!m_pSDL)
+		return FALSE;
+
+	switch(nCmdShow)
+	{
+	case SW_HIDE			: SDL_HideWindow(m_pSDL); break;
+	case SW_MINIMIZE		:
+	case SW_SHOWMINIMIZED	: SDL_MinimizeWindow(m_pSDL); break;
+	case SW_RESTORE			:
+	case SW_SHOWNORMAL		: SDL_ShowWindow(m_pSDL); SDL_RestoreWindow(m_pSDL); break;
+	case SW_MAXIMIZE		:
+		SDL_ShowWindow(m_pSDL);
+
+		// A borderless window already covers the screen (SetFrameSize).
+		if(!(SDL_GetWindowFlags(m_pSDL) & SDL_WINDOW_BORDERLESS))
+			SDL_MaximizeWindow(m_pSDL);
+
+		break;
+
+	default					: SDL_ShowWindow(m_pSDL); break;
+	}
+
+	return bVisible;
+}
+
+BOOL CTWindow::IsWindowVisible() const
+{
+	return m_pSDL && !(SDL_GetWindowFlags(m_pSDL) & SDL_WINDOW_HIDDEN) ? TRUE : FALSE;
+}
+
+BOOL CTWindow::IsIconic() const
+{
+	return m_pSDL && (SDL_GetWindowFlags(m_pSDL) & SDL_WINDOW_MINIMIZED) ? TRUE : FALSE;
+}
+
+BOOL CTWindow::IsForeground() const
+{
+	return m_pSDL && (SDL_GetWindowFlags(m_pSDL) & SDL_WINDOW_INPUT_FOCUS) ? TRUE : FALSE;
+}
+
+void CTWindow::SetFocus()
+{
+	if(m_pSDL)
+		SDL_RaiseWindow(m_pSDL);
+}
+
+void CTWindow::SetCaption( BOOL bCaption)
+{
+	if(m_pSDL)
+		SDL_SetWindowBordered( m_pSDL, bCaption ? true : false);
+}
+
+void CTWindow::SetFrameSize( int nWidth, int nHeight)
+{
+	int nTop = 0;
+	int nLeft = 0;
+
+	if(!m_pSDL)
+		return;
+
+	SDL_SetWindowSize( m_pSDL, nWidth, nHeight);
+	SDL_GetWindowBordersSize( m_pSDL, &nTop, &nLeft, NULL, NULL);
+	SDL_SetWindowPosition( m_pSDL, nLeft, nTop);
+}
+
+void CTWindow::SetTopMost( BOOL bTopMost)
+{
+	if(m_pSDL)
+		SDL_SetWindowAlwaysOnTop( m_pSDL, bTopMost ? true : false);
+}
+
+void CTWindow::MoveWindow( int x, int y, int nWidth, int nHeight)
+{
+	int nTop = 0;
+	int nLeft = 0;
+	int nBottom = 0;
+	int nRight = 0;
+
+	if(!m_pSDL)
+		return;
+
+	SDL_GetWindowBordersSize( m_pSDL, &nTop, &nLeft, &nBottom, &nRight);
+	SDL_SetWindowPosition( m_pSDL, x + nLeft, y + nTop);
+	SDL_SetWindowSize( m_pSDL, nWidth - nLeft - nRight, nHeight - nTop - nBottom);
+}
+
+void CTWindow::GetClientRect( LPRECT lpRect) const
+{
+	int nWidth = 0;
+	int nHeight = 0;
+
+	if(m_pSDL)
+		SDL_GetWindowSize( m_pSDL, &nWidth, &nHeight);
+
+	::SetRect( lpRect, 0, 0, nWidth, nHeight);
+}
+
+void CTWindow::GetWindowRect( LPRECT lpRect) const
+{
+	int nTop = 0;
+	int nLeft = 0;
+	int nBottom = 0;
+	int nRight = 0;
+	CRect rect;
+
+	GetClientRect(&rect);
+	ClientToScreen(&rect);
+
+	if(m_pSDL)
+		SDL_GetWindowBordersSize( m_pSDL, &nTop, &nLeft, &nBottom, &nRight);
+
+	::SetRect( lpRect, rect.left - nLeft, rect.top - nTop, rect.right + nRight, rect.bottom + nBottom);
+}
+
+void CTWindow::ClientToScreen( LPPOINT lpPoint) const
+{
+	int nX = 0;
+	int nY = 0;
+
+	if(m_pSDL)
+		SDL_GetWindowPosition( m_pSDL, &nX, &nY);
+
+	lpPoint->x += nX;
+	lpPoint->y += nY;
+}
+
+void CTWindow::ClientToScreen( LPRECT lpRect) const
+{
+	ClientToScreen((LPPOINT) lpRect);
+	ClientToScreen(((LPPOINT) lpRect) + 1);
+}
+
+void CTWindow::ScreenToClient( LPPOINT lpPoint) const
+{
+	int nX = 0;
+	int nY = 0;
+
+	if(m_pSDL)
+		SDL_GetWindowPosition( m_pSDL, &nX, &nY);
+
+	lpPoint->x -= nX;
+	lpPoint->y -= nY;
+}
+
+void CTWindow::ScreenToClient( LPRECT lpRect) const
+{
+	ScreenToClient((LPPOINT) lpRect);
+	ScreenToClient(((LPPOINT) lpRect) + 1);
+}
+
+LRESULT CTWindow::SendMessage( UINT message, WPARAM wParam, LPARAM lParam)
+{
+	return CallWindowProc( message, wParam, lParam);
+}
+
+BOOL CTWindow::PostMessage( UINT message, WPARAM wParam, LPARAM lParam)
+{
+	if( message == WM_QUIT )
+	{
+		PostQuit();
+		return TRUE;
+	}
+
+	SDL_Event event;
+	SDL_zero(event);
+	event.type = s_dwMSGEVENT;
+	event.user.windowID = SDL_GetWindowID(m_pSDL);
+	event.user.code = Sint32(message);
+	event.user.data1 = (void *) wParam;
+	event.user.data2 = (void *) lParam;
+
+	return SDL_PushEvent(&event) ? TRUE : FALSE;
 }
 
 BOOL CTWindow::DestroyWindow()
@@ -492,7 +579,6 @@ LRESULT CTWindow::WindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 
 	switch(message)
 	{
-	case WM_SETCURSOR		: return OnSetCursor( (HWND) wParam, LOWORD(lParam), HIWORD(lParam));
 	case WM_NCHITTEST		: return OnNcHitTest(point);
 	case WM_NCLBUTTONDOWN	: OnNcLButtonDown( UINT(wParam), point); return 0;
 	case WM_NCRBUTTONDOWN	: OnNcRButtonDown( UINT(wParam), point); return 0;
@@ -535,9 +621,9 @@ void CTWindow::DispatchKey( const SDL_Event& event)
 {
 	BOOL bDown = event.type == SDL_EVENT_KEY_DOWN;
 	SDL_Keymod nMod = event.key.mod;
-	WORD wScan = s_vSCANCODE[event.key.scancode];
+	WORD wScan = CTachyonInput::GetPCScanCode(event.key.scancode);
 
-	UINT nChar = GetVirtualKey( event.key.scancode, event.key.key, nMod);
+	UINT nChar = CTachyonInput::GetVirtualKey( event.key.scancode, event.key.key, nMod);
 	if( bDown && s_wPROCESSKEY && s_wPROCESSKEY == ((wScan & 0xFF) | (wScan & 0xE000 ? KF_EXTENDED : 0)) )
 		nChar = VK_PROCESSKEY;
 
@@ -659,15 +745,21 @@ void CTWindow::DispatchMouse( const SDL_Event& event)
 		return;
 	}
 
+	// Like WM_SETCURSOR, before each mouse message: the handler picks the cursor image.
 	if( event.type == SDL_EVENT_MOUSE_MOTION )
 	{
+		OnSetCursor( m_hWnd, HTCLIENT, WM_MOUSEMOVE);
 		OnMouseMove( GetMouseFlags(m_dwButtons), CPoint( int(event.motion.x), int(event.motion.y)));
+
 		return;
 	}
 
 	BOOL bDown = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
 	BOOL bDouble = bDown && event.button.clicks >= 2 && !(event.button.clicks & 1);
 	CPoint point( int(event.button.x), int(event.button.y));
+
+	if(bDown)
+		OnSetCursor( m_hWnd, HTCLIENT, event.button.button == SDL_BUTTON_LEFT ? WM_LBUTTONDOWN : event.button.button == SDL_BUTTON_RIGHT ? WM_RBUTTONDOWN : WM_MBUTTONDOWN);
 
 	// The flags tell the buttons held after this one, like Windows.
 	if(bDown)

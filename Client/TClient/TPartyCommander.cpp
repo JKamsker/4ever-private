@@ -29,7 +29,7 @@ CTPartyCommander* CTPartyCommander::GetInstance()
 // ====================================================================
 
 // ====================================================================
-CString CTPartyCommander::OnPartyCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD dwUSER)
+CString CTPartyCommander::OnPartyCmdByChatMsg(const CString& strCMD, const VECTORSTRING& vPARAM, DWORD_PTR dwUSER)
 {
 	CString strParam("");
 	if( !vPARAM.empty() )

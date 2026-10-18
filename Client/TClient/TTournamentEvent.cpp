@@ -121,7 +121,7 @@ void CTTournamentEvent::OnMatchDataReset()
 	for(; it!=end ; ++it )
 	{
 		int nLine = m_pEVENTLIST->AddString( (*it)->m_strEntry );
-		m_pEVENTLIST->SetItemData( nLine, 0, (DWORD) (*it) );
+		m_pEVENTLIST->SetItemData( nLine, 0, (DWORD_PTR) (*it) );
 
 		m_pEVENTLIST->SetItemString( nLine, 1, ((*it)->m_bType != 0) ? CTChart::LoadString( (TSTRING) ENTRY_TYPE[(*it)->m_bType]) : _T("") );
 		m_pEVENTLIST->SetItemString( nLine, 2, (*it)->m_strChoice );
@@ -155,7 +155,7 @@ void CTTournamentEvent::OnListDataReset( LPTTEVENTMATCH pMatch )
 		for(; it != end ; ++it )
 		{
 			int nLine = m_pENTRYLIST->AddString( (*it)->m_strName );
-			m_pENTRYLIST->SetItemData( nLine, 0, (DWORD) (*it) );
+			m_pENTRYLIST->SetItemData( nLine, 0, (DWORD_PTR) (*it) );
 
 			m_pENTRYLIST->SetItemString( nLine, 1, CTChart::LoadString( (TSTRING) CTClientGame::m_vTCOUNTRYSTR[(*it)->m_bCountry] ) );
 			m_pENTRYLIST->SetItemString( nLine, 2, (*it)->m_strGuildName );
@@ -190,7 +190,7 @@ void CTTournamentEvent::OnPartyDataReset( LPTTEVENTTARGET pTarget )
 		for(; it != end ; ++it )
 		{
 			int nLine = m_pPARTYLIST->AddString( (*it)->m_strName );
-			m_pPARTYLIST->SetItemData( nLine, 0, (DWORD) (*it) );
+			m_pPARTYLIST->SetItemData( nLine, 0, (DWORD_PTR) (*it) );
 
 			m_pPARTYLIST->SetItemString( nLine, 1, CTChart::LoadString( (TSTRING) CTClientGame::m_vTCOUNTRYSTR[(*it)->m_bCountry] ) );
 			m_pPARTYLIST->SetItemString( nLine, 2, (*it)->m_strGuildName );

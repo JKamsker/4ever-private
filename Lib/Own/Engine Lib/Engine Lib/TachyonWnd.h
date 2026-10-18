@@ -28,13 +28,11 @@ public:
 	BYTE m_bSiteCode;
 	BYTE m_bActivate;
 	BYTE m_bOnMovie;
-	BYTE m_bNcMove;
 
 	CString m_strIPAddr;
 	CString m_strID;
 	CString m_strPW;
 
-	CPoint m_vNcPOS;
 	DWORD m_dwPort;
 	static DWORD m_dwPing;
 
@@ -129,9 +127,6 @@ public:
 	virtual void OnDestroy();
 	virtual void OnNcDestroy();
 	virtual LRESULT OnNcHitTest(CPoint point);
-	virtual void OnNcLButtonDown(UINT nHitTest, CPoint point);
-	virtual void OnLButtonUp(UINT nFlags, CPoint point);
-	virtual void OnMouseMove(UINT nFlags, CPoint point);
 	virtual void OnNcRButtonDown(UINT nHitTest, CPoint point);
 };
 

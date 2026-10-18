@@ -320,7 +320,7 @@ HRESULT CTNewQuestDlg::Render( DWORD dwTickCount )
 		{
 			if( m_pReward->GetItemCount() > 0 && nIndex >= 0 )
 			{
-				DWORD dwValue = m_pReward->GetItemData( nIndex, i);
+				DWORD_PTR dwValue = m_pReward->GetItemData( nIndex, i);
 
 				if( dwValue == -1 )
                     pTREWARD[i] = NULL;
@@ -467,7 +467,7 @@ void CTNewQuestDlg::OnLButtonDown(UINT nFlags, CPoint pt)
 			{
 				LPTREWARD pTREWARD = (LPTREWARD) m_pReward->GetItemData( nIndex, i);
 
-				if( pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) &&
+				if( pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) &&
 					pTREWARD->m_bMethod == RM_SELECT )
 				{
 					CRect rect;
@@ -683,7 +683,7 @@ ITDetailInfoPtr CTNewQuestDlg::GetTInfoKey(const CPoint& point)
 		if( m_pReward->GetItemCount() > 0 && nIndex >= 0 )
 			pTREWARD = (LPTREWARD) m_pReward->GetItemData( nIndex, i );
 
-		if(pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) )
+		if(pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) )
 		{
 			switch(pTREWARD->m_bType)
 			{
@@ -747,7 +747,7 @@ BOOL CTNewQuestDlg::GetTChatInfo(const CPoint& point, TCHATINFO& outInfo)
 		if( !pListItem )
 			return FALSE;
 
-		DWORD dwID = pListItem->m_param;
+		DWORD_PTR dwID = pListItem->m_param;
 
 		if( dwID && dwID != (DWORD)(-1) && nColumn == COL_ITEM )
 		{
@@ -780,7 +780,7 @@ BOOL CTNewQuestDlg::GetTChatInfo(const CPoint& point, TCHATINFO& outInfo)
 			if( m_pReward->GetItemCount() > 0 && nIndex >= 0 )
 				pTREWARD = (LPTREWARD) m_pReward->GetItemData( nIndex, i);
 
-			if( pTREWARD && (DWORD)(pTREWARD) != (DWORD)(-1) &&
+			if( pTREWARD && (DWORD_PTR)(pTREWARD) != (DWORD_PTR)(-1) &&
 				(pTREWARD->m_bType == RT_ITEM || pTREWARD->m_bType == RT_MAGICITEM) )
 			{
 				if(m_pITEM[i]->HitTest(point))
@@ -1069,7 +1069,7 @@ void CTNewQuestDlg::ResetTQUEST( LPTQUEST pTQUEST)
 						m_pReward->SetItemString( nLine, nCol, (LPCTSTR)strREWARD );
 					}
 
-					m_pReward->SetItemData( nLine, nCol, (DWORD) pTMISSION->m_vTREWARD[i] );
+					m_pReward->SetItemData( nLine, nCol, (DWORD_PTR) pTMISSION->m_vTREWARD[i] );
 					++nRewardItemCount;
 				}
 			}
@@ -1619,13 +1619,13 @@ INT CTNewQuestDlg::AddQuest(LPTQUEST pTQUEST, CTClientQuest* pCQUEST, BOOL bChec
 
 	if( m_bPrintMSG )
 	{
-		nIndex = m_pQLIST->AddItem(pTMISSION->m_strTITLE, (DWORD)pCQUEST, COL_ITEM);
-		m_pQLIST->SetItemDataAllColumn( nIndex, (DWORD)pCQUEST );
+		nIndex = m_pQLIST->AddItem(pTMISSION->m_strTITLE, (DWORD_PTR)pCQUEST, COL_ITEM);
+		m_pQLIST->SetItemDataAllColumn( nIndex, (DWORD_PTR)pCQUEST );
 	}
 	else
 	{
-		nIndex = m_pQLIST->AddItem(pTMISSION->m_strTITLE, (DWORD)pTQUEST, COL_ITEM);
-		m_pQLIST->SetItemDataAllColumn( nIndex, (DWORD)pTQUEST );
+		nIndex = m_pQLIST->AddItem(pTMISSION->m_strTITLE, (DWORD_PTR)pTQUEST, COL_ITEM);
+		m_pQLIST->SetItemDataAllColumn( nIndex, (DWORD_PTR)pTQUEST );
 	}
 
 	if( !pCQUEST )
@@ -1660,7 +1660,7 @@ INT CTNewQuestDlg::AddQClass(CTClientQClass* pQCLASS)
 {
 	int nIndex = m_pQLIST->AddItem(pQCLASS->m_pTQCLASS->m_strNAME, NULL, COL_CATEGORY);
 	m_pQLIST->SetItemDataAllColumn( nIndex, NULL );
-	m_pQLIST->SetItemData( nIndex, COL_CATEGORY, (DWORD)pQCLASS);
+	m_pQLIST->SetItemData( nIndex, COL_CATEGORY, (DWORD_PTR)pQCLASS);
 
 	//CString strCount;
 	//strCount = CTChart::Format( TSTR_FMT_COUNT, INT(pQCLASS->m_mapTQUEST.size()));
@@ -1689,7 +1689,7 @@ void CTNewQuestDlg::SetQuestState(INT nIdx, LPTQUEST pTQUEST)
 // ====================================================================================================
 LPTQUEST CTNewQuestDlg::GetTQUEST(INT nIdx)
 {
-	DWORD dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
+	DWORD_PTR dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
 
 	if( dwDATA != (DWORD)-1 )
 	{
@@ -1711,7 +1711,7 @@ LPTQUEST CTNewQuestDlg::GetTQUEST(INT nIdx)
 
 CTClientQuest* CTNewQuestDlg::GetCQUEST(INT nIdx)
 {
-	DWORD dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
+	DWORD_PTR dwDATA = m_pQLIST->GetItemData(nIdx, COL_ITEM);
 
 	if( dwDATA != (DWORD)-1 )
 		return (CTClientQuest*) dwDATA;
@@ -1721,7 +1721,7 @@ CTClientQuest* CTNewQuestDlg::GetCQUEST(INT nIdx)
 // ----------------------------------------------------------------------------------------------------
 CTClientQClass* CTNewQuestDlg::GetQCLASS(INT nIdx)
 {
-	DWORD dwDATA = m_pQLIST->GetItemData(nIdx, COL_CATEGORY);
+	DWORD_PTR dwDATA = m_pQLIST->GetItemData(nIdx, COL_CATEGORY);
 	if( dwDATA != (DWORD)-1 )
 		return (CTClientQClass*)(dwDATA);
 	else
