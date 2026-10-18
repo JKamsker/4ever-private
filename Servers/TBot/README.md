@@ -104,6 +104,14 @@ reaches its party and A (not B). A hands command to C's party, and C takes A's p
 recall: D's answer for B is ignored, B's yes brings B to A (A's Evocation Scroll is used), and C's Scroll of Teleportation
 takes C to A. The scrolls and B's and C's positions are put back. 14 checks.
 
+## Scenario: auction (the auction house)
+
+`--Bot:Scenario=auction` (same arguments as `features`) uses the Craxion auctioneer (NPC 20841). A puts a sword up (2%
+of the direct price paid), B finds it, bids and can't bid over itself, and A cancels: A gets the sword back by mail, B its
+bid. A puts a second sword up and B buys it at the direct price: A is paid less 3% by mail, B gets the sword by mail. A
+third lot with no time and no bidder ends on its own and goes back to A. Needs migration 020 (`TSaveTax` overflowed on
+the baseline's tax totals). The swords, letters, lots and both bots' money are put back. 15 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

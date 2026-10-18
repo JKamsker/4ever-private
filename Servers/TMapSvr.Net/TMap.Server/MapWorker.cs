@@ -102,6 +102,8 @@ public sealed class MapWorker : BackgroundService
         service.InitSwitches();      // build the per-channel map switches + gates (empty when the charts aren't loaded)
         service.InitQuests();        // build the quest trigger index (empty when the charts aren't loaded)
         await service.InitItemIdSeedAsync(); // seed the per-server item-id counter (enables inventory save; no-op DB-free)
+        service.AuctionEnabled = _opt.AuctionEnabled;
+        await service.LoadAuctionsAsync();   // the auction house's lots (MapService.Auction.cs; no-op DB-free)
 
         // --- single serialized batch task ---
         var batch = Channel.CreateUnbounded<BatchItem>(new UnboundedChannelOptions { SingleReader = true });

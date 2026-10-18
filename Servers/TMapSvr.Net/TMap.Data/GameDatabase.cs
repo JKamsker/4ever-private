@@ -173,7 +173,7 @@ public sealed partial class GameDatabase
                  bLevel, dwClassID, dwSlotID, bPrmSlotID, bSubSlotID, bStack, bKind, wUseValue, dwDelay,
                  fPrice, bCanRepair, wDelayGroupID, bConsumable, bIsSell,
                  bGrade, bCanGrade, bCanMagic, bCanRare, bCanWrap, bCanColor, dwDuraMax, wUseTime, bUseType,
-                 bItemCountry, fPvPrice, bEquipSkill FROM TITEMCHART";
+                 bItemCountry, fPvPrice, bEquipSkill, dwCode FROM TITEMCHART";
     // The per-level chart (CTBLLevelChart): the repair-cost coefficient (m_dwRepairCost), dwEXP (the
     // level-up threshold) + bSkillPoint (granted per level), and dwMoney (the base price the item
     // buy/sell math scales by m_fPrice).
@@ -322,7 +322,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                     Grade: r.GetByteSafe(23), CanGrade: r.GetByteSafe(24), CanMagic: r.GetByteSafe(25),
                     CanRare: r.GetByteSafe(26), CanWrap: r.GetByteSafe(27), CanColor: r.GetByteSafe(28),
                     DuraMax: r.GetUIntSafe(29), UseTime: r.GetUShortSafe(30), UseType: r.GetByteSafe(31),
-                    ItemCountry: r.GetByteSafe(32), PvPrice: r.GetFloatSafe(33), EquipSkill: r.GetByteSafe(34));
+                    ItemCountry: r.GetByteSafe(32), PvPrice: r.GetFloatSafe(33), EquipSkill: r.GetByteSafe(34), Code: r.GetUIntSafe(35));
             }
 
         await using (var cmd = new SqlCommand(MagicChartSql, c))

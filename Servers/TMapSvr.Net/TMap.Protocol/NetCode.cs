@@ -195,6 +195,25 @@ public static class Msg
     public const ushort CS_COMMENT_REQ = CS_MAP + 0x01E0;           // strComment
     public const ushort CS_COMMENT_ACK = CS_MAP + 0x01E1;           // dwCharID, strComment
     public const ushort CS_QUESTPOSEXEC_REQ = CS_MAP + 0x0354;      // dwQuestID, dwTermID
+    // The auction house, batch S4 (CSProtocol.h:3327; MapService.Auction.cs).
+    public const ushort CS_AUCTIONREG_REQ = CS_MAP + 0x01FD;
+    public const ushort CS_AUCTIONREG_ACK = CS_MAP + 0x01FE;
+    public const ushort CS_AUCTIONINTEREST_REQ = CS_MAP + 0x01FF;
+    public const ushort CS_AUCTIONINTEREST_ACK = CS_MAP + 0x0200;
+    public const ushort CS_AUCTIONINTERESTLIST_REQ = CS_MAP + 0x0201;
+    public const ushort CS_AUCTIONINTERESTLIST_ACK = CS_MAP + 0x0202;
+    public const ushort CS_AUCTIONBIDLIST_REQ = CS_MAP + 0x0203;
+    public const ushort CS_AUCTIONBIDLIST_ACK = CS_MAP + 0x0204;
+    public const ushort CS_AUCTIONREGCANCEL_REQ = CS_MAP + 0x0205;
+    public const ushort CS_AUCTIONREGCANCEL_ACK = CS_MAP + 0x0206;
+    public const ushort CS_AUCTIONBID_REQ = CS_MAP + 0x0207;
+    public const ushort CS_AUCTIONBID_ACK = CS_MAP + 0x0208;
+    public const ushort CS_AUCTIONBUYDIRECT_REQ = CS_MAP + 0x0209;
+    public const ushort CS_AUCTIONBUYDIRECT_ACK = CS_MAP + 0x020A;
+    public const ushort CS_AUCTIONFIND_REQ = CS_MAP + 0x020B;
+    public const ushort CS_AUCTIONFIND_ACK = CS_MAP + 0x020C;
+    public const ushort CS_AUCTIONREGLIST_REQ = CS_MAP + 0x020D;
+    public const ushort CS_AUCTIONREGLIST_ACK = CS_MAP + 0x020E;
     // Corps and party member recall, batch S2/S3 (CSProtocol.h; MapService.Corps.cs).
     public const ushort CS_CORPSASK_REQ = CS_MAP + 0x00AC;
     public const ushort CS_CORPSASK_ACK = CS_MAP + 0x00AD;

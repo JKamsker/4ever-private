@@ -213,6 +213,7 @@ public sealed partial class MapService
         // C++ OnMW_CHARINFO_REQ: the guild skills first, among the skills the character info carries (MapService.GuildSkill.cs).
         await RefreshGuildSkills(s, notify: false);
         await LoadProtected(ch);                                // C++ OnDM_LOADCHAR_REQ (MapService.Social.cs)
+        await LoadAuctionLists(ch);                             // … and its auction lists (MapService.Auction.cs)
         if (s.Char != ch) return;
 
         // This is where the client actually receives its character (see agent analysis, item 5).

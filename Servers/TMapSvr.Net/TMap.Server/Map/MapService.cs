@@ -43,6 +43,7 @@ public sealed partial class MapService
         CompanionStore = gameDb;
         GuildSkillStore = gameDb;
         ProtectedStore = gameDb;
+        AuctionStore = gameDb;
         _templates = templates;
         _log = log;
     }
@@ -244,6 +245,15 @@ public sealed partial class MapService
                 case Msg.CS_CORPSHP_REQ: CorpsToWorld(session, r, Msg.MW_CORPSHP_ACK); break;
                 case Msg.CS_PARTYMEMBERRECALL_REQ: OnCS_PARTYMEMBERRECALL_REQ(session, r); break;
                 case Msg.CS_PARTYMEMBERRECALLANS_REQ: OnCS_PARTYMEMBERRECALLANS_REQ(session, r); break;
+                case Msg.CS_AUCTIONREG_REQ: await OnCS_AUCTIONREG_REQ(session, r); break;                   // MapService.Auction.cs
+                case Msg.CS_AUCTIONREGCANCEL_REQ: await OnCS_AUCTIONREGCANCEL_REQ(session, r); break;
+                case Msg.CS_AUCTIONBID_REQ: await OnCS_AUCTIONBID_REQ(session, r); break;
+                case Msg.CS_AUCTIONBUYDIRECT_REQ: await OnCS_AUCTIONBUYDIRECT_REQ(session, r); break;
+                case Msg.CS_AUCTIONFIND_REQ: OnCS_AUCTIONFIND_REQ(session, r); break;
+                case Msg.CS_AUCTIONINTEREST_REQ: OnCS_AUCTIONINTEREST_REQ(session, r); break;
+                case Msg.CS_AUCTIONINTERESTLIST_REQ: OnCS_AUCTIONMYLIST_REQ(session, r, Msg.CS_AUCTIONINTERESTLIST_ACK, c => c.AuctionInterest, false); break;
+                case Msg.CS_AUCTIONBIDLIST_REQ: OnCS_AUCTIONMYLIST_REQ(session, r, Msg.CS_AUCTIONBIDLIST_ACK, c => c.AuctionBid, false); break;
+                case Msg.CS_AUCTIONREGLIST_REQ: OnCS_AUCTIONMYLIST_REQ(session, r, Msg.CS_AUCTIONREGLIST_ACK, c => c.AuctionReg, true); break;
                 case Msg.CS_SOULMATESEARCH_REQ: OnCS_SOULMATESEARCH_REQ(session, r); break;          // MapService.Soulmate.cs
                 case Msg.CS_SOULMATEREGREADY_REQ: OnCS_SOULMATEREGREADY_REQ(session, r); break;
                 case Msg.CS_SOULMATEREG_REQ: OnCS_SOULMATEREG_REQ(session, r); break;
@@ -522,6 +532,7 @@ public sealed partial class MapService
         RunPeriodicSaves(NowMs);               // 30-min per-char DB save (no-op DB-free); off-thread write
         FlushItemDirect();                     // incremental item persistence (TSaveItemDirect); off-thread write
         await RunPostBills();                  // unpaid bills past 3 days go back to their sender
+        await RunAuctionEnds();                // auctions whose time is up (MapService.Auction.cs)
         RunDuels();                            // duel standby → start → timeout → clear (the SM_DUEL* timer)
         // Still deferred here: war timers — see PORT_STATUS.md.
     }

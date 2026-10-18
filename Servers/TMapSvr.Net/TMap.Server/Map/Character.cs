@@ -232,6 +232,10 @@ public sealed class Character
     public string SoulmateName = "";
     public uint SoulSilence;
 
+    /// <summary>C++ <c>m_vAuctionInterest</c> / <c>m_vAuctionBid</c> / <c>m_vAuctionReg</c> — lots watched, bid on and sold (MapService.Auction.cs).</summary>
+    public List<uint> AuctionInterest = new(), AuctionBid = new(), AuctionReg = new();
+    public bool AuctionLoaded;
+
     /// <summary>C++ <c>m_vRemainSkill</c> — the learned skills whose rows apply for good (<c>IsRemainType</c>). The C++
     /// fills it with every such skill at login and, on learning one, first drops another of the same
     /// <c>m_bPriority</c>; this reads the learned list instead (the live remain skills, 41-46, are one per class).</summary>

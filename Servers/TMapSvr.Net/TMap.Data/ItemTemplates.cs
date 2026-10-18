@@ -36,7 +36,9 @@ public sealed record ItemTemplate(ushort ItemId, byte RefineMax, float[] Revisio
     // ratio of a PvP shop (m_fPvPrice, against TLEVELCHART.dwPvPMoney).
     byte ItemCountry = 3, float PvPrice = 0f,
     // m_bEquipSkill: wearing it needs a weapon mastery for its kind (a learned SDT_EQUIP skill) — else MI_NOSKILL.
-    byte EquipSkill = 0);
+    byte EquipSkill = 0,
+    // The auction category (m_dwCode: type << 16 | class mask << 8 | kind — MapService.Auction.cs).
+    uint Code = 0);
 
 /// <summary>
 /// An item-attribute row from <c>TITEMATTRCHART</c> (C++ <c>CTBLItemAttrChart</c> → <c>tagITEMATTR</c>,
