@@ -20,6 +20,7 @@
 #include <TRenderDevice.h>
 #include "TThread.h"
 #include "TCodePage.h"
+#include "TTextRaster.h"
 #include "TSocket.h"
 #include "TCrypt.h"
 #include "TSocket.h"

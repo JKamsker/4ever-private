@@ -34,6 +34,7 @@ set(EngineLib_SOURCES
     TConsole.cpp
     TCrypt.cpp
     TFile.cpp
+    TTextRaster.cpp
     TDynamicBillboard.cpp
     TMath.cpp
     TMiniAudio.cpp
@@ -78,6 +79,8 @@ target_include_directories(EngineLib
         "${TCLIENT_LIB_3RD}/miniaudio"
         # TComp and Engine Lib include each other's headers.
         "${TCLIENT_LIB_OWN}/TComp/TComp"
+        # stb_truetype, for the text drawn from font files.
+        "${TCLIENT_LIB_3RD}/bgfx.cmake/bgfx/3rdparty"
 )
 target_link_directories(EngineLib PUBLIC "${TCLIENT_LIB_3RD}/zlib/lib/${TCLIENT_ARCH}")
 target_link_libraries(EngineLib

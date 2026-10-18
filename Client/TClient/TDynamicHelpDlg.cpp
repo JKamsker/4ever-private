@@ -82,32 +82,20 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 		strTEXT.GetLength() + 1,
 		pBUF, TGDIBUFFER_SIZE);
 
-	HDC hDC = CreateCompatibleDC(NULL);
-	HFONT hOLDFONT = (HFONT) SelectObject(
-		hDC,
-		TSAFE_HANDLE(m_pGDIFont->m_pFont));
-
-	Graphics *pGDI = new Graphics(hDC);
-	StringFormat vFORMAT;
-	::Font vFONT(hDC);
-
 	CRect rect( 0, 0, 0, 0);
-	RectF vRECT;
+	FLOAT fWidth = 0.0f;
+	FLOAT fHeight = 0.0f;
 
-	pGDI->SetTextRenderingHint(TextRenderingHintAntiAlias);
-	pGDI->MeasureString(
-		pBUF, -1,
-		&vFONT,
-		PointF(
-		FLOAT(rect.left),
-		FLOAT(rect.top)),
-		&vRECT);
+	CTTextRaster::Measure(
+		m_pGDIFont->m_pFont,
+		pBUF,
+		FALSE,
+		TTEXTHINT_ANTIALIAS,
+		&fWidth,
+		&fHeight);
 
-	delete pGDI;
-	pGDI = NULL;
-
-	rect.bottom = INT(rect.top + vRECT.Height + 1);
-	rect.right = INT(rect.left + vRECT.Width + 1);
+	rect.bottom = INT(rect.top + fHeight + 1);
+	rect.right = INT(rect.left + fWidth + 1);
 
 	m_nHEIGHT = rect.Height();
 	m_nWIDTH = rect.Width();
@@ -121,43 +109,21 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 		(rect.Height() - m_nHEIGHT) / 2);
 	m_nWIDTH += rect.Width();
 
-	BITMAPINFO bmi;
-	LPDWORD pBits;
+	// The text's coverage, white on black, after an empty part as wide as the window.
+	std::vector<BYTE> vCOVER( size_t(max( m_nWIDTH, 1)) * max( m_nHEIGHT, 1));
 
-	ZeroMemory( &bmi.bmiHeader, sizeof(BITMAPINFOHEADER));
-	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bmi.bmiHeader.biWidth = m_nWIDTH;
-	bmi.bmiHeader.biHeight = -m_nHEIGHT;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biBitCount = 32;
-
-	HBITMAP hBMP = CreateDIBSection(
-		hDC,
-		&bmi,
-		DIB_RGB_COLORS,
-		(LPVOID *) &pBits,
-		NULL, 0);
-	HBITMAP hOLDBMP = (HBITMAP) SelectObject( hDC, hBMP);
-
-	vFORMAT.SetAlignment(StringAlignmentNear);
-	vFORMAT.SetLineAlignment(StringAlignmentNear);
-	pGDI = new Graphics(hDC);
-
-	pGDI->SetTextRenderingHint(TextRenderingHintAntiAlias);
-	pGDI->DrawString(
-		pBUF, -1,
-		&vFONT,
-		RectF(
+	CTTextRaster::Draw(
+		m_pGDIFont->m_pFont,
+		pBUF,
+		TTEXTHINT_ANTIALIAS,
 		FLOAT(rect.Width()),
 		1.0f,
 		FLOAT(m_nWIDTH),
-		FLOAT(m_nHEIGHT) - 1.0f),
-		&vFORMAT,
-		TTEMP(SolidBrush( Color( 0xFF, 0xFF, 0xFF))));
-
-	delete pGDI;
-	pGDI = NULL;
+		FLOAT(m_nHEIGHT) - 1.0f,
+		0,
+		m_nWIDTH,
+		m_nHEIGHT,
+		&vCOVER[0]);
 
 	int nHeight = TSTART_TEXTSIZE;
 	int nWidth = TSTART_TEXTSIZE;
@@ -238,7 +204,7 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 					for( int nPosX = 0; nPosX < m_pWIDTH[i]; nPosX++)
 					{
 						int nX = nLEFT + nPosX;
-						BYTE bColor = nX < m_nWIDTH ? (BYTE) ((pBits[nY * m_nWIDTH + nX] & 0xFF) >> 4) : 0x00;
+						BYTE bColor = nX < m_nWIDTH ? (BYTE) (vCOVER[nY * m_nWIDTH + nX] >> 4) : 0x00;
 
 						if( bColor > 0 )
 						{
@@ -268,11 +234,6 @@ void CTDynamicHelpDlg::InitTEXT( const CString& strTEXT)
 		0, T3DFVF_TVERTEX,
 		D3DPOOL_MANAGED,
 		&m_pVB, NULL);
-
-	SelectObject( hDC, hOLDBMP);
-	SelectObject( hDC, hOLDFONT);
-	DeleteObject(hBMP);
-	DeleteDC(hDC);
 }
 
 HRESULT CTDynamicHelpDlg::Render( DWORD dwTickCount)

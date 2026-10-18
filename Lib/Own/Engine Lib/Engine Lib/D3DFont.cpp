@@ -4,7 +4,7 @@
 
 #include "stdafx.h"
 
-int CD3DFont::m_nRenderingHint = TextRenderingHintAntiAlias;
+int CD3DFont::m_nRenderingHint = TTEXTHINT_ANTIALIAS;
 
 
 //////////////////////////////////////////////////////////////////////
@@ -136,28 +136,21 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 		strText.GetLength() + 1,
 		pBUF, TGDIBUFFER_SIZE);
 
-	HDC hDC = CreateCompatibleDC(NULL);
-	HFONT hOLDFONT = (HFONT) SelectObject(
-		hDC,
-		TSAFE_HANDLE(m_pFont));
-	Font vFONT(hDC);
-
 	if(nFormat&DT_CALCRECT)
 	{
-		Graphics vGDI(hDC);
-		RectF vRECT;
+		FLOAT fWidth = 0.0f;
+		FLOAT fHeight = 0.0f;
 
-		vGDI.SetTextRenderingHint((Gdiplus::TextRenderingHint) m_nRenderingHint);
-		vGDI.MeasureString(
-			pBUF, -1,
-			&vFONT,
-			PointF(
-			FLOAT(rect.left),
-			FLOAT(rect.top)),
-			&vRECT);
+		CTTextRaster::Measure(
+			m_pFont,
+			pBUF,
+			FALSE,
+			m_nRenderingHint,
+			&fWidth,
+			&fHeight);
 
-		rect.bottom = INT(rect.top + vRECT.Height - 1) - Hide.y;
-		rect.right = INT(rect.left + vRECT.Width + 1) - Hide.x;
+		rect.bottom = INT(rect.top + fHeight - 1) - Hide.y;
+		rect.right = INT(rect.left + fWidth + 1) - Hide.x;
 
 		nFormat &= ~DT_CALCRECT;
 	}
@@ -201,53 +194,26 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 	ZeroMemory( m_ppPosBufX, m_nPartCount * sizeof(float *));
 	ZeroMemory( m_ppPosBufY, m_nPartCount * sizeof(float *));
 
-	BITMAPINFO bmi;
-	LPDWORD pBits;
+	// The text's coverage, white on black.
+	std::vector<BYTE> vCOVER;
 
-	ZeroMemory( &bmi.bmiHeader, sizeof(BITMAPINFOHEADER));
-	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bmi.bmiHeader.biWidth = m_nWidth;
-	bmi.bmiHeader.biHeight = -m_nHeight;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biBitCount = 32;
-
-	HBITMAP hBMP = CreateDIBSection(
-		hDC,
-		&bmi,
-		DIB_RGB_COLORS,
-		(LPVOID *) &pBits,
-		NULL, 0);
-	HBITMAP hOLDBMP = (HBITMAP) SelectObject( hDC, hBMP);
-
-	if(hDC)
+	if( m_nWidth > 0 && m_nHeight > 0 )
 	{
-		StringFormat vFORMAT;
-		Graphics vGDI(hDC);
+		vCOVER.resize( size_t(m_nWidth) * m_nHeight);
 
-		if( nFormat & DT_CENTER )
-			vFORMAT.SetAlignment(StringAlignmentCenter);
-		else if( nFormat & DT_RIGHT )
-			vFORMAT.SetAlignment(StringAlignmentFar);
-		else
-			vFORMAT.SetAlignment(StringAlignmentNear);
-
-		if( nFormat & DT_VCENTER )
-			vFORMAT.SetLineAlignment(StringAlignmentCenter);
-		else
-			vFORMAT.SetLineAlignment(StringAlignmentNear);
-
-		vGDI.SetTextRenderingHint((Gdiplus::TextRenderingHint) m_nRenderingHint);
-		vGDI.DrawString(
-			pBUF, -1,
-			&vFONT,
-			RectF(
+		CTTextRaster::Draw(
+			m_pFont,
+			pBUF,
+			m_nRenderingHint,
 			0.0f, 1.0f,
 			FLOAT(m_nWidth),
-			FLOAT(m_nHeight - 1.0f)),
-			&vFORMAT,
-			TTEMP(SolidBrush( Color( 0xFF, 0xFF, 0xFF))));
+			FLOAT(m_nHeight - 1.0f),
+			nFormat,
+			m_nWidth,
+			m_nHeight,
+			&vCOVER[0]);
 	}
+	LPBYTE pCOVER = vCOVER.empty() ? NULL : &vCOVER[0];
 
 	int nIndex = 0;
 	nHeight = 0;
@@ -280,10 +246,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if( FAILED(hRESULT) || !m_pVB[nIndex] )
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -297,10 +259,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if( FAILED(hRESULT) || !m_pVB3D[nIndex] )
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -314,10 +272,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if(FAILED(m_pVB3D[nIndex]->Lock( 0, 4 * sizeof(PVERTEX), (LPVOID *) &pBUF3D, 0)))
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -325,11 +279,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if(FAILED(m_pVB[nIndex]->Lock( 0, 4 * sizeof(TVERTEX), (LPVOID *) &pBUF, 0)))
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
-
 				m_pVB3D[nIndex]->Unlock();
 				Release();
 
@@ -369,10 +318,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if( FAILED(hRESULT) || !m_pTEX[0][nIndex] )
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -389,10 +334,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if( FAILED(hRESULT) || !m_pTEX[1][nIndex] )
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -401,10 +342,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 			D3DLOCKED_RECT lr[2];
 			if(FAILED(m_pTEX[0][nIndex]->LockRect( 0, &lr[0], NULL, 0)))
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
 				Release();
 
 				return;
@@ -412,11 +349,6 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 
 			if(FAILED(m_pTEX[1][nIndex]->LockRect( 0, &lr[1], NULL, 0)))
 			{
-				SelectObject( hDC, hOLDBMP);
-				SelectObject( hDC, hOLDFONT);
-				DeleteObject(hBMP);
-				DeleteDC(hDC);
-
 				m_pTEX[0][nIndex]->UnlockRect(0);
 				Release();
 
@@ -436,7 +368,7 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 				for( int nPosX = 0; nPosX < min( nRight, m_nWidth) - nWidth; nPosX++)
 				{
 					int nIndex = m_nWidth * (nHeight + nPosY) + nWidth + nPosX;
-					BYTE bColor = (BYTE) ((pBits[nIndex] & 0xFF) >> 4);
+					BYTE bColor = (BYTE) (pCOVER[nIndex] >> 4);
 
 					if( bColor > 0 )
 					{
@@ -448,7 +380,7 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 						*pDst16[0] = (WORD(bColor) << 12)|0x0FFF;
 					}
 					else
-						*pDst16[0] = GetColorByLinePixel( pBits, nWidth + nPosX, nHeight + nPosY);
+						*pDst16[0] = GetColorByLinePixel( pCOVER, nWidth + nPosX, nHeight + nPosY);
 
 					bColor = ((*pDst16[0]) & 0xF000) >> 12;
 					if( !bColor || bColor > 0x07 )
@@ -475,18 +407,13 @@ void CD3DFont::MakeText( LPTRENDERDEVICE pDevice,
 		nWidth = 0;
 	}
 
-	SelectObject( hDC, hOLDBMP);
-	SelectObject( hDC, hOLDFONT);
-	DeleteObject(hBMP);
-	DeleteDC(hDC);
-
 	m_nFormat = nFormat;
 	m_strTEXT = strText;
 	m_nPosX = 0;
 	m_nPosY = 0;
 }
 
-WORD CD3DFont::GetColorByLinePixel( LPDWORD pBits, int nPosX, int nPosY)
+WORD CD3DFont::GetColorByLinePixel( LPBYTE pCOVER, int nPosX, int nPosY)
 {
 	if( m_bOutLine || m_bShadow )
 	{
@@ -509,7 +436,7 @@ WORD CD3DFont::GetColorByLinePixel( LPDWORD pBits, int nPosX, int nPosY)
 			if(rect.PtInRect(CPoint( nCurX, nCurY)))
 			{
 				int nIndex = m_nWidth * nCurY + nCurX;
-				BYTE bColor = (BYTE) ((pBits[nIndex] & 0xFF) >> 4);
+				BYTE bColor = (BYTE) (pCOVER[nIndex] >> 4);
 
 				if( bColor > 0 && (m_bOutLine || i < 2) )
 					return 0x3FFF;

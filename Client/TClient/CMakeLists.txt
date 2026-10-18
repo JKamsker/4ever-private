@@ -318,5 +318,17 @@ target_link_options(TClient PRIVATE
     /MAPINFO:EXPORTS
     "/MANIFESTUAC:level='requireAdministrator' uiAccess='false'"
 )
+# Fonts with Arial's metrics, for the text drawn from font files where Arial is not installed.
+add_custom_command(TARGET TClient POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:TClient>/Fonts"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${TCLIENT_LIB_3RD}/LiberationFonts/LiberationSans-Regular.ttf"
+        "${TCLIENT_LIB_3RD}/LiberationFonts/LiberationSans-Bold.ttf"
+        "${TCLIENT_LIB_3RD}/LiberationFonts/LiberationSans-Italic.ttf"
+        "${TCLIENT_LIB_3RD}/LiberationFonts/LiberationSans-BoldItalic.ttf"
+        "${TCLIENT_LIB_3RD}/LiberationFonts/LICENSE"
+        "$<TARGET_FILE_DIR:TClient>/Fonts"
+)
+
 # Resources are Korean (Culture=0x0412).
 set_source_files_properties(TClient.rc PROPERTIES COMPILE_OPTIONS "/l0x0412" COMPILE_DEFINITIONS KOREA)

@@ -1289,51 +1289,41 @@ void TComponent::GetTextExtentPoint( LPCTSTR strText, CSize &size)
 	if(!m_pGDIFont)
 		return;
 
-	HDC hDC = CreateCompatibleDC(NULL);
-	RectF vRECT;
+	FLOAT fWidth = 0.0f;
+	FLOAT fHeight = 0.0f;
 
-	SelectObject( hDC, m_pGDIFont->m_pFont->m_hObject);
 	if( _tcslen(strText) > 0 )
 	{
 		WCHAR pBUF[TGDIBUFFER_SIZE];
-
-		Graphics vGDI(hDC);
-		Font vFONT(hDC);
 
 		CTCodePage::ToWide(
 			strText,
 			static_cast<int>(_tcslen(strText) + 1),
 			pBUF, TGDIBUFFER_SIZE);
 
-		vGDI.SetTextRenderingHint(TextRenderingHintAntiAlias);
-		vGDI.MeasureString(
-			pBUF, -1,
-			&vFONT,
-			PointF(
-			0.0f,
-			0.0f),
-			TTEMP(StringFormat(StringFormatFlagsMeasureTrailingSpaces)),
-			&vRECT);
-		vRECT.Width -= 3.0f;
+		CTTextRaster::Measure(
+			m_pGDIFont->m_pFont,
+			pBUF,
+			TRUE,
+			TTEXTHINT_ANTIALIAS,
+			&fWidth,
+			&fHeight);
+		fWidth -= 3.0f;
 	}
 	else
 	{
-		Graphics vGDI(hDC);
-		Font vFONT(hDC);
-
-		vGDI.SetTextRenderingHint(TextRenderingHintAntiAlias);
-		vGDI.MeasureString(
-			L"X", -1,
-			&vFONT,
-			PointF(
-			0.0f,
-			0.0f),
-			&vRECT);
-		vRECT.Width = 0.0f;
+		// No text: no width, a line's height.
+		CTTextRaster::Measure(
+			m_pGDIFont->m_pFont,
+			L"X",
+			FALSE,
+			TTEXTHINT_ANTIALIAS,
+			&fWidth,
+			&fHeight);
+		fWidth = 0.0f;
 	}
 
-	size = CSize( INT(vRECT.Width), INT(vRECT.Height - 3.0f));
-	DeleteDC(hDC);
+	size = CSize( INT(fWidth), INT(fHeight - 3.0f));
 }
 
 void TComponent::ShrinkText( CString& text)

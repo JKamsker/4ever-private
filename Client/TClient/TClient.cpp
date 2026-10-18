@@ -1098,6 +1098,13 @@ void CTClientApp::LoadStdProfileSettings()
 		100);
 	SetTachyonFontSizeRate(nFontSizeRate);
 
+	// GDI+ draws the text, or with TextRenderer=FontFiles the font files, as on Linux.
+	CString strTextRenderer = GetProfileString(
+		_T("Settings"),
+		_T("TextRenderer"),
+		_T("GDI+"));
+	CTTextRaster::SetFontFiles(!strTextRenderer.CompareNoCase(_T("FontFiles")));
+
 	CString strFontQuality = GetProfileString(
 		_T("Settings"),
 		_T("FontQuality"),

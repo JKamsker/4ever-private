@@ -1340,13 +1340,18 @@ public:
 	HGDIOBJ m_hObject;
 };
 
+// The font keeps its LOGFONT: text drawn from font files (TTextRaster.h) works from it, not from
+// the GDI font.
 class CFont : public CGdiObject
 {
 public:
+	CFont() { memset( &m_vLOGFONT, 0, sizeof(LOGFONT)); }
+
 	operator HFONT() const { return (HFONT) m_hObject; }
 
 	BOOL CreateFontIndirect( const LOGFONT *lpLogFont)
 	{
+		m_vLOGFONT = *lpLogFont;
 		return Attach(::CreateFontIndirect(lpLogFont));
 	}
 
@@ -1366,27 +1371,42 @@ public:
 		BYTE nPitchAndFamily,
 		LPCTSTR lpszFacename)
 	{
-		return Attach(::CreateFont(
-			nHeight,
-			nWidth,
-			nEscapement,
-			nOrientation,
-			nWeight,
-			bItalic,
-			bUnderline,
-			cStrikeOut,
-			nCharSet,
-			nOutPrecision,
-			nClipPrecision,
-			nQuality,
-			nPitchAndFamily,
-			lpszFacename));
+		LOGFONT vLOGFONT;
+
+		memset( &vLOGFONT, 0, sizeof(LOGFONT));
+		vLOGFONT.lfHeight = nHeight;
+		vLOGFONT.lfWidth = nWidth;
+		vLOGFONT.lfEscapement = nEscapement;
+		vLOGFONT.lfOrientation = nOrientation;
+		vLOGFONT.lfWeight = nWeight;
+		vLOGFONT.lfItalic = bItalic;
+		vLOGFONT.lfUnderline = bUnderline;
+		vLOGFONT.lfStrikeOut = cStrikeOut;
+		vLOGFONT.lfCharSet = nCharSet;
+		vLOGFONT.lfOutPrecision = nOutPrecision;
+		vLOGFONT.lfClipPrecision = nClipPrecision;
+		vLOGFONT.lfQuality = nQuality;
+		vLOGFONT.lfPitchAndFamily = nPitchAndFamily;
+
+		if(lpszFacename)
+			_tcsncpy_s( vLOGFONT.lfFaceName, lpszFacename, _TRUNCATE);
+
+		return CreateFontIndirect(&vLOGFONT);
 	}
 
-	int GetLogFont( LOGFONT *pLogFont)
+	int GetLogFont( LOGFONT *pLogFont) const
 	{
-		return GetObject( sizeof(LOGFONT), pLogFont);
+		*pLogFont = m_vLOGFONT;
+		return sizeof(LOGFONT);
 	}
+
+	const LOGFONT& GetLogFont() const
+	{
+		return m_vLOGFONT;
+	}
+
+protected:
+	LOGFONT m_vLOGFONT;
 };
 
 #endif // !_AFX

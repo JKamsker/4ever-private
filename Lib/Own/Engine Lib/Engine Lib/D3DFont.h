@@ -48,7 +48,7 @@ public:
 
 protected:
 	WORD GetColorByLinePixel(
-		LPDWORD pBits,
+		LPBYTE pCOVER,
 		int nPosX, 
 		int nPosY);
 

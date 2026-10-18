@@ -318,6 +318,7 @@ static const TConfigDefaultStr s_DefaultStrs[] =
 	{ _T("Settings"), _T("GroupMonNamesRatio"), _T("0.5")  },
 	{ _T("Settings"), _T("Font"),          _T("")      },
 	{ _T("Settings"), _T("FontQuality"),   _T("ANTIALIASED_QUALITY") },
+	{ _T("Settings"), _T("TextRenderer"),  _T("GDI+")  },  // GDI+ or FontFiles (the Linux rasterizer)
 
 	// [Launcher]
 	{ _T("Launcher"), _T("directory"),     _T("")            },  // resolved to exe folder by the launcher
