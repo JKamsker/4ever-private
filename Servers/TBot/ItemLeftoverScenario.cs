@@ -5,7 +5,7 @@ namespace TBot;
 /// <summary>
 /// <c>--Bot:Scenario=itemleftovers</c>: batch S7a live, on the charts' real items. A falls (its HP goes down, B sees it) and is refused
 /// when reporting B's fall. A sets off an act item (B sees the cast, one item spent), uses a medal package (its medals go up), turns a
-/// refine stone into its item, and opens a special box's rewards window. Before: the three items are put in A's backpack; after: they
+/// refine stone into its item, and opens a cash gamble group's rewards window. Before: the three items are put in A's backpack; after: they
 /// (and the refined item) are removed, and A's HP and medals put back. Stop-the-clock spends cash, so it is left to the unit tests.
 /// </summary>
 public static partial class Scenarios
@@ -21,11 +21,11 @@ public static partial class Scenarios
         var db = new GameDb(cfg.GameConnectionString);
         uint idA = await FirstChar(db, cfg.Account);
         var act = await db.RowAsync(@"SELECT TOP 1 s.wID, s.wItemID FROM TSKILLCHART s JOIN TITEMCHART i ON i.wItemID = s.wItemID
-            WHERE i.bType = 25 AND s.wMapID = 65535 ORDER BY s.wID");
+            WHERE i.bType = 25 AND s.wMapID = -1 ORDER BY s.wID");
         var medal = await db.RowAsync("SELECT TOP 1 wItemID, wUseValue FROM TITEMCHART WHERE bType = 15 AND bKind = 118 ORDER BY wItemID");
         var stone = await db.RowAsync(@"SELECT TOP 1 i.wItemID, i.wUseValue FROM TITEMCHART i JOIN TITEMCHART t ON t.wItemID = i.wUseValue
             WHERE i.bType = 14 ORDER BY i.wItemID");
-        var box = await db.RowAsync("SELECT TOP 1 wGroup FROM TSPECIALBOXCHART WHERE bClass = 6 ORDER BY wGroup");
+        var box = await db.RowAsync("SELECT TOP 1 wGroup FROM TVIEW_CASHGAMBLECHART ORDER BY wGroup");             // listed whole, any class
         if (act is null || medal is null || stone is null) { Report("itemleftovers", "the charts have no act item, medal package or refine stone"); return 2; }
         ushort actSkill = Convert.ToUInt16(act[0]), actItem = Convert.ToUInt16(act[1]);
         ushort medalItem = Convert.ToUInt16(medal[0]), medalValue = Convert.ToUInt16(medal[1]);
@@ -91,7 +91,7 @@ public static partial class Scenarios
 
         a.Send(Req(CS_USEMEDALITEM_REQ, w => { w.WriteByte(LeftoverBag); w.WriteByte(MedalSlot); w.WriteByte(1); }));
         var m = a.TryWait(CS_UPDATEMEDALS_REQ);
-        Check($"itemleftovers: a medal package adds its {medalValue} medals", m is not null && Read(m, r => r.ReadUInt32()) == medals + medalValue, Describe(m));
+        Check($"itemleftovers: a medal package adds its medals ({medalValue} in this chart)", m is not null && Read(m, r => r.ReadUInt32()) == medals + medalValue, Describe(m));
 
         a.Send(Req(CS_WASTEREFINE_REQ, w => { w.WriteByte(LeftoverBag); w.WriteByte(StoneSlot); }));
         var refine = a.TryWait(CS_WASTEREFINE_ACK);
@@ -99,9 +99,9 @@ public static partial class Scenarios
 
         if (box is { } group)
         {
-            a.Send(Req(CS_GETREWARDS_REQ, w => { w.WriteByte(115); w.WriteUInt16(group); }));
+            a.Send(Req(CS_GETREWARDS_REQ, w => { w.WriteByte(0); w.WriteUInt16(group); }));                       // not a special box: a cash gamble group
             var rewards = a.TryWait(CS_GETREWARDS_ACK);
-            Check($"itemleftovers: the rewards window lists special box {group}", rewards is not null
+            Check($"itemleftovers: the rewards window lists cash gamble group {group}", rewards is not null
                 && rewards.ReadUInt16() > 0, Describe(rewards));
         }
     }
