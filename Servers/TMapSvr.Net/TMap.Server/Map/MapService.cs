@@ -83,6 +83,7 @@ public sealed partial class MapService
         if (session.CharId != 0 && _worldReady)
             SendMW_CLOSECHAR_ACK(session.CharId, session.Key);
 
+        if (session.Char is { } entrant) TournamentExitMap(session, entrant);   // C++ ExitMAP first: the real character back (MapService.TournamentMatch.cs)
         SaveCharData(session);   // flush the char record + dirty quests on logout (C++ SetEventCloseSession)
         if (session.Char is { } fighter) { ArenaLeave(session, fighter, teleport: false); ArenaDequeue(fighter.CharId); }   // C++ ExitMAP (MapService.Arena.cs)
         if (session.State == EnterState.InGame && session.Char is { } carrier) DropGodBall(carrier);   // C++ ExitMAP (MapService.Castle.cs)
@@ -106,6 +107,7 @@ public sealed partial class MapService
         var r = new PacketReader(packet);
         try
         {
+            if (TournamentRefuses(session, r.Id)) return;                                       // MapService.TournamentMatch.cs
             switch (r.Id)
             {
                 case Msg.CS_CONNECT_REQ: await OnCS_CONNECT_REQ(session, r); break;
@@ -454,6 +456,7 @@ public sealed partial class MapService
                 case Msg.MW_TOURNAMENTMATCH_REQ: OnMW_TOURNAMENTMATCH_REQ(r); break;
                 case Msg.MW_TOURNAMENTENABLE_REQ: OnMW_TOURNAMENTENABLE_REQ(r); break;
                 case Msg.MW_TOURNAMENTBATPOINT_REQ: OnMW_TOURNAMENTBATPOINT_REQ(r); break;
+                case Msg.MW_TOURNAMENTRESULT_REQ: OnMW_TOURNAMENTRESULT_REQ(r); break;                      // MapService.TournamentMatch.cs
                 case Msg.MW_WARCOUNTRYBALANCE_REQ: OnMW_WARCOUNTRYBALANCE_REQ(r); break;                    // MapService.CountryBalance.cs
                 case Msg.MW_RECALCCOUNTRYBALANCE_ACK: OnMW_RECALCCOUNTRYBALANCE_ACK(r); break;
                 case Msg.MW_EVENTUPDATE_REQ: OnMW_EVENTUPDATE_REQ(r); break;                                // MapService.Events.cs
@@ -574,6 +577,7 @@ public sealed partial class MapService
         await RunPostBills();                  // unpaid bills past 3 days go back to their sender
         await RunAuctionEnds();                // auctions whose time is up (MapService.Auction.cs)
         ArenaTick();                           // the arenas' ready and battle clocks (MapService.Arena.cs)
+        TournamentTick();                      // the tournament's countdowns and drawn matches (MapService.TournamentMatch.cs)
         RunDuels();                            // duel standby → start → timeout → clear (the SM_DUEL* timer)
         // Still deferred here: war timers — see PORT_STATUS.md.
     }

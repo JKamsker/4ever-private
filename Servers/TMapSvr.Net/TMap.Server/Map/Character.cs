@@ -249,6 +249,10 @@ public sealed class Character
     /// <summary>C++ <c>m_wArenaID</c> / <c>m_bArenaTeam</c> — the arena the character fights in and its side (1 or 2), 0 = none
     /// (MapService.Arena.cs).</summary>
     public ushort ArenaId { get; set; }
+
+    /// <summary>C++ <c>m_bIsTournamentPlayer</c> + the <c>m_*_bak</c> it set aside: non-null while playing as the tournament character
+    /// (MapService.TournamentMatch.cs). Nothing is saved meanwhile.</summary>
+    public MapService.TournamentBackup? TournamentBackup { get; set; }
     public byte ArenaTeam { get; set; }
 
     /// <summary>C++ <c>m_vRemainSkill</c> — the learned skills whose rows apply for good (<c>IsRemainType</c>). The C++

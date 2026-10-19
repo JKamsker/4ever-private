@@ -32,7 +32,7 @@ public sealed partial class MapService
 {
     private const byte TprSuccess = 0, TprNotTeleportNpc = 1, TprNoPortal = 2, TprNoDestination = 3,
         TprNeedMoney = 4, TprNoItem = 5, TprInvalid = 6, TprUsed = 7;                      // TTELEPORT_RESULT
-    private const byte PctHaveItem = 2, PctMeeting = 12;                                     // PORTALCONDITION_TYPE
+    private const byte PctHaveItem = 2, PctTournamentPlayer = 9, PctTournamentLounge = 10, PctTournamentGuest = 11, PctMeeting = 12;   // PORTALCONDITION_TYPE
     private const byte InvalidServerId = 0xFF;
 
     // Buffs a teleport always clears (TMapSvr.cpp:7206).
@@ -53,6 +53,7 @@ public sealed partial class MapService
         Npc? npc = null;
         PortalRow? npcPortal = null;
         uint price = 0;
+        bool bet = false;                                                                        // C++ bTournamentBat
         var consume = new List<ushort>();
 
         if (npcId != 0)
@@ -85,6 +86,7 @@ public sealed partial class MapService
             foreach (var cond in dest.Conditions)
             {
                 if (cond.Type == PctMeeting && cond.Id != 0) { SendCS_TELEPORT_ACK(s, TprUsed, ch.MapId, 0, 0, 0); return; }
+                if (cond.Type == PctTournamentLounge) bet = true;
                 if (cond.Type == PctHaveItem)
                 {
                     ushort need = (ushort)cond.Id;
@@ -107,6 +109,12 @@ public sealed partial class MapService
             {
                 ch.UseMoney(price, commit: true);
                 SendCS_MONEY_ACK(s, ch);
+                if (bet)                                                                         // the lounge gate's price is a bet ticket
+                {
+                    var w = new PacketWriter(Msg.MW_TOURNAMENTENTERGATE_ACK);
+                    w.WriteUInt32(ch.CharId); w.WriteUInt32(s.Key); w.WriteUInt32(price); w.WriteByte(1);
+                    _world.Send(w);
+                }
             }
             // Remember the portal a player left map 0 through (used by the return scroll).
             if (npcPortal is not null && fromMap == 0)
@@ -236,6 +244,7 @@ public sealed partial class MapService
 
         EraseZoneEffects(s, ch);               // C++ ExitMAP → EraseMissionSkill (MapService.Mission.cs)
         ArenaLeave(s, ch); ArenaDequeue(ch.CharId);   // and ArenaLeave + the queue (MapService.Arena.cs)
+        TournamentExitMap(s, ch);              // a fighter leaving its match, the real character back (MapService.TournamentMatch.cs)
         SkyGardenExitMap(s, ch);               // and CS_LEAVESKYGARDEN_ACK (MapService.SkyGarden.cs)
         CastleExitMap(s, ch);                  // a carried god ball falls, CS_LEAVECASTLE_ACK (MapService.Castle.cs)
         RecallsExitMap(s, ch);

@@ -161,6 +161,15 @@ public sealed class TemplateStore
     /// <summary>C++ <c>m_mapTGAMBLE</c>: the outcomes by (item type, item kind).</summary>
     public Dictionary<(byte Type, byte Kind), List<GambleRow>> Gambles { get; } = new();
 
+    /// <summary>C++ <c>m_mapTTNMTINVEN</c>: the tournament character's bags (bag slot, bag item, ELD).</summary>
+    public List<(byte InvenId, ushort ItemId, byte Eld)> TnmtInvens { get; } = new();
+
+    /// <summary>C++ <c>m_vTTNMTITEM[class]</c>: the tournament character's items by class (bag, item).</summary>
+    public Dictionary<byte, List<(byte InvenId, FullItemRow Item)>> TnmtItems { get; } = new();
+
+    /// <summary>C++ <c>m_bMaxLevel</c> (<c>TGetLimitedLevel</c>): the level cap — the tournament character's level.</summary>
+    public byte LimitedLevel { get; set; }
+
     /// <summary>C++ <c>CTBLArena</c>: the arenas.</summary>
     public List<ArenaRow> Arenas { get; } = new();
 

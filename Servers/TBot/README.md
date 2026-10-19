@@ -168,8 +168,8 @@ letters are put back. Takes about two minutes. 15 checks.
 
 `--Bot:Scenario=tournament` (same arguments; only A) asks for the tournament schedule (the world's real steps, relayed by the
 map), then for the sign-up window — answered as the world's step allows (sign-up info, party list or match list) — and is
-refused when signing up for an entry that does not exist. Nothing is written. 3 checks. The matches themselves are not yet
-covered (batch S6e-2).
+refused when signing up for an entry that does not exist. Nothing is written. 3 checks. The matches (batch S6e-2) follow the
+world's step clock, days apart, so they are covered by the map's unit tests (`TournamentMatchTests`), not live.
 
 ## Scenario: stress (hundreds of bots)
 

@@ -37,6 +37,7 @@ public sealed partial class MapService
         string targetName = r.ReadString();
         var t = FindByName(targetName);
         if (t is null || t == s || !t.IsMain || t.State != EnterState.InGame || t.Char is null) return;  // silent (C++ FindPlayer gate)
+        if (IsTournamentChar(t.Char)) return;                                                 // not with a tournament character
         if (!CheckProtected(t.Char, ch.CharId, ProtectedDeal)) { SendCS_DEALITEMEND_ACK(s, DealResult.Deny, targetName); return; }
         SendCS_DEALITEMASK_ACK(t, ch.Name);   // to the target only
     }

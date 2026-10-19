@@ -275,7 +275,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                  dwReuseDelay, nReuseDelayInc, dwLoopDelay, dwKindDelay, bSpeedApply, bPositive, wMapID,
                  dwDuration, dwDurationInc, bMaintainType, bPriority, bStatic, dwClassID, bGlobal,
                  bIsRide, bIsHideSkill, bIsDismount, bEraseAct, bTargetRange, fPrice, wParentSkillID,
-                 dwWeaponID, wPosture, bORadius, bEraseHide, bTargetHit FROM TSKILLCHART";
+                 dwWeaponID, wPosture, bORadius, bEraseHide, bTargetHit, bCanLearn FROM TSKILLCHART";
     // The learning costs per skill level (CTBLSkillPoint → CTSkillTemp::m_mapTSkillPoint).
     private const string SkillPointChartSql =
         @"SELECT wID, bLevel, bSkillPoint, bGroupPoint, bPrevSkillLevel, dwPayback FROM TSKILLPOINTCHART";
@@ -422,6 +422,37 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                 if (!store.Gambles.TryGetValue(key, out var list)) store.Gambles[key] = list = new();
                 list.Add(new GambleRow(r.GetUShortSafe(2), r.GetByteSafe(3), r.GetByteSafe(4), r.GetByteSafe(5), r.GetUShortSafe(6)));
             }
+
+        // C++ CTBLInvenTournametChart / CTBLItemTournamentChart (DBAccess.h:1476, 1496): the tournament character's bags and items.
+        await using (var cmd = new SqlCommand("SELECT bInvenID, wItemID, bELD FROM TINVENTOURNAMENTCHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+                store.TnmtInvens.Add((r.GetByteSafe(0), r.GetUShortSafe(1), r.GetByteSafe(2)));
+        await using (var cmd = new SqlCommand(@"SELECT bClass, bInvenID, bItemID, wItemID, bLevel, bCount, bGLevel, dwDuraMax, bGradeEffect,
+                 bMagic1, bMagic2, bMagic3, bMagic4, bMagic5, bMagic6, wValue1, wValue2, wValue3, wValue4, wValue5, wValue6,
+                 dwTime1, dwTime2, dwTime3, dwTime4, dwTime5, dwTime6, bGem, wMoggItemID FROM TITEMTOURNAMENTCHART", c))
+        await using (var r = await cmd.ExecuteReaderAsync(ct))
+            while (await r.ReadAsync(ct))
+            {
+                var magic = new byte[6]; var value = new ushort[6]; var ext = new uint[6];
+                for (int i = 0; i < 6; i++) magic[i] = r.GetByteSafe(9 + i);
+                for (int i = 0; i < 6; i++) value[i] = r.GetUShortSafe(15 + i);
+                for (int i = 0; i < 6; i++) ext[i] = r.GetUIntSafe(21 + i);
+                uint dura = r.GetUIntSafe(7);
+                var item = new FullItemRow(0, 0, r.GetByteSafe(2), r.GetUShortSafe(3), r.GetByteSafe(4), r.GetByteSafe(5), r.GetByteSafe(6), dura,
+                    dura, 0, 0, r.GetByteSafe(8), magic, value, ext, r.GetByteSafe(27), r.GetUShortSafe(28), 0);
+                byte cls = r.GetByteSafe(0);
+                if (!store.TnmtItems.TryGetValue(cls, out var list)) store.TnmtItems[cls] = list = new();
+                list.Add((r.GetByteSafe(1), item));
+            }
+        // C++ CSPGetLimitedLevel (TGetLimitedLevel): the server's level cap, the tournament character's level.
+        try
+        {
+            var max = SqlProc.Out("@m", SqlDbType.TinyInt);
+            await SqlProc.ExecAsync(c, "TGetLimitedLevel", null, new[] { max }, ct);
+            store.LimitedLevel = max.AsByte();
+        }
+        catch (SqlException) { }
 
         // C++ CTBLArena (DBAccess.h:4588)
         await using (var cmd = new SqlCommand("SELECT wID, bType, wInPos, wOutPos, dwFee FROM TARENACHART", c))
@@ -605,7 +636,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                     IsDismount: r.GetByteSafe(25) != 0, EraseAct: r.GetByteSafe(26), TargetRange: r.GetByteSafe(27),
                     Price: r.IsDBNull(28) ? 0f : Convert.ToSingle(r.GetValue(28)), ParentSkillId: r.GetUShortSafe(29),
                     WeaponId: r.GetUIntSafe(30), Posture: r.GetUShortSafe(31), ORadius: r.GetByteSafe(32),
-                    EraseHide: r.GetByteSafe(33), TargetHit: r.GetByteSafe(34));
+                    EraseHide: r.GetByteSafe(33), TargetHit: r.GetByteSafe(34), CanLearn: r.GetByteSafe(35));
             }
 
         await using (var cmd = new SqlCommand(SkillPointChartSql, c))

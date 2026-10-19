@@ -78,6 +78,7 @@ public sealed partial class MapService
     private void EraseMaintainPlayer(ClientSession s, Character ch, int index)
     {
         var m = ch.MaintainSkills[index];
+        TournamentHideEnded(ch, m);                                       // a match's hide time (MapService.TournamentMatch.cs)
         uint oldMaxHp = MaxHpFor(ch), oldMaxMp = MaxMpFor(ch);
         ch.MaintainSkills.RemoveAt(index);
 

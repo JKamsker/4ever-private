@@ -159,7 +159,7 @@ public sealed partial class MapService
     /// <summary>Whether this session's item changes should persist incrementally: a main, DB-loaded char with the
     /// item-id base seeded (so a minted dlID can't collide with a live PK — the same gate as the full inventory
     /// save). Independent of <c>_gameDb</c> so the enqueue logic is unit-testable DB-free.</summary>
-    private bool CanPersistItems(ClientSession s) => _itemIdReady && s.IsMain && s.Char is { DbLoaded: true };
+    private bool CanPersistItems(ClientSession s) => _itemIdReady && s.IsMain && s.Char is { DbLoaded: true, TournamentBackup: null };
 
     /// <summary>Records an added/changed item for an incremental direct save. Stamps a fresh dlID on an
     /// in-session item (0) so its row has a stable PK, queues the latest snapshot, and cancels any pending delete
@@ -297,7 +297,7 @@ public sealed partial class MapService
     /// periodic throttle — used by the disconnect/logout path (C++ <c>SetEventCloseSession</c>).</summary>
     private void SaveCharData(ClientSession s)
     {
-        if (_gameDb is null || !s.IsMain || s.Char is not { DbLoaded: true } ch) return;
+        if (_gameDb is null || !s.IsMain || s.Char is not { DbLoaded: true, TournamentBackup: null } ch) return;   // not the tournament character
         ch.LastSaveMs = NowMs;
         var charData = WithDuringItems(WithRecalls(BuildCharSave(ch), ch, NowMs), ch, UnixNow());
         if (ArenaOf(ch) is { } arena)                                                  // a fighter is saved at the exit (SSSender.cpp:823)

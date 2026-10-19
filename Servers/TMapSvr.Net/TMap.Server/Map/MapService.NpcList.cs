@@ -80,8 +80,7 @@ public sealed partial class MapService
         return _templates.LevelPvPMoneyOf(grade) is { } money ? (uint)(money * t.PvPrice + 0.99) : 0u;
     }
 
-    /// <summary>C++ <c>CTPlayer::CheckPortalCondition</c> (TPlayer.cpp:3220). Tournaments are unported: those conditions fail
-    /// (their C++ lookups find nothing). The castles' are in MapService.Castle.cs, the sky garden's in MapService.SkyGarden.cs.</summary>
+    /// <summary>C++ <c>CTPlayer::CheckPortalCondition</c> (TPlayer.cpp:3220), the tournament's included. The castles' are in MapService.Castle.cs, the sky garden's in MapService.SkyGarden.cs.</summary>
     private bool CheckPortalCondition(Character ch, PortalRow portal, byte condition, uint conditionId)
     {
         switch (condition)
@@ -99,10 +98,16 @@ public sealed partial class MapService
             case PctUpLevel: return ch.Level <= conditionId;
             case PctUpDownLevel: return ch.Level >= (conditionId & 0xFFFF) && ch.Level <= (conditionId >> 16);
             case PctMeeting: return conditionId == 0;
+            case PctTournamentPlayer: return conditionId == TournamentMapOf(ch.CharId, _tnmtGroup);    // MapService.Tournament.cs
+            case PctTournamentLounge:
+                return CanDoTournament(TnmtEnter) && (conditionId == 0
+                    || (conditionId == 1 && FindTournamentPlayer(ch.CharId, active: true) is not null)
+                    || (conditionId == 2 && FindTournamentPlayer(ch.CharId, active: true) is null));
+            case PctTournamentGuest: return IsActiveTournamentMap((ushort)conditionId);
             case PctAttackPos or PctDefendPos: return CheckCastlePortal(ch, portal, condition);   // MapService.Castle.cs
             case >= PctSkyAttackPos and <= PctSkyAttackPos + 10: return CheckSkyGardenPortal(ch, portal, condition);   // MapService.SkyGarden.cs
             case > PctMeeting + 11: return true;                                 // past the enum: C++ default
-            default: return false;                                               // tournaments
+            default: return false;
         }
     }
 }

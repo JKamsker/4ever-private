@@ -81,7 +81,8 @@ public sealed partial class MapService
     /// news to everyone around, and the short revival-protection buff.</summary>
     private void Revive(ClientSession s, Character ch, byte aftermath, SkillTemplate? tpl, byte level)
     {
-        if (SetAftermath(s, ch, aftermath)) SendCS_CHARSTATINFO_ACK(s, ch);
+        if (IsTournamentMap(ch.MapId)) aftermath = AftermathAtOnce;                          // C++ Revival: no penalty in a tournament
+        else if (SetAftermath(s, ch, aftermath)) SendCS_CHARSTATINFO_ACK(s, ch);
 
         uint maxHp = MaxHpFor(ch), maxMp = MaxMpFor(ch);
         ch.Action = 0;                                                  // TA_STAND

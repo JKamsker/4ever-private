@@ -17,8 +17,7 @@ namespace TMap.Server.Map;
 /// is told by mail. A bet won is paid by mail (<c>MW_TOURNAMENTBATPOINT_REQ</c>).</item>
 /// <item>During a match, a cheer item heals a fighter on one's tournament map (<c>CS_TOURNAMENTCHEER_REQ</c>).</item>
 /// </list>
-/// <para>The matches themselves (entering the tournament maps, the tournament character, kill points, results, the final's reward)
-/// are batch S6e-2. Fixed C++ bug: a cheer was refused when the cheerer (not the fighter) was at full health.</para>
+/// <para>The matches themselves are in MapService.TournamentMatch.cs (batch S6e-2). Fixed C++ bug: a cheer was refused when the cheerer (not the fighter) was at full health.</para>
 /// </summary>
 public sealed partial class MapService
 {
@@ -278,7 +277,7 @@ public sealed partial class MapService
     /// and whoever is in a tournament map or the lounge goes home.</summary>
     private void OnMW_TOURNAMENTINFO_REQ(PacketReader r)
     {
-        _tnmtPlayers.Clear();
+        ClearTournamentPlayers();
         _tournaments.Clear();
         FirstGroupCount = r.ReadByte();
         byte group = r.ReadByte(), step = r.ReadByte(), count = r.ReadByte();
@@ -309,7 +308,7 @@ public sealed partial class MapService
     /// results so far.</summary>
     private void OnMW_TOURNAMENTMATCH_REQ(PacketReader r)
     {
-        _tnmtPlayers.Clear();
+        ClearTournamentPlayers();
         byte count = r.ReadByte();
         for (int i = 0; i < count; i++)
         {
@@ -319,7 +318,9 @@ public sealed partial class MapService
                 Level = r.ReadByte(), Class = r.ReadByte(), ChiefId = r.ReadUInt32(),
             };
             p.Result[0] = r.ReadByte(); p.Result[1] = r.ReadByte(); p.Result[2] = r.ReadByte();
-            if (_tournaments.ContainsKey(p.EntryId)) _tnmtPlayers[p.CharId] = p;
+            if (!_tournaments.ContainsKey(p.EntryId)) continue;
+            _tnmtPlayers[p.CharId] = p;
+            if (TournamentMapOf(p.CharId, 0) is var map and not 0) AddTnmtPlayer(MatchOf(map), p);   // CTMap::AddTNMTPlayer
         }
     }
 
@@ -332,6 +333,7 @@ public sealed partial class MapService
         long next = r.ReadInt64();
         byte current = _tnmtStep;
         foreach (var s in _state.AllInGame().ToList()) if (s.IsMain) SendTournamentStep(s, group, step, period, next);
+        TournamentMatchesOnStep(group, step, period);                                         // MapService.TournamentMatch.cs
         _tnmtGroup = group;
         _tnmtStep = step;
         _tnmtEndTime = UnixNow() + period;

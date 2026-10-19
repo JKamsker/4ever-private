@@ -94,7 +94,7 @@ public sealed partial class MapService
         string name = r.ReadString();
         if (!s.IsMain || s.Char is not { } ch || IsTutorial(ch)) return;
         void Fail(byte result, byte type = TpNoneDef) => SendCS_PARTYMEMBERRECALL_ACK(s, result, type, name);
-        if (ch.ArenaId != 0) { Fail(IuTargetBusy); return; }                              // not from an arena
+        if (ch.ArenaId != 0 || IsTournamentMap(ch.MapId) || ch.MapId == TournamentLoungeMap) { Fail(IuTargetBusy); return; }   // not from an arena or the tournament
         if (ch.Riding != 0) { Fail(IuRiding); return; }
         if (s.Deal.Status >= DealStart) { Fail(IuDealing); return; }
         if (ch.FindInven(inven)?.FindItem(slot) is not { Count: > 0 } item || item.Template?.Type != ItUse) { Fail(IuNotFound); return; }

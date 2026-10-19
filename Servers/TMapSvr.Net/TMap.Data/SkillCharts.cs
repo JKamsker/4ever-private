@@ -55,7 +55,9 @@ public sealed record SkillTemplate(
     // m_bEraseHide (BUFFERASEACTION_TYPE bits): which actions of this skill also end a hide buff (EraseBuffByAttack/Defend).
     byte EraseHide = 0,
     // m_bTargetHit: the most missiles a multi-attack skill puts on one target.
-    byte TargetHit = 1)
+    byte TargetHit = 1,
+    // m_bCanLearn: a skill of the class's tree (the tournament character gets them all at their top level).
+    byte CanLearn = 0)
 {
     /// <summary>MAGIC_TYPE MTYPE_EFC (NetCode.h): how many missiles a skill fires at once.</summary>
     public const byte MtypeEfc = 36;

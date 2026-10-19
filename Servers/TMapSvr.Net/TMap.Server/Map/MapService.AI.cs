@@ -208,6 +208,7 @@ public sealed partial class MapService
         CompanionOwnerDied(dead, target);
         ReleaseMaintainPlayer(dead, target, notify: false);
         ArenaOnDeath(target);                                                   // a side wiped out loses (MapService.Arena.cs)
+        TournamentOnDeath(target);                                              // a kill point for the other side (MapService.TournamentMatch.cs)
     }
 
     /// <summary>

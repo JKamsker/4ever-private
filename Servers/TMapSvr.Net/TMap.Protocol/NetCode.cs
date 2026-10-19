@@ -216,9 +216,16 @@ public static class Msg
     public const ushort CS_TOURNAMENTEVENTJOIN_ACK = CS_MAP + 0x0238;
     public const ushort CS_TOURNAMENTCHEER_REQ = CS_MAP + 0x0239;    // bInven, bItem, dwTargetID
     public const ushort CS_TOURNAMENTCHEER_ACK = CS_MAP + 0x023A;    // dwCharID, dwTargetID
+    public const ushort CS_TOURNAMENTENTER_ACK = CS_MAP + 0x023B;    // wDefKill, wAtkKill, bCount, the fighters
+    public const ushort CS_TOURNAMENTRESULT_ACK = CS_MAP + 0x023C;   // bStep, bRet, dwWin, dwLose, dwBlueHide, dwRedHide
     public const ushort CS_TOURNAMENTPARTYDEL_REQ = CS_MAP + 0x023D;
     public const ushort CS_TOURNAMENTSCHEDULE_REQ = CS_MAP + 0x0241;
     public const ushort CS_TOURNAMENTSCHEDULE_ACK = CS_MAP + 0x0242;
+    public const ushort CS_TOURNAMENTSELECTWINNER_ACK = CS_MAP + 0x0243; // bBlue, bRed — the dice of a drawn match
+    public const ushort CS_EXITTOURNAMETMAINTAIN_ACK = CS_MAP + 0x0280; // the buffs given back
+    public const ushort MW_TOURNAMENTENTERGATE_ACK = MW_BASE + 0x015B; // dwCharID, dwKey, dwMoney, bEnter — a bet ticket at the lounge gate
+    public const ushort MW_TOURNAMENTRESULT_REQ = MW_BASE + 0x015C;  // the world's results
+    public const ushort MW_TOURNAMENTRESULT_ACK = MW_BASE + 0x015D;  // a match decided on the map
     public const ushort MW_TOURNAMENTENABLE_REQ = MW_BASE + 0x0144;  // bGroup, bStep, dwPeriod, dlNextStep
     public const ushort MW_TOURNAMENT_REQ = MW_BASE + 0x0145;        // dwCharID, dwKey, wProtocol, the answer
     public const ushort MW_TOURNAMENT_ACK = MW_BASE + 0x0146;        // dwCharID, dwKey, wProtocol, the request
@@ -869,6 +876,7 @@ public static class Msg
     public const ushort MW_BATTLEMODESTATUS_ACK = MW_BASE + 0x0221; // dwCharID dwKey BoW (status next winner) BR (status next type)
     public const ushort MW_FIRSTGRADEGROUP_REQ = MW_BASE + 0x0143;
     public const ushort MW_FAMERANKUPDATE_REQ = MW_BASE + 0x0169;
+    public const ushort MW_FAMERANKUPDATE_ACK = MW_BASE + 0x016A;    // a fame-list place (the tournament's reward)
     public const ushort MW_MONTHRANKRESETCHAR_REQ = MW_BASE + 0x016E;
     public const ushort CS_CREATECOMPANION_REQ = CS_MAP + 0x033E;      // bInven · bItem · strName
     public const ushort CS_DELETECOMPANION_REQ = CS_MAP + 0x033F;      // bSlot

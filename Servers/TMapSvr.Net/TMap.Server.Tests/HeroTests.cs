@@ -16,6 +16,12 @@ internal sealed class FakeHeroStore : IHeroStore
 
     public Task<int> SaveWarlordSayAsync(byte type, byte month, uint charId, string say)
     { Says.Add((type, month, charId, say)); return Task.FromResult(SayRet); }
+
+    public readonly List<(byte Month, ushort Tournament, byte Entry, uint Chief, uint Winner, bool Shield)> Rewards = new();
+    public TournamentRewardRow? Reward;
+
+    public Task<TournamentRewardRow?> TournamentRewardAsync(byte month, ushort tournamentId, byte entryId, uint chiefId, uint winnerId, bool shield)
+    { Rewards.Add((month, tournamentId, entryId, chiefId, winnerId, shield)); return Task.FromResult(Reward); }
 }
 
 /// <summary>Batch S6c: the hero list, naming a territory's hero, and the warlord's message.</summary>
