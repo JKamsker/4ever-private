@@ -75,6 +75,34 @@ public class BrTests
         Assert.True(host.State.Br!.Reg.ContainsKey(charId));
     }
 
+    /// <summary>The queue's cancel is the BoW one; with BoW off (no settings row) it still takes a player out of the BR queue
+    /// (the C++ answered nothing without a BoW module, so the BR queue could not be left).</summary>
+    [Fact]
+    public async Task Queue_Cancel_WorksWithoutBow()
+    {
+        const uint charId = 8002, key = 0xBEEF;
+        await using var host = new WorldTestHost(s => { var br = NewBr(); br.Status = BattleStatus.Alarm; br.Times.Add(100); s.Br = br; });
+        using var c = await host.ConnectAsync();
+        Connect(c, 1);
+        EnterChar(c, charId, key);
+
+        var add = new PacketWriter(Msg.MW_ADDTOBRQUEUE_REQ);
+        add.WriteUInt32(charId); add.WriteUInt32(key); add.WriteByte(0);
+        c.Send(add);
+        Assert.Equal(Msg.MW_ADDTOBRQUEUE_ACK, c.Receive(TimeSpan.FromSeconds(5)).Id);
+
+        var cancel = new PacketWriter(Msg.MW_CANCELBOWQUEUE_REQ);
+        cancel.WriteUInt32(charId); cancel.WriteUInt32(key);
+        c.Send(cancel);
+        var ack = c.Receive(TimeSpan.FromSeconds(5));
+        Assert.Equal(Msg.MW_CANCELBOWQUEUE_ACK, ack.Id);
+        Assert.Equal((byte)0, ack.ReadByte());   // BOWREG_SUCCESS
+
+        await Task.Delay(80);
+        Assert.Null(host.State.Bow);
+        Assert.False(host.State.Br!.Reg.ContainsKey(charId));
+    }
+
     [Fact]
     public async Task Premade_Invite_Accept_FormsTeam()
     {

@@ -16,7 +16,8 @@ public sealed partial class WorldService
 
     private async Task<bool> DispatchBowAsync(ServerSession session, PacketReader r)
     {
-        if (_state.Bow is null) return false;
+        // C++ answers nothing without a BoW module — but the cancel is also the BR queue's, so it stays (C++ bug: no leaving the BR queue).
+        if (_state.Bow is null && !(r.Id == Msg.MW_CANCELBOWQUEUE_REQ && _state.Br is not null)) return false;
         switch (r.Id)
         {
             case Msg.MW_ADDTOBOWQUEUE_REQ: await OnAddToBowQueue(r); return true;
@@ -57,12 +58,12 @@ public sealed partial class WorldService
         uint charId = r.ReadUInt32();
         uint key = r.ReadUInt32();
         var ch = _state.FindChar(charId, key);
-        var bow = _state.Bow!;
+        var bow = _state.Bow;
         if (ch is null) return;
-        byte result = BowDeleteFromQueue(charId, key);
+        byte result = bow is null ? (byte)BowReg.Fail : BowDeleteFromQueue(charId, key);
         // The client uses one cancel for both queues; fall back to BR when the BoW queue had nothing.
         if (result == (byte)BowReg.Fail && _state.Br is not null) result = BrErasePlayerFromQueue(charId, key);
-        uint tick = Math.Max(bow.Tick, _state.Br?.Tick ?? 0);
+        uint tick = Math.Max(bow?.Tick ?? 0, _state.Br?.Tick ?? 0);
         MapOf(ch)?.Send(BuildCancelBowQueueAck(result, charId, key, tick));
     }
 

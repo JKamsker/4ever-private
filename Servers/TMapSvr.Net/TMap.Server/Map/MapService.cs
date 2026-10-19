@@ -262,6 +262,10 @@ public sealed partial class MapService
                 case Msg.CS_ARENA_REQ: OnCS_ARENA_REQ(session, r); break;                                   // MapService.Arena.cs
                 case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
                 case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
+                case Msg.CS_REGISTERBOW_REQ or Msg.CS_CANCELBOWQUEUE_REQ or Msg.CS_REGISTERBR_REQ or Msg.CS_BRTEAMMATEADD_REQ
+                    or Msg.CS_BRTEAMMATEDEL_REQ or Msg.CS_BRTEAMMATEADDRESULT_ACK or Msg.CS_VOTEFORBRMAP_REQ or Msg.CS_CMTELEPORTBATTLEMODE_REQ:
+                    OnCS_BattleQueue(session, r.Id, r); break;                                  // MapService.BattleQueue.cs
+                case Msg.CS_EXCHANGEBOWBP_REQ or Msg.CS_BOWRANKING_REQ or Msg.CS_LEAVEBATTLEFIELD_REQ: break;   // the battle servers'
                 case Msg.CS_HEROLIST_REQ: OnCS_HEROLIST_REQ(session); break;                                // MapService.Heroes.cs
                 case Msg.CS_HEROSELECT_REQ: await OnCS_HEROSELECT_REQ(session, r); break;
                 case Msg.CS_WARLORDSAY_REQ: await OnCS_WARLORDSAY_REQ(session, r); break;
@@ -485,6 +489,16 @@ public sealed partial class MapService
                 case Msg.MW_LOCALOCCUPY_REQ: OnMW_LOCALOCCUPY_REQ(r); break;
                 case Msg.MW_GAINPVPPOINT_REQ: OnMW_GAINPVPPOINT_REQ(r); break;
                 case Msg.MW_BATTLEMODESTATUS_ACK: OnMW_BATTLEMODESTATUS_ACK(r); break;
+                case Msg.MW_BOWTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BOWTIMEUPDATE_ACK, r, 7); break;   // MapService.BattleQueue.cs
+                case Msg.MW_BRTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BRTIMEUPDATE_ACK, r, 6); break;
+                case Msg.MW_ADDTOBOWQUEUE_ACK: OnMW_QueueResult(Msg.CS_REGISTERBOW_ACK, r); break;
+                case Msg.MW_CANCELBOWQUEUE_ACK: OnMW_QueueResult(Msg.CS_CANCELBOWQUEUE_ACK, r); break;
+                case Msg.MW_ADDTOBRQUEUE_ACK: OnMW_QueueResult(Msg.CS_ADDTOBRQUEUE_ACK, r); break;
+                case Msg.MW_NOTIFYNONQUEUEDPLAYER_ACK: OnMW_NOTIFYNONQUEUEDPLAYER_ACK(r); break;
+                case Msg.MW_BRTEAMMATEADD_ACK: OnMW_BRTEAMMATEADD_ACK(r); break;
+                case Msg.MW_UPDATEBRTEAM_ACK: OnMW_UPDATEBRTEAM_ACK(r); break;
+                case Msg.MW_PREPAREFORBOW_REQ: OnMW_PrepareForBattle(r, br: false); break;
+                case Msg.MW_PREPAREFORBR_REQ: OnMW_PrepareForBattle(r, br: true); break;
                 case Msg.MW_WORLDPOSTSEND_REQ: await OnMW_WORLDPOSTSEND_REQ(r); break;
                 case Msg.MW_LEVELUP_REQ: OnMW_LEVELUP_REQ(r); break;
                 case Msg.MW_CHARSTATINFO_REQ: OnMW_CHARSTATINFO_REQ(r); break;

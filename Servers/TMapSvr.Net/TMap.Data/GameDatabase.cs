@@ -454,6 +454,15 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
         }
         catch (SqlException) { }
 
+        // C++ CTBLOperatorChart (DBAccess.h:3137): the operators.
+        try
+        {
+            await using var cmd = new SqlCommand("SELECT dwOperatorID FROM TOPERATORTABLE", c);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct)) store.Operators.Add(r.GetUIntSafe(0));
+        }
+        catch (SqlException) { }
+
         // C++ CTBLArena (DBAccess.h:4588)
         await using (var cmd = new SqlCommand("SELECT wID, bType, wInPos, wOutPos, dwFee FROM TARENACHART", c))
         await using (var r = await cmd.ExecuteReaderAsync(ct))

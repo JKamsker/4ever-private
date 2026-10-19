@@ -170,6 +170,9 @@ public sealed class TemplateStore
     /// <summary>C++ <c>m_bMaxLevel</c> (<c>TGetLimitedLevel</c>): the level cap — the tournament character's level.</summary>
     public byte LimitedLevel { get; set; }
 
+    /// <summary>C++ <c>m_mapTOPERATOR</c> (<c>TOPERATORTABLE</c>): the operators' character ids.</summary>
+    public HashSet<uint> Operators { get; } = new();
+
     /// <summary>C++ <c>CTBLArena</c>: the arenas.</summary>
     public List<ArenaRow> Arenas { get; } = new();
 

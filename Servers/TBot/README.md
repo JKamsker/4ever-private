@@ -171,6 +171,13 @@ map), then for the sign-up window — answered as the world's step allows (sign-
 refused when signing up for an entry that does not exist. Nothing is written. 3 checks. The matches (batch S6e-2) follow the
 world's step clock, days apart, so they are covered by the map's unit tests (`TournamentMatchTests`), not live.
 
+## Scenario: battlequeue (the BoW and BR queues)
+
+`--Bot:Scenario=battlequeue` (A and B) asks to join the BoW queue, leaves it, and asks to join the BR queue: each is answered with
+the world's verdict (outside the sign-up time, a refusal) — except BoW when it is off (no `TBOWSETTINGSCHART` row): then, as in the
+C++, joining it is not answered, while leaving still is (it is also the BR queue's). A invites B into a BR team: B gets the invite with A's name and refuses,
+which comes back to A; inviting someone who isn't online is answered "not found". Nothing is written. 6 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account
