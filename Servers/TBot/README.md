@@ -178,6 +178,13 @@ the world's verdict (outside the sign-up time, a refusal) — except BoW when it
 C++, joining it is not answered, while leaving still is (it is also the BR queue's). A invites B into a BR team: B gets the invite with A's name and refuses,
 which comes back to A; inviting someone who isn't online is answered "not found". Nothing is written. 6 checks.
 
+## Scenario: itemleftovers (falls, act items, medals, waste refine, rewards)
+
+`--Bot:Scenario=itemleftovers` (A and B) takes a real act item, medal package, refine stone and special box from the charts. A falls
+(B sees it) and is refused when reporting B's fall; A sets off the act item (B sees the cast), uses a medal package (its medals go
+up), turns the stone into its item, and opens the box's rewards window. The items are put in A's backpack before and removed after,
+with A's HP and medals put back. Stop-the-clock spends cash, so it is left to the unit tests. 6 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

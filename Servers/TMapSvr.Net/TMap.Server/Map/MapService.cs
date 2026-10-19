@@ -45,6 +45,7 @@ public sealed partial class MapService
         ProtectedStore = gameDb;
         AuctionStore = gameDb;
         HeroStore = gameDb;
+        CashStore = gameDb;
         _templates = templates;
         _log = log;
     }
@@ -262,6 +263,12 @@ public sealed partial class MapService
                 case Msg.CS_ARENA_REQ: OnCS_ARENA_REQ(session, r); break;                                   // MapService.Arena.cs
                 case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
                 case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
+                case Msg.CS_DROPDAMAGE_REQ: OnCS_DROPDAMAGE_REQ(session, r); break;                // MapService.ItemLeftovers.cs
+                case Msg.CS_ACTITEMSUSE_REQ: OnCS_ACTITEMSUSE_REQ(session, r); break;
+                case Msg.CS_USEMEDALITEM_REQ: OnCS_USEMEDALITEM_REQ(session, r); break;
+                case Msg.CS_GETREWARDS_REQ: OnCS_GETREWARDS_REQ(session, r); break;
+                case Msg.CS_STOPTHECLOCK_REQ: await OnCS_STOPTHECLOCK_REQ(session, r); break;
+                case Msg.CS_WASTEREFINE_REQ: OnCS_WASTEREFINE_REQ(session, r); break;
                 case Msg.CS_REGISTERBOW_REQ or Msg.CS_CANCELBOWQUEUE_REQ or Msg.CS_REGISTERBR_REQ or Msg.CS_BRTEAMMATEADD_REQ
                     or Msg.CS_BRTEAMMATEDEL_REQ or Msg.CS_BRTEAMMATEADDRESULT_ACK or Msg.CS_VOTEFORBRMAP_REQ or Msg.CS_CMTELEPORTBATTLEMODE_REQ:
                     OnCS_BattleQueue(session, r.Id, r); break;                                  // MapService.BattleQueue.cs

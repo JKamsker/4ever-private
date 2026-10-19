@@ -123,7 +123,7 @@ public static partial class Scenarios
 
     public static async Task<int> RunAsync(BotConfig cfg, CancellationToken ct)
     {
-        if (cfg.Scenario is not ("features" or "castle" or "guild" or "social" or "corps" or "auction" or "minigame" or "drops" or "events" or "balance" or "heroes" or "arena" or "tournament" or "battlequeue")) { Console.Error.WriteLine($"unknown scenario '{cfg.Scenario}'"); return 2; }
+        if (cfg.Scenario is not ("features" or "castle" or "guild" or "social" or "corps" or "auction" or "minigame" or "drops" or "events" or "balance" or "heroes" or "arena" or "tournament" or "battlequeue" or "itemleftovers")) { Console.Error.WriteLine($"unknown scenario '{cfg.Scenario}'"); return 2; }
         if (cfg.Account2.Length == 0 || cfg.GameConnectionString.Length == 0)
         {
             Console.Error.WriteLine($"the {cfg.Scenario} scenario needs --Bot:Account2 and --Bot:GameConnectionString");
@@ -142,6 +142,7 @@ public static partial class Scenarios
         if (cfg.Scenario == "arena") return await RunArenaAsync(cfg);       // ArenaScenario.cs
         if (cfg.Scenario == "tournament") return await RunTournamentAsync(cfg); // TournamentScenario.cs
         if (cfg.Scenario == "battlequeue") return await RunBattleQueueAsync(cfg); // BattleQueueScenario.cs
+        if (cfg.Scenario == "itemleftovers") return await RunItemLeftoversAsync(cfg); // ItemLeftoverScenario.cs
         var db = new GameDb(cfg.GameConnectionString);
         var cfgA = Clone(cfg, cfg.Account, "[A]");
         var cfgB = Clone(cfg, cfg.Account2, "[B]");

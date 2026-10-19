@@ -173,6 +173,9 @@ public sealed class TemplateStore
     /// <summary>C++ <c>m_mapTOPERATOR</c> (<c>TOPERATORTABLE</c>): the operators' character ids.</summary>
     public HashSet<uint> Operators { get; } = new();
 
+    /// <summary>C++ <c>m_mapTCashItem</c>, its <c>m_wUseTime</c>: a cash item's days, by shop item id.</summary>
+    public Dictionary<ushort, ushort> CashItemUseTime { get; } = new();
+
     /// <summary>C++ <c>CTBLArena</c>: the arenas.</summary>
     public List<ArenaRow> Arenas { get; } = new();
 

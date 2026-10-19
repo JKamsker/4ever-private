@@ -275,7 +275,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                  dwReuseDelay, nReuseDelayInc, dwLoopDelay, dwKindDelay, bSpeedApply, bPositive, wMapID,
                  dwDuration, dwDurationInc, bMaintainType, bPriority, bStatic, dwClassID, bGlobal,
                  bIsRide, bIsHideSkill, bIsDismount, bEraseAct, bTargetRange, fPrice, wParentSkillID,
-                 dwWeaponID, wPosture, bORadius, bEraseHide, bTargetHit, bCanLearn FROM TSKILLCHART";
+                 dwWeaponID, wPosture, bORadius, bEraseHide, bTargetHit, bCanLearn, wItemID FROM TSKILLCHART";
     // The learning costs per skill level (CTBLSkillPoint → CTSkillTemp::m_mapTSkillPoint).
     private const string SkillPointChartSql =
         @"SELECT wID, bLevel, bSkillPoint, bGroupPoint, bPrevSkillLevel, dwPayback FROM TSKILLPOINTCHART";
@@ -451,6 +451,15 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
             var max = SqlProc.Out("@m", SqlDbType.TinyInt);
             await SqlProc.ExecAsync(c, "TGetLimitedLevel", null, new[] { max }, ct);
             store.LimitedLevel = max.AsByte();
+        }
+        catch (SqlException) { }
+
+        // C++ CTBLCashShopItem (DBAccess.h:3366), the part the map uses so far: each cash item's use time (stop-the-clock).
+        try
+        {
+            await using var cmd = new SqlCommand("SELECT wID, wUseTime FROM TVIEW_CASHSHOPITEMCHART", c);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            while (await r.ReadAsync(ct)) store.CashItemUseTime[r.GetUShortSafe(0)] = r.GetUShortSafe(1);
         }
         catch (SqlException) { }
 
@@ -645,7 +654,7 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
                     IsDismount: r.GetByteSafe(25) != 0, EraseAct: r.GetByteSafe(26), TargetRange: r.GetByteSafe(27),
                     Price: r.IsDBNull(28) ? 0f : Convert.ToSingle(r.GetValue(28)), ParentSkillId: r.GetUShortSafe(29),
                     WeaponId: r.GetUIntSafe(30), Posture: r.GetUShortSafe(31), ORadius: r.GetByteSafe(32),
-                    EraseHide: r.GetByteSafe(33), TargetHit: r.GetByteSafe(34), CanLearn: r.GetByteSafe(35));
+                    EraseHide: r.GetByteSafe(33), TargetHit: r.GetByteSafe(34), CanLearn: r.GetByteSafe(35), UseItem: r.GetUShortSafe(36));
             }
 
         await using (var cmd = new SqlCommand(SkillPointChartSql, c))

@@ -57,7 +57,9 @@ public sealed record SkillTemplate(
     // m_bTargetHit: the most missiles a multi-attack skill puts on one target.
     byte TargetHit = 1,
     // m_bCanLearn: a skill of the class's tree (the tournament character gets them all at their top level).
-    byte CanLearn = 0)
+    byte CanLearn = 0,
+    // m_wUseItem (TSKILLCHART.wItemID): the item an act skill spends (CS_ACTITEMSUSE).
+    ushort UseItem = 0)
 {
     /// <summary>MAGIC_TYPE MTYPE_EFC (NetCode.h): how many missiles a skill fires at once.</summary>
     public const byte MtypeEfc = 36;

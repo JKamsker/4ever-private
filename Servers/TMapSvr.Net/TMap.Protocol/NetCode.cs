@@ -631,6 +631,17 @@ public static class Msg
     public const ushort CS_CREATESADDLE_REQ = CS_MAP + 0x0321;
     public const ushort CS_DELETESADDLE_REQ = CS_MAP + 0x0323;
     public const ushort CS_UPDATEMEDALS_REQ = CS_MAP + 0x0350;      // S→C: dwMedals
+    // ---- the item and combat leftovers (MapService.ItemLeftovers.cs) ----
+    public const ushort CS_DROPDAMAGE_REQ = CS_MAP + 0x0108;        // dwTargetID · bTargetType · dwDamage · bChannel · wMapID
+    public const ushort CS_DROPDAMAGE_ACK = CS_MAP + 0x0109;        // dwID · bType · dwDamage
+    public const ushort CS_STOPTHECLOCK_REQ = CS_MAP + 0x01CB;      // bInven · bItem · wShopItemID
+    public const ushort CS_STOPTHECLOCK_ACK = CS_MAP + 0x01CC;      // bResult · bInven · bItem · dEndTime (INT64)
+    public const ushort CS_WASTEREFINE_REQ = CS_MAP + 0x01F9;       // bInven · bItem
+    public const ushort CS_WASTEREFINE_ACK = CS_MAP + 0x01FA;       // bResult
+    public const ushort CS_GETREWARDS_REQ = CS_MAP + 0x0325;        // bKind · wUseValue
+    public const ushort CS_GETREWARDS_ACK = CS_MAP + 0x0326;        // wCount · items
+    public const ushort CS_USEMEDALITEM_REQ = CS_MAP + 0x0351;      // bInven · bSlot · bCount
+    public const ushort CS_ACTITEMSUSE_REQ = CS_MAP + 0x0376;       // as CS_SKILLUSE_REQ's head · dwDefendID · bDefendType
     // Companions (CSProtocol.h:4103-4198; MWProtocol.h:537-540). Several "_REQ" here are server → client.
     public const ushort CS_COMPANIONLIST_ACK = CS_MAP + 0x0329;
     public const ushort CS_COMPANIONUPGRADE_REQ = CS_MAP + 0x032B;     // bIndex · bSlot

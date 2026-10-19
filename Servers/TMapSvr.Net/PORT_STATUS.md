@@ -1748,120 +1748,50 @@ So `IsAggressive` is now `Binds(AT_ENTERLB, ChgHost) || Binds(AT_ENTERLB, ChgMod
 
 ---
 
+## ✅ Done after Phase 46 (by commit, oldest first)
+
+The phase write-ups above stop at Phase 46; what followed is recorded in the commits and the module headers of each
+`MapService.*.cs` (each names its C++ sources, the bugs fixed and what is left out). In short:
+
+- **Monsters and summons** — AI fixes, mounts, pets, the Evocator (all invocations, taming, behaviour), monster buffs and
+  debuffs, summon fixes; the tick load cut from 25 % to 1 %.
+- **Items and skills** — the item shop and loot fix, skill buying, passive skills, skill items and random skills, money and
+  special boxes, exp boosts, premium, name/country/look changes, loop skills, take-all loot, helmet/comment, target query,
+  monster drops (ranged and magic options).
+- **PvP** — earning and paying points, duels, PvP buffs, the combat leftovers (buff erasers, enemy dispel, damage share).
+- **Territories** — zones, region buffs, peace zones, war phases, mission / sky garden / fort / castle wars, heroes and
+  the warlord's message.
+- **Guilds** — founding to recruiting, cabinet, board, fame, mercenaries, point rewards, castle guards, level, guild
+  skills.
+- **Social** — block list, friends, messenger, soulmates, corps, party member recall; mail; the auction house.
+- **Mini-games and events** — gamble, magic shop, soul lottery, rock-paper-scissors, party loot lottery; events (exp,
+  drop, craft bonuses, spawns, lucky ticket); the kingdom balance.
+- **Battle modes** — the arena, the tournament (windows, sign-up, bets, cheer, matches, the tournament character), the
+  BoW and BR queues (the battles themselves run on the BoW/BR map server builds, not in this stack).
+- **S7a** — fall damage, act items, medal items, the rewards window, stop-the-clock, waste refine.
+
 ## 🚧 Not yet ported — the roadmap
 
-Everything below is present in the C++ `TMapSvr` and intentionally deferred past Phase 1. Grouped by the
-`OnReceive` buckets, with the C++ sources to port from. This is the bulk of the ~54k lines.
+Found by diffing the C++ `ON_RECEIVE` table (621 handlers enabled outside the BoW/BR builds) against the .NET dispatch
+(October 2026). What is left that does something:
 
-### The engines the gameplay handlers depend on (port these first)
-- ~~**Spatial grid**~~ — **done in Phase 3** (`MapGrid`/`Cell`; the `CELL_SIZE` 3×3 grid + `GetNeighbor`
-  + `OnMove` enter/leave diff). Still deferred within the grid: monster/NPC/summon cell occupancy, the
-  per-channel border-cell / cross-server arrays, and dungeon instances (`MAP_INDUN`).
-- **Object/stat/combat core** — `CTObjBase`. The **entire stat sheet is done** (Phase 5 stats + vitals,
-  Phase 6 AP/DP/speed/crit/charge + `CS_CHARSTATINFO`). The **combat spine is done** (Phase 13 — physical
-  `CS_DEFEND` → `CalcDamage` → death → respawn), the **`CS_SKILLUSE` announce half** (Phase 14), the
-  **skill-data damage scaling + attack-type/long classification** (Phase 15), **HP/MP regen `Recover`**
-  (Phase 16), **exp/level-up + money loot** on death (Phase 17), and **monster-attacks-player** melee damage +
-  player death (Phase 20), and **crit/miss/accuracy (`GetAtkHitType`) + the magic-damage branch** (Phase 28 —
-  magic AP vs monster magic-DP), and the **maintained-skill buff layer** (Phase 31 — `MaintainSkill` +
-  `CalcAbilityValue` as the third stat-getter layer, apply/expire/`CS_SKILLEND`, `ForceMaintain`), the
-  **`CalcDamage` exec dispatch** (Phase 42 — `MTYPE_MDAMAGE` MP damage + `MTYPE_HP`/`MP` direct heal/drain +
-  the multi-entry damage map + `MTYPE_HI`/`MI` lifedrain), and the **shield-block roll** (Phase 41 — live for a
-  PC defender vs a monster; the block-triggered durability/reaction tail deferred). Still deferred:
-  the buff **effection/remain** amplification layers (`ApplyEffectionBuff`/`m_vRemainSkill`)
-  + the stat-layer `CalcCure` term (the **instant** cure/dispel is done in Phase 35; the HP/MP transfer/swap
-  execs in Phase 43), `DistributeSkill` (pet share),
-  PvP, the loot magic/rare rolls (party exp-split + free-for-all loot are done in Phase 38; money-split/exotic
-  modes remain), and the pet/guild-StatLevel bonuses currently stubbed in
-  the stat sheet. (Player revival — Phase 21 — and item drop-loot — Phase 22 — are done; the death-penalty
-  aftermath and the loot magic/rare option rolls remain.)
-- **Item / skill data tables** — the item / magic / formula / class / race charts (Phase 4–5), the
-  `TITEMATTR` / `TITEMGRADE` attr charts (Phase 6), the **skill chart** (`TSKILLCHART` cost/reuse, Phase 14),
-  the **skill-data rows** (`TSKILLDATA` → `m_vData`, Phase 15 — value/attack-type; cure/aggro still unused),
-  the **level chart** exp/skill-point columns (`TLEVELCHART.dwEXP`/`bSkillPoint`, Phase 17), and the
-  **monster item-drop chart** (`TMONITEMCHART`, Phase 22 — fixed-item subset) are **done**. Still
-  deferred: the `TSKILLPOINTCHART` table and the `TMONITEMCHART` magic/rare-option + ranged-pick columns.
+| Batch | What | C++ handlers |
+|---|---|---|
+| S7b | **Cash shop** — cabinet, item list, buy, present, cabinet buy, put in, get; the world's sale and shop-stop | `CS_CASHITEM*`, `CS_CASHSHOPITEMLIST`, `CS_CASHCABINETBUY`, `MW_CASHSHOPSTOP`, `MW_CASHITEMSALE` |
+| S7c | **GM tools** — move, move to a player, gifts, chat ban, kick out of a map, user position, char message, item state, help message; the control server's monster find/action, announcement, kick, castle info | `CS_CMMOVE*`, `CS_CMGIFT`, `CS_CHATBAN`, `CS_KICKOUTMAP`, `MW_CMGIFT*`, `MW_CHATBAN`, `MW_USERPOSITION`, `MW_CHARMSG`, `MW_ITEMSTATE`, `MW_HELPMESSAGE`, `CT_*` |
+| S7d | **Security code** (PIN) — create, change, enable, disable, unlock, check | `CS_SC_*` |
+| S7e | **Cloaks** — custom cloak list/change, guild cloak | `CS_CUSTOMCLOAK_*`, `CS_REGGUILDCLOAK` |
+| S7f | **Meeting rooms** | `CS_/MW_/SM_MEETINGROOM` |
+| S7g | **Misc** — monster tempt/evolve, blood, magic mirror, reset host, other-self, SMS | `MW_MONTEMPT*`, `MW_GETBLOOD`, `MW_MAGICMIRROR`, `CS_RESETHOST`, `CS_OTHERSELF`, `CS_SMSSEND` |
 
-### Monsters / AI / NPCs
-- ~~`CTMonster` grid occupancy + client visibility~~ — **done in Phase 11** (`Monster`/`m_mapMONSTER`,
-  `CS_ADDMON_ACK`/`CS_DELMON_ACK`, spawn/enter/move-diff exchange). ~~The DB spawn pipeline + regen~~ — **done
-  in Phase 12** (`TMONSTERCHART`/`TMONATTRCHART`/`TMONSPAWNCHART`/`TMAPMONCHART` load, SE_DEFAULT build, the
-  `CTAICmdRegen` prob/weighted-pick/scatter regen on the 1-second tick). **Respawn-on-death** — **done in
-  Phase 13** (kill re-arms the slot). **HP/MP regen** (`Recover`) — **Phase 16**; **kill exp + money loot +
-  damage/keeper tracking** — **Phase 17**; **idle roam broadcast** (`CTAICmdRoam` → `CS_MONACTION_ACK`) —
-  **Phase 18**; **aggro + chase + leash drop-aggro** (`CTAICmdChgMode`→BATTLE + `CTAICmdFollow`) — **Phase 19**;
-  **monster-attacks-player** (`CTAICmdAttack` → melee AP−DP + `CS_MONATTACK_ACK`/`CS_DEFEND_ACK` + player
-  death) — **Phase 20**; the **highest-cumulative aggro table** (`SetAggro`/`m_mapAggro` + `ChgHost` retarget +
-  `CS_MONHOST_ACK`) — **Phase 44**; **host acquisition** (aggro-on-sight, `CTAICmdSetHost` + `m_bCanHost`/
-  `m_dwMoveTick`) — **Phase 45**. Still deferred: the **leader-cluster/group** spawn branches and
-  **essential** monsters; the data-driven `TAICHART` AI-script table + the `m_dwHostKEY` delayed-command epoch
-  are **done in Phase 46**. Still deferred in the monster **combat AI**: monster skills /
-  magic / ranged attacks, `MT_GOHOME` walk-back, getaway/refill/lottery, and the client-authoritative move echo
-  (`CS_MONMOVE_REQ`/`ACK`); the **priest-resurrection** ask flow (`CS_REVIVALASK`/`REPLY`) + death penalty
-  (player revival itself is done — Phase 21); `CTRecallMon` /
-  `CTSpolecnikMon` / `CTSelfObj` summons; and the
-  `SM_AICMD` AI-scheduling plane (collapsed into the local tick here).
-- **`CTNpc`** — the **item shop** (talk/buy/sell) is **done in Phase 23** (`TNPCCHART`/`TNPCITEMCHART` registry,
-  `CS_NPCTALK`/`CS_ITEMBUY`/`CS_ITEMSELL`, `CanTalk` country gating). The **quest engine** is **done in
-  Phases 24 + 29** (`CheckQuest`/`CanRunQuest`/`CheckComplete`/`OnQuestComplete` + `m_mapQUEST` + 10 `CQuest`
-  subtypes; the **DB template load** is live — 6261 templates). The **DefendSkill** subtype
-  is done in **Phase 31** (buff via `ForceMaintain`), **Switch** in **Phase 32** (the map switch/gate subsystem),
-  **SpawnMon**/**DieMon**/**DropItem** in **Phase 33** (the time-limited-spawn engine), and **Regen** in
-  **Phase 34** (dynamic spawn templates + the regen-del link), and **GiveSkill** in **Phase 36** (the skill-learn
-  path `UpdateSkill`). Still deferred: the remaining `CQuest` subtypes — **Craft** (self-completion), **SendPost**
-  (mail); and the client node graph (`TQuest.mpq`/`TQNode.qpd`). (Quest-progress load-on-enter
-  + the enter `CS_QUESTLIST` shipped in Phase 30.) The other NPC types (skill master/rent, make/upgrade/refine, portal/return/map-portal,
-  warehouse, auction, arena, cash/magic-item shops, gamble/craft).
-
-### Client subsystems (the `CS_*` long tail — ~290 handlers)
-- **Combat/death**: revival, defend, action, drop-damage, return-pos.
-- **Skills**: ~~use~~ (**done, Phase 14** — `CS_SKILLUSE` announce) · ~~end~~ (**done, Phase 31** —
-  `CS_SKILLEND` maintained-buff end); still: buy/loop/cancel/init + guild-skill actions.
-- **Items**: ~~move~~ (**done, Phase 7** — `CS_MOVEITEM`) · ~~use~~ (**done, Phase 8** — `CS_ITEMUSE`
-  HP/MP potions) · ~~2H auto-eviction~~ (**done, Phase 9**) · ~~repair~~ (**done, Phase 10** —
-  `CS_DURATIONREP` + the money core); still: non-potion item-use kinds, upgrade/change
-  (`CS_ITEMUPGRADE`/`CS_ITEMCHANGE` — need NPC + random-loot table), refine (`CS_REFINE` — needs the level
-  refine chart), medal/pet/act items.
-- **Shops & loot**: NPC talk / item-list / buy / sell / rewards, monster-buy, monster loot take/lottery.
-- **Quests** — `CQuest` + the ~19 `Quest*` step types (talk, give/drop/delete item, spawn/die-mon, regen,
-  teleport, complete, mission/guild, routing, chapter-msg, switch, defend-skill, send-post, craft) and the
-  `QTT_*` term evaluation.
-- **Party / squad / corps (siege)** — the **management** `CS_*`/`MW_*` relay set (invite/join/leave/move/recall
-  + the MANSTAT/ATTR stat-broadcast) and the world-side `CTParty`. (Party **gameplay** — shared exp + free-for-all
-  loot — is **done in Phase 38**.)
-- **Guild + guild-tactics (alliance)** — establish/disband/invite/duty/peer/kickout/member-list/info,
-  cabinet, articles, fame, wanted/volunteering, point-log/reward, PvP-record, cloak, and the parallel
-  `GUILDTACTICS*` block.
-- **Social** — friends (list/ask/reply/erase/groups), soulmate (search/reg/end), protected/other-self.
-- **Character** — hotkeys, ~~char-stat-info~~ (**done, Phase 6**), title list / change-title / change-name,
-  helmet-hide, change-country, war-country-balance, stop-the-clock, hero select/list.
-- **Mail/post**. (~~cabinet/warehouse~~ Phase 37; ~~player trade/deal~~ Phase 39; ~~player store/vendor~~ Phase 40.)
-- **Pets / mounts / summons** — pet make/del/recall/effect/riding/cancel, saddle, recall-mon &
-  spolecnik-mon modes, companions (create/delete/upgrade/level/hide/reset/powder/effect).
-- **Cash shop** & **auction house** (reg/bid/buy-direct/interest/find/lists).
-- **PvP / ranking / tournament** — PvP-record, fame/month rank lists, first-grade group, the tournament
-  apply/join/party/match/event/cheer/schedule block.
-- **Battle modes** — BoW (`REGISTERBOW`, queue, respawn, BP exchange, ranking) and BR (`REGISTERBR`,
-  teammate add/del, map vote), lobby/arena-battle enter/leave, god-ball / castle-war switches & countdown,
-  duel, RPS / meeting-room minigames.
-- **Secure code (2FA/PIN)**, **anti-cheat** (HackShield / nProtect), **GM/creative-mode (CM)**,
-  **custom cloak**, **APEX**.
-
-### DB plane (the `DM_*` / `CSP*` persistence — ~120 procs)
-- The **char-record save** (`TSaveChar`, Phase 25) + **quest save** (`TSaveQuest`/`TSaveQuestTerm`, Phase 25) +
-  the **inventory save** (`TSaveInven`/`TSaveItem` under `TSaveItemDataStart/End` + `TInitGenItemID`, Phase 26) +
-  the **incremental item fast-path** (`TSaveItemDirect` + delete-by-`dlID`, Phase 27) are **done and live-DB
-  round-trip verified** (30-min timer / disconnect / shutdown + per-tick); the **quest-template load** (Phase 29)
-  + the **quest-progress load-on-enter** (`TQUESTTABLE`/`TQUESTTERMTABLE`, Phase 30) are done + live-verified.
-  Still deferred: the
-  `TSaveSkill*`/`TSaveHotkey`/cabinet, guild-bank, post, occupancy (local/castle/skygarden/mission),
-  summons/pets/companions, cash shop, auction, PvP/rank/tournament, secure-code, medals, and the topology procs
-  (`TEnterServer`, `TRoute`, `TLoadService`, `TGetPosition`, `TClearCurrentUser`, `TLogout`).
-  > **Note on the deferred char-data saves (`TSaveSkill`/`TSaveHotkey`/cabinet/etc.):** these persist state **no
-  > ported handler mutates yet** (skills/hotkeys/buffs are load-only — no learn/hotkey-edit handlers), and the
-  > baseline's `TSaveSkill` even stages to `TTEMPSKILLTABLE` with the `TSaveCharDataEnd` promotion commented out
-  > (realized only by `TLogout`). So they're scaffolding until their mutation handlers land, not a correctness
-  > gap. `TSaveSkillMaintain`/`TSaveHotkey` write live directly; `TSaveSkill` needs the logout promotion.
+Not needed here:
+- **`DM_*`** — the C++ queues its database calls through its own `DM_*` messages; the .NET handlers call the database
+  directly, so each `DM_*` pair is covered where its feature is ported.
+- **Anti-cheat** (HackShield, nProtect, APEX) — no such client packages in this stack.
+- **Map-to-map relays** (`MW_ADDITEM*`, `MW_PARTYORDERTAKEITEM`, `MW_MONSTERDIE`, `MW_TAKEMONMONEY`, `MW_DEALITEMERROR`,
+  `MW_RELEASEMAIN`, …) — only between several map servers; this stack runs one.
+- **Empty in C++** — `CS_TOURNAMENTJOINLIST_REQ` / `CS_TOURNAMEMTMATCHLIST_REQ` (commented out), the BoW-only
+  `CS_CASHBOWRESPAWN` / `CS_EXCHANGEBOWBP` / `CS_BOWRANKING` / `CS_LEAVEBATTLEFIELD`.
 
 ### Infrastructure
 - `CUdpSocket` / `CDebugSocket` UDP log-sink integration (LogIp/LogPort), `CTTextLinker` clickable
