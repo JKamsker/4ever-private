@@ -19,6 +19,7 @@
 #include "TD3D9.h"
 #include <TRenderDevice.h>
 #include "TThread.h"
+#include "TPerfLap.h"
 #include "TCodePage.h"
 #include "TTextRaster.h"
 #include "TSocket.h"
@@ -1125,6 +1126,14 @@ struct tagBONESANIMATION
 	LPVOID m_pRotationKey;
 	LPVOID m_pScaleKey;
 
+	// The position keys hold the moves from the key before: m_pPositionSum[i] is the sum
+	// of the moves of keys 0 to i (CTachyonAnimation::InitPositionKey).
+	LPD3DXVECTOR3 m_pPositionSum;
+
+	// The key lists sorted by time, which can be searched by halves: 1 position,
+	// 2 rotation, 4 scale.
+	BYTE m_bSorted;
+
 	tagBONESANIMATION()
 	{
 		m_nPositionKeyCount = 0;
@@ -1134,10 +1143,15 @@ struct tagBONESANIMATION
 		m_pPositionKey = NULL;
 		m_pRotationKey = NULL;
 		m_pScaleKey = NULL;
+		m_pPositionSum = NULL;
+		m_bSorted = 0;
 	};
 
 	~tagBONESANIMATION()
 	{
+		if(m_pPositionSum)
+			delete[] m_pPositionSum;
+
 		if(m_pPositionKey)
 			delete[] m_pPositionKey;
 

@@ -830,6 +830,9 @@ inline HRESULT D3DXMatrixDecompose( D3DXVECTOR3 *pOutScale, D3DXQUATERNION *pOut
 }
 
 // Msc^-1 * Msr^-1 * Ms * Msr * Msc * Mrc^-1 * Mr * Mrc * Mt; a NULL part is skipped.
+// Every part is affine, so the product is built as its 3x3 part and its translation
+// (p * M = p * L + T) instead of up to nine 4x4 products: the skeletons call this
+// twice per bone.
 inline D3DXMATRIX* D3DXMatrixTransformation(
 	D3DXMATRIX *pOut,
 	const D3DXVECTOR3 *pScalingCenter,
@@ -839,60 +842,100 @@ inline D3DXMATRIX* D3DXMatrixTransformation(
 	const D3DXQUATERNION *pRotation,
 	const D3DXVECTOR3 *pTranslation)
 {
-	D3DXMATRIX r;
-	D3DXMATRIX t;
+	FLOAT A[3][3] = {
+		{ 1.0f, 0.0f, 0.0f},
+		{ 0.0f, 1.0f, 0.0f},
+		{ 0.0f, 0.0f, 1.0f}};
+	FLOAT U[3] = { 0.0f, 0.0f, 0.0f};
 
-	D3DXMatrixIdentity(&r);
+	// Scaling: (p - Csc) * Msr^-1 * Ms * Msr + Csc = p * A + U.
 	if(pScaling)
 	{
-		D3DXQUATERNION qSR;
-		D3DXQuaternionIdentity(&qSR);
+		const FLOAT S[3] = { pScaling->x, pScaling->y, pScaling->z};
 
-		if(pScalingRotation)
-			qSR = *pScalingRotation;
+		if( pScalingRotation && (pScalingRotation->x != 0.0f || pScalingRotation->y != 0.0f || pScalingRotation->z != 0.0f || pScalingRotation->w != 1.0f) )
+		{
+			D3DXMATRIX vSR;
+			D3DXMATRIX vSRI;
+			D3DXQUATERNION qSRI;
 
-		D3DXVECTOR3 vSC( 0.0f, 0.0f, 0.0f);
+			D3DXMatrixRotationQuaternion( &vSR, pScalingRotation);
+			D3DXQuaternionInverse( &qSRI, pScalingRotation);
+			D3DXMatrixRotationQuaternion( &vSRI, &qSRI);
+
+			for( int i=0; i<3; i++)
+				for( int j=0; j<3; j++)
+					A[i][j] =
+						vSRI.m[i][0] * S[0] * vSR.m[0][j] +
+						vSRI.m[i][1] * S[1] * vSR.m[1][j] +
+						vSRI.m[i][2] * S[2] * vSR.m[2][j];
+		}
+		else
+		{
+			A[0][0] = S[0];
+			A[1][1] = S[1];
+			A[2][2] = S[2];
+		}
+
 		if(pScalingCenter)
-			vSC = *pScalingCenter;
+		{
+			const FLOAT C[3] = { pScalingCenter->x, pScalingCenter->y, pScalingCenter->z};
 
-		D3DXMATRIX vSR;
-		D3DXMATRIX vSRI;
-		D3DXQUATERNION qSRI;
-
-		D3DXMatrixRotationQuaternion( &vSR, &qSR);
-		D3DXQuaternionInverse( &qSRI, &qSR);
-		D3DXMatrixRotationQuaternion( &vSRI, &qSRI);
-
-		D3DXMatrixTranslation( &r, -vSC.x, -vSC.y, -vSC.z);
-		D3DXMatrixMultiply( &r, &r, &vSRI);
-		D3DXMatrixScaling( &t, pScaling->x, pScaling->y, pScaling->z);
-		D3DXMatrixMultiply( &r, &r, &t);
-		D3DXMatrixMultiply( &r, &r, &vSR);
-		D3DXMatrixTranslation( &t, vSC.x, vSC.y, vSC.z);
-		D3DXMatrixMultiply( &r, &r, &t);
+			for( int j=0; j<3; j++)
+				U[j] = C[j] - (C[0] * A[0][j] + C[1] * A[1][j] + C[2] * A[2][j]);
+		}
 	}
 
+	FLOAT L[3][3];
+	FLOAT T[3];
+
+	// Rotation: (p * A + U - Crc) * Mr + Crc.
 	if(pRotation)
 	{
-		D3DXVECTOR3 vRC( 0.0f, 0.0f, 0.0f);
-		if(pRotationCenter)
-			vRC = *pRotationCenter;
+		D3DXMATRIX vR;
+		FLOAT C[3] = { 0.0f, 0.0f, 0.0f};
 
-		D3DXMatrixTranslation( &t, -vRC.x, -vRC.y, -vRC.z);
-		D3DXMatrixMultiply( &r, &r, &t);
-		D3DXMatrixRotationQuaternion( &t, pRotation);
-		D3DXMatrixMultiply( &r, &r, &t);
-		D3DXMatrixTranslation( &t, vRC.x, vRC.y, vRC.z);
-		D3DXMatrixMultiply( &r, &r, &t);
+		D3DXMatrixRotationQuaternion( &vR, pRotation);
+		if(pRotationCenter)
+		{
+			C[0] = pRotationCenter->x;
+			C[1] = pRotationCenter->y;
+			C[2] = pRotationCenter->z;
+		}
+
+		for( int i=0; i<3; i++)
+			for( int j=0; j<3; j++)
+				L[i][j] = A[i][0] * vR.m[0][j] + A[i][1] * vR.m[1][j] + A[i][2] * vR.m[2][j];
+
+		for( int j=0; j<3; j++)
+			T[j] = (U[0] - C[0]) * vR.m[0][j] + (U[1] - C[1]) * vR.m[1][j] + (U[2] - C[2]) * vR.m[2][j] + C[j];
+	}
+	else
+	{
+		memcpy( L, A, sizeof(L));
+		memcpy( T, U, sizeof(T));
 	}
 
 	if(pTranslation)
 	{
-		D3DXMatrixTranslation( &t, pTranslation->x, pTranslation->y, pTranslation->z);
-		D3DXMatrixMultiply( &r, &r, &t);
+		T[0] += pTranslation->x;
+		T[1] += pTranslation->y;
+		T[2] += pTranslation->z;
 	}
 
-	*pOut = r;
+	for( int i=0; i<3; i++)
+	{
+		pOut->m[i][0] = L[i][0];
+		pOut->m[i][1] = L[i][1];
+		pOut->m[i][2] = L[i][2];
+		pOut->m[i][3] = 0.0f;
+	}
+
+	pOut->m[3][0] = T[0];
+	pOut->m[3][1] = T[1];
+	pOut->m[3][2] = T[2];
+	pOut->m[3][3] = 1.0f;
+
 	return pOut;
 }
 

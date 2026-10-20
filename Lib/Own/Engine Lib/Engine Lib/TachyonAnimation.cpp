@@ -711,6 +711,11 @@ void CTachyonAnimation::GetFrameMatrix( LPD3DXMATRIX pResult,
 	static D3DXMATRIX vTSCALE[MAX_PIVOT];
 	static BYTE vFILTER[MAX_PIVOT];
 
+	TPERF_COUNT( "skeletons", 1);
+	TPERF_COUNT( "bones", m_dwNodeCount);
+	TPERF_COUNT( "pivots", pPivot ? 1 : 0);
+	TPERF_COUNT( "blends", pBlend ? 1 : 0);
+
 	ZeroMemory( vFILTER, MAX_PIVOT * sizeof(BYTE));
 	vFILTER[bRootID] = TRUE;
 
@@ -895,6 +900,44 @@ BYTE CTachyonAnimation::IsValidNode( LPBONESNODE pNode,
 	return pFILTER[pNode->m_bParentPOS] || pFILTER[pNode->m_bParentROT] ? TRUE : FALSE;
 }
 
+// The first key from 1 whose time is at or after fTimeValue, or nCount when there is none.
+// Keys sorted by time are searched by halves.
+template< class TKEY > static int FindKey( const TKEY *pKey, int nCount, FLOAT fTimeValue, BOOL bSorted)
+{
+	if(!bSorted)
+	{
+		for( int i=1; i<nCount; i++)
+			if( INT(pKey[i].m_dwTime) >= fTimeValue )
+				return i;
+
+		return nCount;
+	}
+
+	int nLow = 1;
+	int nHigh = nCount;
+
+	while( nLow < nHigh )
+	{
+		int nMid = (nLow + nHigh) / 2;
+
+		if( INT(pKey[nMid].m_dwTime) >= fTimeValue )
+			nHigh = nMid;
+		else
+			nLow = nMid + 1;
+	}
+
+	return nLow;
+}
+
+template< class TKEY > static BOOL IsSortedKey( const TKEY *pKey, int nCount)
+{
+	for( int i=2; i<nCount; i++)
+		if( INT(pKey[i].m_dwTime) < INT(pKey[i - 1].m_dwTime) )
+			return FALSE;
+
+	return TRUE;
+}
+
 D3DXVECTOR3 CTachyonAnimation::CalcPositionVector( LPBONESANIMATION pNode,
 												   FLOAT fTimeValue)
 {
@@ -906,6 +949,24 @@ D3DXVECTOR3 CTachyonAnimation::CalcPositionVector( LPBONESANIMATION pNode,
 
 		if( INT(pKey[pNode->m_nPositionKeyCount - 1].m_dwTime) < fTimeValue )
 			fTimeValue = FLOAT(INT(pKey[pNode->m_nPositionKeyCount - 1].m_dwTime));
+
+		// The sums of the moves give the same result as adding them here.
+		if(pNode->m_pPositionSum)
+		{
+			int i = FindKey( pKey, pNode->m_nPositionKeyCount, fTimeValue, pNode->m_bSorted & 1);
+
+			if( i >= pNode->m_nPositionKeyCount )
+				return pNode->m_pPositionSum[pNode->m_nPositionKeyCount - 1];
+
+			FLOAT fInterval = (FLOAT) (INT(pKey[i].m_dwTime) - INT(pKey[i - 1].m_dwTime));
+			FLOAT fTime = (fTimeValue - ((FLOAT) INT(pKey[i - 1].m_dwTime))) / fInterval;
+
+			vRESULT = pNode->m_pPositionSum[i - 1];
+			vRESULT += fTime * pKey[i].m_vKeyPoint;
+
+			return vRESULT;
+		}
+
 		vRESULT += pKey[0].m_vKeyPoint;
 
 		for( int i=1; i<pNode->m_nPositionKeyCount; i++)
@@ -936,24 +997,23 @@ D3DXQUATERNION CTachyonAnimation::CalcRotation( LPBONESANIMATION pNode,
 		if( INT(pKey[pNode->m_nRotationKeyCount - 1].m_dwTime) < fTimeValue )
 			fTimeValue = FLOAT(INT(pKey[pNode->m_nRotationKeyCount - 1].m_dwTime));
 
-		for( int i=1; i<pNode->m_nRotationKeyCount; i++)
-			if( INT(pKey[i].m_dwTime) >= fTimeValue )
-			{
-				FLOAT fInterval = (FLOAT) (INT(pKey[i].m_dwTime) - INT(pKey[i - 1].m_dwTime));
-				FLOAT fTime = (fTimeValue - ((FLOAT) INT(pKey[i - 1].m_dwTime))) / fInterval;
+		int i = FindKey( pKey, pNode->m_nRotationKeyCount, fTimeValue, pNode->m_bSorted & 2);
 
-				D3DXQUATERNION vInitPos;
-				D3DXQuaternionInverse(
-					&vInitPos,
-					&pKey[0].m_vKeyQuat);
+		if( i < pNode->m_nRotationKeyCount )
+		{
+			FLOAT fInterval = (FLOAT) (INT(pKey[i].m_dwTime) - INT(pKey[i - 1].m_dwTime));
+			FLOAT fTime = (fTimeValue - ((FLOAT) INT(pKey[i - 1].m_dwTime))) / fInterval;
 
-				vRESULT = vInitPos * CTMath::MaxSlerp(
-					pKey[i - 1].m_vKeyQuat,
-					pKey[i].m_vKeyQuat,
-					fTime);
+			D3DXQUATERNION vInitPos;
+			D3DXQuaternionInverse(
+				&vInitPos,
+				&pKey[0].m_vKeyQuat);
 
-				break;
-			}
+			vRESULT = vInitPos * CTMath::MaxSlerp(
+				pKey[i - 1].m_vKeyQuat,
+				pKey[i].m_vKeyQuat,
+				fTime);
+		}
 	}
 
 	return vRESULT;
@@ -971,20 +1031,19 @@ D3DXVECTOR3 CTachyonAnimation::CalcScale( LPBONESANIMATION pNode,
 		if( INT(pKey[pNode->m_nScaleKeyCount - 1].m_dwTime) < fTimeValue )
 			fTimeValue = FLOAT(INT(pKey[pNode->m_nScaleKeyCount - 1].m_dwTime));
 
-		for( int i=1; i<pNode->m_nScaleKeyCount; i++)
-			if( INT(pKey[i].m_dwTime) >= fTimeValue )
-			{
-				FLOAT fInterval = (FLOAT) (INT(pKey[i].m_dwTime) - INT(pKey[i - 1].m_dwTime));
-				FLOAT fTime = (fTimeValue - ((FLOAT) INT(pKey[i - 1].m_dwTime))) / fInterval;
+		int i = FindKey( pKey, pNode->m_nScaleKeyCount, fTimeValue, pNode->m_bSorted & 4);
 
-				D3DXVec3Lerp(
-					&vRESULT,
-					&pKey[i - 1].m_vKeyScale,
-					&pKey[i].m_vKeyScale,
-					fTime);
+		if( i < pNode->m_nScaleKeyCount )
+		{
+			FLOAT fInterval = (FLOAT) (INT(pKey[i].m_dwTime) - INT(pKey[i - 1].m_dwTime));
+			FLOAT fTime = (fTimeValue - ((FLOAT) INT(pKey[i - 1].m_dwTime))) / fInterval;
 
-				break;
-			}
+			D3DXVec3Lerp(
+				&vRESULT,
+				&pKey[i - 1].m_vKeyScale,
+				&pKey[i].m_vKeyScale,
+				fTime);
+		}
 	}
 
 	return vRESULT;
@@ -999,6 +1058,22 @@ void CTachyonAnimation::InitPositionKey( LPBONESANIMATION pNode)
 	for( int i=pNode->m_nPositionKeyCount - 1; i>0; i--)
 		pKey[i].m_vKeyPoint -= pKey[i - 1].m_vKeyPoint;
 	pKey[0].m_vKeyPoint = D3DXVECTOR3( 0.0f, 0.0f, 0.0f);
+
+	// The sums of the moves, added in the order CalcPositionVector used to add them.
+	D3DXVECTOR3 vSUM( 0.0f, 0.0f, 0.0f);
+
+	if(pNode->m_pPositionSum)
+		delete[] pNode->m_pPositionSum;
+	pNode->m_pPositionSum = new D3DXVECTOR3[pNode->m_nPositionKeyCount];
+
+	for( int i=0; i<pNode->m_nPositionKeyCount; i++)
+	{
+		vSUM += pKey[i].m_vKeyPoint;
+		pNode->m_pPositionSum[i] = vSUM;
+	}
+
+	if(IsSortedKey( pKey, pNode->m_nPositionKeyCount))
+		pNode->m_bSorted |= 1;
 }
 
 void CTachyonAnimation::InitRotationKey( LPBONESANIMATION pNode)
@@ -1009,10 +1084,15 @@ void CTachyonAnimation::InitRotationKey( LPBONESANIMATION pNode)
 
 	for( int i=1; i<pNode->m_nRotationKeyCount; i++)
 		pKey[i].m_vKeyQuat = pKey[i - 1].m_vKeyQuat * pKey[i].m_vKeyQuat;
+
+	if(IsSortedKey( pKey, pNode->m_nRotationKeyCount))
+		pNode->m_bSorted |= 2;
 }
 
 void CTachyonAnimation::InitScaleKey( LPBONESANIMATION pNode)
 {
+	if( pNode->m_nScaleKeyCount > 0 && IsSortedKey( (LPTSCALEKEY) pNode->m_pScaleKey, pNode->m_nScaleKeyCount) )
+		pNode->m_bSorted |= 4;
 }
 
 DWORD CTachyonAnimation::GetInterval()

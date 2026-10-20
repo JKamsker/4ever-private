@@ -841,6 +841,8 @@ void CTClientWnd::Render()
 	static DWORD dwPrevTick = GetTClientTickCount();
 	static CPoint prev;
 
+	TPERF_LAP("events+net");
+
 	if(m_Device.m_pDevice)
 	{
 		DWORD dwTick = GetTClientTickCount();
@@ -952,7 +954,8 @@ void CTClientWnd::Render()
 
 		for (BYTE i = 0; i < PREMIUMSKILL_COUNT; ++i)
 			m_MainGame.GetPremiumSkillsFrame(i)->CalcHotkeyTick();
-		
+		TPERF_LAP("wnd pre");
+
 		pFRAME->Render(min( TMAXPASS_TICK, m_MainGame.m_vKEY.m_dwTick - dwPrevTick));
 		m_FontFPS.m_dwColor = 0xFFFFFFFF;
 

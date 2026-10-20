@@ -111,11 +111,14 @@ foreach(_pos RANGE 0 2)
 endforeach()
 
 _compile(fragment "${_dir}/ffp_fs.sc" "NONE=0" ffp_fs)
+_compile(fragment "${_dir}/ffp_fs_fast.sc" "NONE=0" ffp_fs_fast)
 
 string(APPEND _out "struct TFFPSHADER\n{\n\tunsigned int m_dwKey;\n\tconst unsigned char *m_pDX11;\n\tunsigned int m_nDX11;\n\tconst unsigned char *m_pSPIRV;\n\tunsigned int m_nSPIRV;\n\tconst unsigned char *m_pGLSL;\n\tunsigned int m_nGLSL;\n};\n\n")
 string(APPEND _out "// Vertex shaders by key: position (0 XYZ, 1 XYZRHW, 2 XYZB4) | normal << 2 | diffuse << 3 | texture sets << 4.\n")
 string(APPEND _out "static const TFFPSHADER g_vFFPVS[] = {\n${_table}};\n\n")
 string(APPEND _out "static const TFFPSHADER g_vFFPFS = { 0, g_ffp_fs_dx11, sizeof(g_ffp_fs_dx11), g_ffp_fs_spirv, sizeof(g_ffp_fs_spirv), g_ffp_fs_glsl, sizeof(g_ffp_fs_glsl) };\n")
+string(APPEND _out "// Stage 0 only, select or modulate (ffp_fs_fast.sc).\n")
+string(APPEND _out "static const TFFPSHADER g_vFFPFSFAST = { 0, g_ffp_fs_fast_dx11, sizeof(g_ffp_fs_fast_dx11), g_ffp_fs_fast_spirv, sizeof(g_ffp_fs_fast_spirv), g_ffp_fs_fast_glsl, sizeof(g_ffp_fs_fast_glsl) };\n")
 
 file(WRITE "${_header}" "${_out}")
 message(STATUS "Wrote ${_header}")

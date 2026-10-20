@@ -6381,6 +6381,9 @@ void CTClientObjBase::CalcSUBFrame()
 
 void CTClientObjBase::ApplyMatrix(CD3DDevice *pDevice)
 {
+	TPERF_ZONE("*skeleton");
+	TPERF_COUNT( "apply", 1);
+
 	if (m_bRootID && m_vTSUBACT.m_pANI)
 	{
 		static FLOAT vWORLD[4 * 3 * MAX_PIVOT + 4];

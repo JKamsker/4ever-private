@@ -25,6 +25,8 @@ set(BGFX_CONFIG_VIDEO OFF CACHE BOOL "" FORCE)
 # The engine calls the render layer from its main thread and its loader thread itself.
 set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
 add_subdirectory("${TCLIENT_LIB_3RD}/bgfx.cmake" bgfx EXCLUDE_FROM_ALL)
+# Each text string of the engine is its own texture: a busy town goes past bgfx's 4096.
+target_compile_definitions(bgfx PRIVATE BGFX_CONFIG_MAX_TEXTURES=16384)
 # bimg's ASTC encoder uses _mm_popcnt_u64 when clang defines __POPCNT__; it does not exist in
 # 32-bit code.
 target_compile_definitions(bimg PRIVATE ASTCENC_POPCNT=0)

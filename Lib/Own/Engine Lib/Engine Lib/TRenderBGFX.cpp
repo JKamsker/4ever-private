@@ -18,6 +18,7 @@
 #include "TD3D9.h"
 #include <TRenderDevice.h>
 #include "TThread.h"
+#include "TPerfLap.h"
 #include "TString.h"
 #include "TFile.h"
 
@@ -34,6 +35,7 @@
 #endif
 #include <bimg/decode.h>
 #include <bx/allocator.h>
+#include <bx/timer.h>
 
 #include <algorithm>
 #include <deque>
@@ -60,10 +62,30 @@ namespace
 	// Bumped by every bgfx init, so handles of an earlier device are never destroyed.
 	DWORD g_dwGeneration = 0;
 
+	// Bumped by every Present.
+	DWORD g_dwFrame = 1;
+
+	// Work counted for the debug overlay, reset at each Present.
+	struct TPERFCOUNT
+	{
+		UINT m_nTexUpload;
+		UINT m_nBufCreate;
+		UINT64 m_qwTransient;
+		UINT64 m_qwUpdate;
+		UINT m_nTexFailed;		// since the start, never reset
+	} g_vPERF = { 0, 0, 0, 0, 0};
+
 	// Settings/BGFXRenderer (SetRenderDeviceBGFXType).
 	std::string g_strRENDERER;
 
 	inline UINT TMax( UINT a, UINT b) { return a > b ? a : b; }
+
+	// The overlay's zone of the draw calls.
+	int DrawZone()
+	{
+		static const int s_nZone = TPerfLapID("*draws");
+		return s_nZone;
+	}
 	inline FLOAT TMaxF( FLOAT a, FLOAT b) { return a > b ? a : b; }
 	inline UINT TMin( UINT a, UINT b) { return a < b ? a : b; }
 
@@ -380,6 +402,7 @@ namespace
 		std::vector<bgfx::TextureHandle> m_vTEXTURE;
 		std::vector<bgfx::VertexBufferHandle> m_vVB;
 		std::vector<bgfx::IndexBufferHandle> m_vIB;
+		std::vector<bgfx::DynamicVertexBufferHandle> m_vDVB;
 		std::vector<bgfx::FrameBufferHandle> m_vFB;
 	};
 
@@ -416,9 +439,13 @@ namespace
 		for( size_t i=0; i<vPENDING.m_vIB.size(); i++)
 			bgfx::destroy(vPENDING.m_vIB[i]);
 
+		for( size_t i=0; i<vPENDING.m_vDVB.size(); i++)
+			bgfx::destroy(vPENDING.m_vDVB[i]);
+
 		vPENDING.m_vTEXTURE.clear();
 		vPENDING.m_vVB.clear();
 		vPENDING.m_vIB.clear();
+		vPENDING.m_vDVB.clear();
 		vPENDING.m_vFB.clear();
 	}
 
@@ -564,7 +591,7 @@ namespace
 				m_nUpload++;
 			}
 
-			if( m_bDirty && m_vWRITTEN[0] )
+			if( m_bDirty && m_vWRITTEN[0] && bgfx::isValid(m_hTexture) )
 			{
 				std::vector<BYTE>& vLEVEL = GetLevel(0);
 				std::vector<BYTE> vBGRA( m_nWidth * m_nHeight * 4);
@@ -594,6 +621,8 @@ namespace
 			if( m_nFormat == D3DFMT_A32B32G32R32F || m_nFormat == D3DFMT_A16B16G16R16F || m_nFormat == D3DFMT_R32F )
 				return;
 
+			g_vPERF.m_nTexUpload++;
+
 			UINT nFull = GetLevelCount( m_nWidth, m_nHeight);
 			BOOL bMips = m_nLevels > 1;
 			BOOL bBlock = IsBlockFormat(m_nFormat);
@@ -619,6 +648,9 @@ namespace
 
 					CreateHandle( nBlock == bimg::TextureFormat::BC1 ? bgfx::TextureFormat::BC1 :
 						nBlock == bimg::TextureFormat::BC2 ? bgfx::TextureFormat::BC2 : bgfx::TextureFormat::BC3, bMips);
+
+					if(!bgfx::isValid(m_hTexture))
+						return;
 
 					for( UINT i=0; i<(bMips ? nFull : 1); i++)
 					{
@@ -655,6 +687,10 @@ namespace
 
 			CreateHandle( bgfx::TextureFormat::BGRA8, bMips);
 
+			// bgfx is out of texture handles: the texture is not drawn.
+			if(!bgfx::isValid(m_hTexture))
+				return;
+
 			std::vector<BYTE> vPREV;
 			std::vector<BYTE> vCUR;
 
@@ -689,6 +725,26 @@ namespace
 				bgfx::destroy(m_hTexture);
 
 			m_hTexture = bgfx::createTexture2D( uint16_t(m_nWidth), uint16_t(m_nHeight), bMips ? true : false, 1, nFormat, BGFX_TEXTURE_NONE | BGFX_SAMPLER_NONE, NULL);
+			if(!bgfx::isValid(m_hTexture))
+			{
+				g_vPERF.m_nTexFailed++;
+
+				// Diagnostics: the first textures bgfx refused go to %TEMP%\tclient-bgfx-texfail.txt.
+				if( g_vPERF.m_nTexFailed <= 40 )
+				{
+					char vPATH[MAX_PATH];
+					char vFILE[MAX_PATH];
+					GetTempPathA( MAX_PATH, vPATH);
+					sprintf_s( vFILE, "%stclient-bgfx-texfail.txt", vPATH);
+					FILE *pFILE = TFileOpen( vFILE, g_vPERF.m_nTexFailed == 1 ? "w" : "a");
+					if(pFILE)
+					{
+						fprintf( pFILE, "%ux%u levels %u mips %d d3dfmt %d bgfxfmt %d pool %d usage %x\n",
+							m_nWidth, m_nHeight, m_nLevels, bMips ? 1 : 0, int(m_nFormat), int(nFormat), int(m_nPool), m_dwUsage);
+						fclose(pFILE);
+					}
+				}
+			}
 			m_nHandleFormat = nFormat;
 			m_dwGeneration = g_dwGeneration;
 			m_nUpload++;
@@ -1292,12 +1348,19 @@ namespace
 					m_bDynamic = TRUE;
 
 				m_bDirty = TRUE;
+
+				// Like D3D9, a size of 0 locks the buffer to its end.
+				UINT nEnd = SizeToLock ? OffsetToLock + SizeToLock : UINT(m_vDATA.size());
+				OnWrite( OffsetToLock, nEnd < m_vDATA.size() ? nEnd : UINT(m_vDATA.size()));
 			}
 
 			return D3D_OK;
 		}
 
 		HRESULT Unlock() override { return D3D_OK; }
+
+		// The bytes nBegin to nEnd may have been written.
+		virtual void OnWrite( UINT nBegin, UINT nEnd) {}
 
 	public:
 		LONG m_nRef;
@@ -1317,6 +1380,76 @@ namespace
 		~CTVertexBufferBGFX()
 		{
 			ClearHandles();
+
+			std::map< UINT64, TDYNAMIC>::iterator it;
+			for( it = m_mapDYNAMIC.begin(); it != m_mapDYNAMIC.end(); it++)
+				DeferDestroy( Pending().m_vDVB, (*it).second.m_hBuffer, (*it).second.m_dwGeneration);
+		}
+
+		// A buffer that changes keeps one GPU copy per vertex layout, updated with the bytes
+		// written since. bgfx applies updates before the draws of a frame, so a copy already
+		// drawn from in this frame can not change: FALSE then, and the draw copies its
+		// vertices into a transient buffer.
+		BOOL GetDynamicHandle( UINT64 qwLayout, const bgfx::VertexLayout& vLayout, UINT nStride, bgfx::DynamicVertexBufferHandle *pHandle)
+		{
+			UINT nCount = UINT(m_vDATA.size() / nStride);
+			TDYNAMIC& vDYN = m_mapDYNAMIC[qwLayout];
+
+			if( !bgfx::isValid(vDYN.m_hBuffer) || vDYN.m_dwGeneration != g_dwGeneration )
+			{
+				if(!nCount)
+					return FALSE;
+
+				vDYN.m_hBuffer = bgfx::createDynamicVertexBuffer( bgfx::copy( &m_vDATA[0], nCount * nStride), vLayout);
+				vDYN.m_dwGeneration = g_dwGeneration;
+				vDYN.m_nBegin = vDYN.m_nEnd = 0;
+				g_vPERF.m_nBufCreate++;
+
+				if(!bgfx::isValid(vDYN.m_hBuffer))
+					return FALSE;
+			}
+			else if( vDYN.m_nBegin < vDYN.m_nEnd )
+			{
+				if( vDYN.m_dwFrame == g_dwFrame )
+					return FALSE;
+
+				UINT nFirst = vDYN.m_nBegin / nStride;
+				UINT nLast = TMin( nCount, (vDYN.m_nEnd + nStride - 1) / nStride);
+
+				if( nFirst < nLast )
+				{
+					bgfx::update( vDYN.m_hBuffer, nFirst, bgfx::copy( &m_vDATA[nFirst * nStride], (nLast - nFirst) * nStride));
+					g_vPERF.m_qwUpdate += (nLast - nFirst) * nStride;
+				}
+
+				vDYN.m_nBegin = vDYN.m_nEnd = 0;
+			}
+
+			vDYN.m_dwFrame = g_dwFrame;
+			*pHandle = vDYN.m_hBuffer;
+
+			return TRUE;
+		}
+
+		void OnWrite( UINT nBegin, UINT nEnd) override
+		{
+			std::map< UINT64, TDYNAMIC>::iterator it;
+
+			for( it = m_mapDYNAMIC.begin(); it != m_mapDYNAMIC.end(); it++)
+			{
+				TDYNAMIC& vDYN = (*it).second;
+
+				if( vDYN.m_nBegin < vDYN.m_nEnd )
+				{
+					vDYN.m_nBegin = TMin( vDYN.m_nBegin, nBegin);
+					vDYN.m_nEnd = TMax( vDYN.m_nEnd, nEnd);
+				}
+				else
+				{
+					vDYN.m_nBegin = nBegin;
+					vDYN.m_nEnd = nEnd;
+				}
+			}
 		}
 
 		// The bgfx buffer of the data seen through a vertex layout.
@@ -1334,6 +1467,7 @@ namespace
 				return (*finder).second.first;
 
 			bgfx::VertexBufferHandle hBuffer = bgfx::createVertexBuffer( bgfx::copy( &m_vDATA[0], uint32_t(m_vDATA.size())), vLayout);
+			g_vPERF.m_nBufCreate++;
 			m_mapHANDLE[qwLayout] = std::make_pair( hBuffer, g_dwGeneration);
 
 			return hBuffer;
@@ -1351,6 +1485,18 @@ namespace
 		}
 
 		std::map< UINT64, std::pair< bgfx::VertexBufferHandle, DWORD> > m_mapHANDLE;
+
+		// The bytes m_nBegin to m_nEnd changed since the last update.
+		struct TDYNAMIC
+		{
+			bgfx::DynamicVertexBufferHandle m_hBuffer = BGFX_INVALID_HANDLE;
+			DWORD m_dwGeneration = 0;
+			DWORD m_dwFrame = 0;
+			UINT m_nBegin = 0;
+			UINT m_nEnd = 0;
+		};
+
+		std::map< UINT64, TDYNAMIC> m_mapDYNAMIC;
 	};
 
 	class CTIndexBufferBGFX : public TBufferBGFX< CTIndexBuffer, D3DINDEXBUFFER_DESC>
@@ -1373,6 +1519,7 @@ namespace
 
 			DeferDestroy( Pending().m_vIB, m_hBuffer, m_dwGeneration);
 			m_hBuffer = bgfx::createIndexBuffer( bgfx::copy( &m_vDATA[0], uint32_t(m_vDATA.size())), Is32() ? BGFX_BUFFER_INDEX32 : BGFX_BUFFER_NONE);
+			g_vPERF.m_nBufCreate++;
 			m_dwGeneration = g_dwGeneration;
 			m_bDirty = FALSE;
 			m_nUpload++;
@@ -1947,23 +2094,43 @@ namespace
 		HRESULT Present( const RECT *pSourceRect, const RECT *pDestRect, HWND hDestWindowOverride, const RGNDATA *pDirtyRegion) override
 		{
 			bgfx::dbgTextClear();
-			bgfx::dbgTextPrintf( 1, 1, 0x0f, "bgfx %s - 3c-5 | views %u draws %u skipped %u",
-				bgfx::getRendererName(bgfx::getRendererType()), m_nView + 1, m_nDraws, m_nSkipped);
+			bgfx::dbgTextPrintf( 1, 1, 0x0f, "bgfx %s - 3c-5 | views %u draws %u (fast %u) skipped %u | test %d",
+				bgfx::getRendererName(bgfx::getRendererType()), m_nView + 1, m_nDraws, m_nFastDraws, m_nSkipped, m_nPerfTest);
+			bgfx::dbgTextPrintf( 1, 2, 0x0f, "%s", m_vPERFSHOW.m_vLINE[0]);
+			bgfx::dbgTextPrintf( 1, 3, 0x0f, "%s", m_vPERFSHOW.m_vLINE[1]);
+			bgfx::dbgTextPrintf( 1, 4, 0x0f, "%s", m_vPERFSHOW.m_vLINE[2]);
+			bgfx::dbgTextPrintf( 1, 5, 0x0f, "%s", m_vPERFSHOW.m_vLINE[3]);
+			bgfx::dbgTextPrintf( 1, 6, 0x0f, "%s", m_vPERFSHOW.m_vLINE[4]);
 
 			// View 0 is the first one of the frame: make sure the back buffer is cleared even
 			// when the engine draws nothing.
 			bgfx::touch(0);
+			TPERF_LAP("wnd post");
+			int64_t nSubmit = bx::getHPCounter();
 			m_vGL.Acquire();
 			bgfx::frame();
 			m_vGL.Release();
+			UpdatePerf(nSubmit);
+
+			// The next frame's laps start here: bgfx::frame is shown on its own.
+			TPerfLap(-1);
 
 			FlushDestroy();
+			g_dwFrame++;
 			m_nView = 0;
 			m_bViewOpen = FALSE;
 			m_nDraws = 0;
+			m_nFastDraws = 0;
 			m_nSkipped = 0;
-			UpdateDump();
+			// The diagnostic flag files are looked for once a second, not every frame.
+			DWORD dwNow = GetTickCount();
+			BOOL bPoll = dwNow - m_dwFlagPoll >= 1000;
 
+			if(bPoll)
+				m_dwFlagPoll = dwNow;
+			UpdateDump(bPoll);
+
+			if(bPoll)
 			{
 				char vPATH[MAX_PATH];
 				char vFILE[MAX_PATH];
@@ -1980,6 +2147,17 @@ namespace
 					fclose(pFLAG);
 				}
 				m_bHighlight = m_nHighlight > 0;
+
+				// Diagnostics: %TEMP%\tclient-bgfx-test.flag holds performance tests (bits): 1 a 1x1
+				// scissor (no pixels), 2 no anisotropy, 4 no skinned draws, 8 no blending.
+				sprintf_s( vFILE, "%stclient-bgfx-test.flag", vPATH);
+				m_nPerfTest = 0;
+				if( (pFLAG = TFileOpen( vFILE, "r")) != NULL )
+				{
+					if( fscanf_s( pFLAG, "%d", &m_nPerfTest) != 1 )
+						m_nPerfTest = 0;
+					fclose(pFLAG);
+				}
 			}
 
 			return D3D_OK;
@@ -2171,11 +2349,18 @@ namespace
 			{
 				m_vWORLD[nState - 256] = *pMatrix;
 				m_nWorldCount = TMax( m_nWorldCount, nState - 256 + 1);
+				m_bWorldDirty = TRUE;
 			}
 			else if( nState == D3DTS_VIEW )
+			{
 				m_vVIEW = *pMatrix;
+				m_bCameraDirty = TRUE;
+			}
 			else if( nState == D3DTS_PROJECTION )
+			{
 				m_vPROJ = *pMatrix;
+				m_bCameraDirty = TRUE;
+			}
 			else if( nState >= D3DTS_TEXTURE0 && nState <= D3DTS_TEXTURE7 )
 				m_vTEXMAT[nState - D3DTS_TEXTURE0] = *pMatrix;
 
@@ -2207,7 +2392,16 @@ namespace
 
 		HRESULT SetMaterial( const D3DMATERIAL9 *pMaterial) override { if(pMaterial) m_vMATERIAL = *pMaterial; return D3D_OK; }
 		HRESULT GetMaterial( D3DMATERIAL9 *pMaterial) override { if(pMaterial) *pMaterial = m_vMATERIAL; return D3D_OK; }
-		HRESULT SetLight( DWORD Index, const D3DLIGHT9 *pLight) override { if(pLight) m_mapLIGHT[Index] = *pLight; return D3D_OK; }
+		HRESULT SetLight( DWORD Index, const D3DLIGHT9 *pLight) override
+		{
+			if(pLight)
+			{
+				m_mapLIGHT[Index] = *pLight;
+				m_bLightsDirty = TRUE;
+			}
+
+			return D3D_OK;
+		}
 
 		HRESULT GetLight( DWORD Index, D3DLIGHT9 *pLight) override
 		{
@@ -2235,6 +2429,8 @@ namespace
 			}
 
 			m_mapLIGHTON[Index] = Enable;
+			m_bLightsDirty = TRUE;
+
 			return D3D_OK;
 		}
 
@@ -2301,6 +2497,7 @@ namespace
 
 		HRESULT DrawPrimitive( D3DPRIMITIVETYPE PrimitiveType, UINT StartVertex, UINT PrimitiveCount) override
 		{
+			CTPerfZone vZone(DrawZone());
 			UINT nCount = GetVertexCount( PrimitiveType, PrimitiveCount);
 
 			if( !nCount || !BeginDraw() )
@@ -2319,6 +2516,7 @@ namespace
 
 		HRESULT DrawIndexedPrimitive( D3DPRIMITIVETYPE Type, INT BaseVertexIndex, UINT MinVertexIndex, UINT NumVertices, UINT startIndex, UINT primCount) override
 		{
+			CTPerfZone vZone(DrawZone());
 			UINT nCount = GetVertexCount( Type, primCount);
 
 			if( !m_pINDEX || !nCount || !BeginDraw() )
@@ -2350,6 +2548,7 @@ namespace
 				bgfx::TransientIndexBuffer vTIB;
 				bgfx::allocTransientIndexBuffer( &vTIB, nCount, b32 ? true : false);
 				memcpy( vTIB.data, pIndex, nCount * nIndexSize);
+				g_vPERF.m_qwTransient += nCount * nIndexSize;
 				bgfx::setIndexBuffer(&vTIB);
 			}
 			else
@@ -2361,6 +2560,7 @@ namespace
 
 		HRESULT DrawPrimitiveUP( D3DPRIMITIVETYPE PrimitiveType, UINT PrimitiveCount, const void *pVertexStreamZeroData, UINT VertexStreamZeroStride) override
 		{
+			CTPerfZone vZone(DrawZone());
 			UINT nCount = GetVertexCount( PrimitiveType, PrimitiveCount);
 
 			if( !pVertexStreamZeroData || !VertexStreamZeroStride || !nCount || !BeginDraw() )
@@ -2377,6 +2577,7 @@ namespace
 			bgfx::TransientVertexBuffer vTVB;
 			bgfx::allocTransientVertexBuffer( &vTVB, nCount, vLayout.m_vLayout);
 			memcpy( vTVB.data, pVertexStreamZeroData, nCount * VertexStreamZeroStride);
+			g_vPERF.m_qwTransient += nCount * VertexStreamZeroStride;
 			bgfx::setVertexBuffer( 0, &vTVB);
 
 			if( PrimitiveType == D3DPT_TRIANGLEFAN && !SetFanIndices( nCount, NULL, FALSE))
@@ -2643,7 +2844,8 @@ namespace
 			MAX_LIGHTS = 8,
 			VS_PARAMS = 9,
 			MAX_VIEWS = 256,		// BGFX_CONFIG_MAX_VIEWS
-			PS_PARAMS = 9
+			PS_PARAMS = 9,
+			PROGRAM_FAST = 0x100	// program key bit: the stage 0 pixel shader
 		};
 
 		struct TSTREAM
@@ -2849,12 +3051,13 @@ namespace
 
 		void InitPipeline()
 		{
-			bgfx::setDebug(BGFX_DEBUG_TEXT);
+			bgfx::setDebug(BGFX_DEBUG_TEXT | BGFX_DEBUG_PROFILER);
 			bgfx::setPaletteColor( 0, 0.0f, 0.0f, 0.0f, 0.0f);
 
 			m_nRenderer = bgfx::getRendererType();
 			m_bHomogeneousDepth = bgfx::getCaps()->homogeneousDepth ? TRUE : FALSE;
 			m_hFS = CreateShader(g_vFFPFS);
+			m_hFSFAST = CreateShader(g_vFFPFSFAST);
 
 			m_vWORLDU.m_hUniform = CreateUniform( "u_tWorld", MAX_WORLD * 3);
 			m_vVIEWPROJU.m_hUniform = CreateUniform( "u_tViewProj", 4);
@@ -2865,6 +3068,7 @@ namespace
 			m_vTEXXFORMU.m_hUniform = CreateUniform( "u_tTexXform", 16);
 			m_vSTAGEU.m_hUniform = CreateUniform( "u_tStage", 16);
 			m_vPSU.m_hUniform = CreateUniform( "u_tPS", PS_PARAMS);
+			m_vFASTU.m_hUniform = CreateUniform( "u_tFast", 4);
 
 			static const char *s_vSAMPLER[SHADER_STAGES] = { "s_tex0", "s_tex1", "s_tex2", "s_tex3" };
 			for( int i=0; i<SHADER_STAGES; i++)
@@ -2880,6 +3084,7 @@ namespace
 			m_bHighlight = FALSE;
 			m_nHighlight = 0;
 			m_nDraws = 0;
+			m_nFastDraws = 0;
 			m_nSkipped = 0;
 		}
 
@@ -2920,11 +3125,12 @@ namespace
 			if( finder != m_mapPROGRAM.end() )
 				return (*finder).second;
 
+			// PROGRAM_FAST pairs the vertex shader with ffp_fs_fast.sc.
 			bgfx::ProgramHandle hProgram = BGFX_INVALID_HANDLE;
 			for( size_t i=0; i<sizeof(g_vFFPVS) / sizeof(g_vFFPVS[0]); i++)
-				if( g_vFFPVS[i].m_dwKey == dwShader )
+				if( g_vFFPVS[i].m_dwKey == (dwShader & ~PROGRAM_FAST) )
 				{
-					hProgram = bgfx::createProgram( CreateShader(g_vFFPVS[i]), m_hFS, false);
+					hProgram = bgfx::createProgram( CreateShader(g_vFFPVS[i]), (dwShader & PROGRAM_FAST) ? m_hFSFAST : m_hFS, false);
 					break;
 				}
 
@@ -3015,6 +3221,10 @@ namespace
 			m_vVIEW = vIDENTITY;
 			m_vPROJ = vIDENTITY;
 			m_nWorldCount = 1;
+			m_nWorldSent = 0;
+			m_bWorldDirty = TRUE;
+			m_bCameraDirty = TRUE;
+			m_bLightsDirty = TRUE;
 		}
 
 		void ResetViewport()
@@ -3156,7 +3366,11 @@ namespace
 			if( nFirst < 0 || UINT(nFirst) + nCount > nTotal )
 				return FALSE;
 
-			if(pVB->m_bDynamic)
+			bgfx::DynamicVertexBufferHandle hDynamic;
+
+			if( pVB->m_bDynamic && pVB->GetDynamicHandle( qwKey, vLayout.m_vLayout, vStream.m_nStride, &hDynamic) )
+				bgfx::setVertexBuffer( nSlot, hDynamic, UINT(nFirst), bAll ? nTotal - UINT(nFirst) : nCount);
+			else if(pVB->m_bDynamic)
 			{
 				if( bgfx::getAvailTransientVertexBuffer( nCount, vLayout.m_vLayout) < nCount )
 					return FALSE;
@@ -3164,6 +3378,7 @@ namespace
 				bgfx::TransientVertexBuffer vTVB;
 				bgfx::allocTransientVertexBuffer( &vTVB, nCount, vLayout.m_vLayout);
 				memcpy( vTVB.data, &pVB->m_vDATA[nFirst * vStream.m_nStride], nCount * vStream.m_nStride);
+				g_vPERF.m_qwTransient += nCount * vStream.m_nStride;
 				bgfx::setVertexBuffer( nSlot, &vTVB);
 			}
 			else
@@ -3250,27 +3465,42 @@ namespace
 			}
 
 			// The palette: the whole used range when blending, else only world matrix 0.
+			// Each group below is only built again when one of its states was set: the
+			// engine sets the camera and the lights once for many draws.
 			static FLOAT vWORLD[MAX_WORLD * 3 * 4];
 			UINT nWorld = fMode > 0.0f ? (fMode > 1.5f ? m_nWorldCount : 4) : 1;
 
-			for( UINT i=0; i<nWorld; i++)
-				MatrixRows( m_vWORLD[i], &vWORLD[i * 12], 3);
-			SendUniform( m_vWORLDU, vWORLD, nWorld * 3);
+			if( m_bWorldDirty || nWorld > m_nWorldSent )
+			{
+				for( UINT i=0; i<nWorld; i++)
+					MatrixRows( m_vWORLD[i], &vWORLD[i * 12], 3);
+				SendUniform( m_vWORLDU, vWORLD, nWorld * 3);
 
-			D3DXMATRIX vVIEWPROJ = D3DXMATRIX(m_vVIEW) * D3DXMATRIX(m_vPROJ);
-			FLOAT vMATRIX[16];
+				// Matrices past nWorld are built again when a draw needs them.
+				m_bWorldDirty = FALSE;
+				m_nWorldSent = nWorld;
+			}
 
-			MatrixRows( vVIEWPROJ, vMATRIX, 4);
-			SendUniform( m_vVIEWPROJU, vMATRIX, 4);
+			if(m_bCameraDirty)
+			{
+				D3DXMATRIX vVIEWPROJ = D3DXMATRIX(m_vVIEW) * D3DXMATRIX(m_vPROJ);
+				FLOAT vMATRIX[16];
 
-			MatrixRows( m_vVIEW, vMATRIX, 4);
-			SendUniform( m_vVIEWU, vMATRIX, 4);
+				MatrixRows( vVIEWPROJ, vMATRIX, 4);
+				SendUniform( m_vVIEWPROJU, vMATRIX, 4);
+
+				MatrixRows( m_vVIEW, vMATRIX, 4);
+				SendUniform( m_vVIEWU, vMATRIX, 4);
+
+				D3DXMATRIX vINVVIEW;
+				if(!D3DXMatrixInverse( &vINVVIEW, NULL, (const D3DXMATRIX *) &m_vVIEW))
+					D3DXMatrixIdentity(&vINVVIEW);
+
+				m_vCAMERA = D3DXVECTOR3( vINVVIEW._41, vINVVIEW._42, vINVVIEW._43);
+				m_bCameraDirty = FALSE;
+			}
 
 			FLOAT vVS[VS_PARAMS * 4];
-			D3DXMATRIX vINVVIEW;
-
-			if(!D3DXMatrixInverse( &vINVVIEW, NULL, (const D3DXMATRIX *) &m_vVIEW))
-				D3DXMatrixIdentity(&vINVVIEW);
 
 			DWORD dwFogMode = m_vRS[D3DRS_FOGTABLEMODE] != D3DFOG_NONE ? m_vRS[D3DRS_FOGTABLEMODE] : m_vRS[D3DRS_FOGVERTEXMODE];
 			FLOAT fFogMode = dwFogMode == D3DFOG_LINEAR ? 3.0f : dwFogMode == D3DFOG_EXP2 ? 2.0f : dwFogMode == D3DFOG_EXP ? 1.0f : 0.0f;
@@ -3287,7 +3517,7 @@ namespace
 			SetVec4( &vVS[20], m_vVIEWPORT.MinZ, m_vVIEWPORT.MaxZ, m_bHomogeneousDepth ? 1.0f : 0.0f, DWToFloat(m_vRS[D3DRS_DEPTHBIAS]));
 			SetVec4( &vVS[24], fFogMode, DWToFloat(m_vRS[D3DRS_FOGSTART]), DWToFloat(m_vRS[D3DRS_FOGEND]), DWToFloat(m_vRS[D3DRS_FOGDENSITY]));
 			SetVec4( &vVS[28], m_vRS[D3DRS_RANGEFOGENABLE] ? 1.0f : 0.0f, m_vRS[D3DRS_FOGENABLE] ? 1.0f : 0.0f, m_bFlipY ? 1.0f : 0.0f, 0.0f);
-			SetVec4( &vVS[32], vINVVIEW._41, vINVVIEW._42, vINVVIEW._43, 1.0f);
+			SetVec4( &vVS[32], m_vCAMERA.x, m_vCAMERA.y, m_vCAMERA.z, 1.0f);
 			SendUniform( m_vVSU, vVS, VS_PARAMS);
 
 			FLOAT vMATERIAL[16];
@@ -3297,8 +3527,16 @@ namespace
 			SetColor( &vMATERIAL[12], m_vMATERIAL.Emissive);
 			SendUniform( m_vMATERIALU, vMATERIAL, 4);
 
+			if(m_bLightsDirty)
+				SetLightUniforms();
+			SetTexUniforms();
+		}
+
+		void SetLightUniforms()
+		{
 			FLOAT vLIGHTS[MAX_LIGHTS * 7 * 4];
 			ZeroMemory( vLIGHTS, sizeof(vLIGHTS));
+			m_bLightsDirty = FALSE;
 
 			for( DWORD i=0; i<MAX_LIGHTS; i++)
 			{
@@ -3320,7 +3558,10 @@ namespace
 				SetVec4( &pLIGHT[24], vLIGHT.Attenuation0, vLIGHT.Attenuation1, vLIGHT.Attenuation2, vLIGHT.Falloff);
 			}
 			SendUniform( m_vLIGHTSU, vLIGHTS, MAX_LIGHTS * 7);
+		}
 
+		void SetTexUniforms()
+		{
 			FLOAT vTEX[16 * 4];
 			ZeroMemory( vTEX, sizeof(vTEX));
 
@@ -3342,7 +3583,80 @@ namespace
 			*pModifier = ((dwArg & D3DTA_COMPLEMENT) ? 1.0f : 0.0f) + ((dwArg & D3DTA_ALPHAREPLICATE) ? 2.0f : 0.0f);
 		}
 
-		void SetPixelUniforms()
+		// The weights of a D3DTA argument in ffp_fs_fast.sc: diffuse, texture, texture
+		// factor, constant. FALSE when the argument needs ffp_fs.sc.
+		static BOOL GetFastArg( DWORD dwArg, FLOAT *p)
+		{
+			SetVec4( p, 0.0f, 0.0f, 0.0f, 0.0f);
+
+			switch(dwArg)
+			{
+			case D3DTA_DIFFUSE	:
+			case D3DTA_CURRENT	: p[0] = 1.0f; return TRUE;	// the current color of stage 0 is the diffuse
+			case D3DTA_TEXTURE	: p[1] = 1.0f; return TRUE;
+			case D3DTA_TFACTOR	: p[2] = 1.0f; return TRUE;
+			}
+
+			return FALSE;
+		}
+
+		// An operation of stage 0 as two arguments to multiply, like ffp_fs.sc: an operation
+		// reading the texture of a stage without one passes the diffuse color through.
+		static BOOL GetFastOp( DWORD dwOp, DWORD dwArg1, DWORD dwArg2, BOOL bBound, FLOAT *p1, FLOAT *p2)
+		{
+			SetVec4( p1, 1.0f, 0.0f, 0.0f, 0.0f);
+			SetVec4( p2, 0.0f, 0.0f, 0.0f, 1.0f);
+
+			switch(dwOp)
+			{
+			case D3DTOP_SELECTARG1	: return (!bBound && dwArg1 == D3DTA_TEXTURE) || GetFastArg( dwArg1, p1);
+			case D3DTOP_SELECTARG2	: return (!bBound && dwArg2 == D3DTA_TEXTURE) || GetFastArg( dwArg2, p1);
+			case D3DTOP_MODULATE	:
+				if( !bBound && (dwArg1 == D3DTA_TEXTURE || dwArg2 == D3DTA_TEXTURE) )
+					return TRUE;
+
+				return GetFastArg( dwArg1, p1) && GetFastArg( dwArg2, p2);
+			}
+
+			return FALSE;
+		}
+
+		// Whether ffp_fs_fast.sc can draw the stages, and its u_tFast when it can. Most
+		// draws of the engine use stage 0 alone.
+		BOOL GetFastStage( FLOAT *pFAST)
+		{
+			DWORD *pTSS = m_vTSS[0];
+			DWORD dwAlphaOp = pTSS[D3DTSS_ALPHAOP];
+
+			if( m_vTSS[1][D3DTSS_COLOROP] != D3DTOP_DISABLE || pTSS[D3DTSS_COLOROP] == D3DTOP_DISABLE )
+				return FALSE;
+
+			if(!GetFastOp( pTSS[D3DTSS_COLOROP], pTSS[D3DTSS_COLORARG1], pTSS[D3DTSS_COLORARG2], m_vSTAGEBOUND[0], &pFAST[0], &pFAST[4]))
+				return FALSE;
+
+			// A disabled alpha keeps the diffuse alpha.
+			if( dwAlphaOp == D3DTOP_DISABLE )
+			{
+				SetVec4( &pFAST[8], 1.0f, 0.0f, 0.0f, 0.0f);
+				SetVec4( &pFAST[12], 0.0f, 0.0f, 0.0f, 1.0f);
+
+				return TRUE;
+			}
+
+			return GetFastOp( dwAlphaOp, pTSS[D3DTSS_ALPHAARG1], pTSS[D3DTSS_ALPHAARG2], m_vSTAGEBOUND[0], &pFAST[8], &pFAST[12]);
+		}
+
+		void SetPixelUniforms( BOOL bFast, const FLOAT *pFAST)
+		{
+			if(bFast)
+				SendUniform( m_vFASTU, pFAST, 4);
+			else
+				SetStageUniforms();
+
+			SetPSUniforms();
+		}
+
+		void SetStageUniforms()
 		{
 			FLOAT vSTAGE[16 * 4];
 			BOOL bDisabled = FALSE;
@@ -3369,7 +3683,10 @@ namespace
 				p[15] = 0.0f;
 			}
 			SendUniform( m_vSTAGEU, vSTAGE, 16);
+		}
 
+		void SetPSUniforms()
+		{
 			FLOAT vPS[PS_PARAMS * 4];
 			ColorToVec4( m_vRS[D3DRS_TEXTUREFACTOR], &vPS[0]);
 			SetVec4( &vPS[4], m_vRS[D3DRS_ALPHATESTENABLE] ? 1.0f : 0.0f, FLOAT(m_vRS[D3DRS_ALPHAFUNC]), FLOAT(m_vRS[D3DRS_ALPHAREF] & 0xFF), m_vRS[D3DRS_SPECULARENABLE] ? 1.0f : 0.0f);
@@ -3614,7 +3931,15 @@ namespace
 
 		HRESULT SubmitDraw( D3DPRIMITIVETYPE nType, TLAYOUT& vLayout)
 		{
-			bgfx::ProgramHandle hProgram = GetProgram(vLayout.m_dwShader);
+			if( (m_nPerfTest & 4) && (vLayout.m_dwShader & 3) == 2 )
+				return Skip("perf test");
+
+			for( int i=0; i<SHADER_STAGES; i++)
+				m_vSTAGEBOUND[i] = m_pTEXTURE[i] && bgfx::isValid(((CTTextureBGFX *) m_pTEXTURE[i])->GetHandle());
+
+			FLOAT vFAST[16];
+			BOOL bFast = GetFastStage(vFAST);
+			bgfx::ProgramHandle hProgram = GetProgram(vLayout.m_dwShader | (bFast ? PROGRAM_FAST : 0));
 
 			if(!bgfx::isValid(hProgram))
 			{
@@ -3631,17 +3956,22 @@ namespace
 
 					if(bgfx::isValid(hTexture))
 					{
-						bgfx::setTexture( uint8_t(i), m_hSAMPLER[i], hTexture, GetSamplerFlags(i));
+						bgfx::setTexture( uint8_t(i), m_hSAMPLER[i], hTexture, (m_nPerfTest & 2) ? GetSamplerFlags(i) & ~uint32_t(BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC) : GetSamplerFlags(i));
 						m_vSTAGEBOUND[i] = TRUE;
 					}
 				}
 			}
 
 			SetVertexUniforms(vLayout.m_dwShader);
-			SetPixelUniforms();
+			SetPixelUniforms( bFast, vFAST);
 
 			uint32_t dwFactor;
 			uint64_t dwState = GetState( nType, &dwFactor);
+
+			if( m_nPerfTest & 8 )
+				dwState &= ~(BGFX_STATE_BLEND_MASK | BGFX_STATE_BLEND_EQUATION_MASK);
+			if( m_nPerfTest & 1 )
+				bgfx::setScissor( 0, 0, 1, 1);
 
 			bgfx::setState( dwState, dwFactor);
 			bgfx::submit( bgfx::ViewId(m_nView), hProgram);
@@ -3649,13 +3979,125 @@ namespace
 			if(m_pDUMP)
 				DumpDraw( nType, vLayout);
 			m_nDraws++;
+			if(bFast)
+				m_nFastDraws++;
+			m_vPERFSHOW.m_vVIEWDRAW[m_nView & 0xFF]++;
 
 			return D3D_OK;
 		}
 
 		// Diagnostics: when %TEMP%\tclient-bgfx-dump.flag exists, the next frame's draw calls
 		// are written to %TEMP%\tclient-bgfx-dump.txt (states, textures, screen rectangle).
-		void UpdateDump()
+		// Frame timings for the overlay. A frame is the time between two Presents; bgfx is
+		// the time spent in bgfx::frame (submitting to the driver), the game is the rest.
+		void UpdatePerf( int64_t nSubmit)
+		{
+			TPERFSHOW& v = m_vPERFSHOW;
+			int64_t nNow = bx::getHPCounter();
+			double fFreq = double(bx::getHPFrequency());
+
+			if(v.m_nLast)
+			{
+				double fFrame = double(nNow - v.m_nLast) * 1000.0 / fFreq;
+				const bgfx::Stats *pStats = bgfx::getStats();
+
+				v.m_fFrame += fFrame;
+				v.m_fMax = fFrame > v.m_fMax ? fFrame : v.m_fMax;
+				v.m_fSubmit += double(nNow - nSubmit) * 1000.0 / fFreq;
+				if( pStats->gpuTimerFreq > 0 && pStats->gpuTimeEnd > pStats->gpuTimeBegin )
+					v.m_fGPU += double(pStats->gpuTimeEnd - pStats->gpuTimeBegin) * 1000.0 / double(pStats->gpuTimerFreq);
+				v.m_qwUpload += g_vPERF.m_nTexUpload;
+				v.m_qwCreate += g_vPERF.m_nBufCreate;
+				v.m_qwTransient += g_vPERF.m_qwTransient;
+				v.m_qwUpdate += g_vPERF.m_qwUpdate;
+
+				if( pStats->gpuTimerFreq > 0 )
+					for( uint16_t i=0; i<pStats->numViews; i++)
+					{
+						const bgfx::ViewStats& vVIEW = pStats->viewStats[i];
+
+						if( vVIEW.gpuTimeEnd > vVIEW.gpuTimeBegin )
+							v.m_vVIEWGPU[vVIEW.view & 0xFF] += double(vVIEW.gpuTimeEnd - vVIEW.gpuTimeBegin) * 1000.0 / double(pStats->gpuTimerFreq);
+					}
+				v.m_nFrames++;
+			}
+			else
+				v.m_nStart = nNow;
+
+			v.m_nLast = nNow;
+			g_vPERF.m_nTexUpload = 0;
+			g_vPERF.m_nBufCreate = 0;
+			g_vPERF.m_qwTransient = 0;
+			g_vPERF.m_qwUpdate = 0;
+
+			if( !v.m_nFrames || double(nNow - v.m_nStart) < fFreq / 2.0 )
+				return;
+
+			double fCount = double(v.m_nFrames);
+			const bgfx::Stats *pStats = bgfx::getStats();
+
+			sprintf_s( v.m_vLINE[0], "fps %.0f | frame %.2f ms (max %.1f) | game %.2f | bgfx %.2f | gpu %.2f",
+				fCount * 1000.0 / v.m_fFrame, v.m_fFrame / fCount, v.m_fMax,
+				(v.m_fFrame - v.m_fSubmit) / fCount, v.m_fSubmit / fCount, v.m_fGPU / fCount);
+			sprintf_s( v.m_vLINE[1], "per frame: tex uploads %.1f | buffers made %.1f | transient %.0f KB, updated %.0f KB | textures %u, %.0f MB, %u failed",
+				double(v.m_qwUpload) / fCount, double(v.m_qwCreate) / fCount, double(v.m_qwTransient) / fCount / 1024.0, double(v.m_qwUpdate) / fCount / 1024.0,
+				UINT(pStats->numTextures), double(pStats->textureMemoryUsed) / (1024.0 * 1024.0), g_vPERF.m_nTexFailed);
+
+			// The views costing the GPU most: view, ms, draws.
+			int vTOP[6] = { -1, -1, -1, -1, -1, -1};
+
+			for( int i=0; i<256; i++)
+				for( int j=0; j<6; j++)
+					if( vTOP[j] < 0 || v.m_vVIEWGPU[i] > v.m_vVIEWGPU[vTOP[j]] )
+					{
+						for( int k=5; k>j; k--)
+							vTOP[k] = vTOP[k - 1];
+						vTOP[j] = i;
+						break;
+					}
+
+			int nLength = sprintf_s( v.m_vLINE[2], "gpu by view:");
+			for( int j=0; j<6 && v.m_vVIEWGPU[vTOP[j]] > 0.0; j++)
+				nLength += sprintf_s( v.m_vLINE[2] + nLength, sizeof(v.m_vLINE[2]) - nLength, " | v%d %.2f ms %.0f",
+					vTOP[j], v.m_vVIEWGPU[vTOP[j]] / fCount, double(v.m_vVIEWDRAW[vTOP[j]]) / fCount);
+
+			// The CPU laps of the frame costing most (TPerfLap.h), in ms per frame.
+			TPERFLAPS& vLAPS = TPerfLaps();
+			int vLAP[8] = { -1, -1, -1, -1, -1, -1, -1, -1};
+			LARGE_INTEGER vLapFreq;
+
+			QueryPerformanceFrequency(&vLapFreq);
+
+			for( int i=0; i<vLAPS.m_nCount; i++)
+				for( int j=0; j<8; j++)
+					if( vLAP[j] < 0 || vLAPS.m_vTICKS[i] > vLAPS.m_vTICKS[vLAP[j]] )
+					{
+						for( int k=7; k>j; k--)
+							vLAP[k] = vLAP[k - 1];
+						vLAP[j] = i;
+						break;
+					}
+
+			nLength = sprintf_s( v.m_vLINE[3], "cpu:");
+			for( int j=0; j<8 && vLAP[j] >= 0; j++)
+				nLength += sprintf_s( v.m_vLINE[3] + nLength, sizeof(v.m_vLINE[3]) - nLength, " | %s %.2f",
+					vLAPS.m_vNAME[vLAP[j]], double(vLAPS.m_vTICKS[vLAP[j]]) * 1000.0 / double(vLapFreq.QuadPart) / fCount);
+			memset( vLAPS.m_vTICKS, 0, sizeof(vLAPS.m_vTICKS));
+
+			nLength = sprintf_s( v.m_vLINE[4], "per frame:");
+			for( int j=0; j<vLAPS.m_nCounts; j++)
+				nLength += sprintf_s( v.m_vLINE[4] + nLength, sizeof(v.m_vLINE[4]) - nLength, " | %s %.0f", vLAPS.m_vCOUNTNAME[j], double(vLAPS.m_vCOUNT[j]) / fCount);
+			memset( vLAPS.m_vCOUNT, 0, sizeof(vLAPS.m_vCOUNT));
+
+			memset( v.m_vVIEWGPU, 0, sizeof(v.m_vVIEWGPU));
+			memset( v.m_vVIEWDRAW, 0, sizeof(v.m_vVIEWDRAW));
+			v.m_nStart = nNow;
+			v.m_nFrames = 0;
+			v.m_fFrame = v.m_fMax = v.m_fSubmit = v.m_fGPU = 0.0;
+			v.m_qwUpload = v.m_qwCreate = v.m_qwTransient = v.m_qwUpdate = 0;
+		}
+
+		void UpdateDump( BOOL bPoll)
 		{
 			char vPATH[MAX_PATH];
 			char vFILE[MAX_PATH];
@@ -3673,10 +4115,13 @@ namespace
 			static int s_nCount = 0;
 			static DWORD s_dwNext = 0;
 
+			if( !bPoll && s_nLeft <= 0 )
+				return;
+
 			GetTempPathA( MAX_PATH, vPATH);
 			sprintf_s( vFILE, "%stclient-bgfx-dump.flag", vPATH);
 
-			if( TFileExists(vFILE) )
+			if( bPoll && TFileExists(vFILE) )
 			{
 				FILE *pFLAG = NULL;
 
@@ -3904,6 +4349,11 @@ namespace
 		D3DMATRIX m_vPROJ;
 		D3DMATRIX m_vTEXMAT[TEXTURE_STAGES];
 		UINT m_nWorldCount;
+		UINT m_nWorldSent;
+		BOOL m_bWorldDirty;
+		BOOL m_bCameraDirty;
+		BOOL m_bLightsDirty;
+		D3DXVECTOR3 m_vCAMERA;
 		std::map< DWORD, D3DLIGHT9> m_mapLIGHT;
 		std::map< DWORD, BOOL> m_mapLIGHTON;
 
@@ -3912,6 +4362,7 @@ namespace
 		std::vector<bgfx::ShaderHandle> m_vSHADER;
 		std::vector<bgfx::UniformHandle> m_vUNIFORM;
 		bgfx::ShaderHandle m_hFS;
+		bgfx::ShaderHandle m_hFSFAST;
 		bgfx::UniformHandle m_hSAMPLER[SHADER_STAGES];
 
 		TUNIFORM m_vWORLDU;
@@ -3923,6 +4374,7 @@ namespace
 		TUNIFORM m_vTEXXFORMU;
 		TUNIFORM m_vSTAGEU;
 		TUNIFORM m_vPSU;
+		TUNIFORM m_vFASTU;
 
 		UINT m_nView;
 		BOOL m_bViewOpen;
@@ -3931,8 +4383,30 @@ namespace
 		CTGLContextBGFX m_vGL;
 		BOOL m_bHighlight;
 		int m_nHighlight;
+		int m_nPerfTest = 0;
 		UINT m_nDraws;
+		UINT m_nFastDraws;
 		UINT m_nSkipped;
+		DWORD m_dwFlagPoll = 0;
+
+		// The overlay's frame timings, summed over half a second then shown as averages.
+		struct TPERFSHOW
+		{
+			int64_t m_nLast = 0;
+			int64_t m_nStart = 0;
+			UINT m_nFrames = 0;
+			double m_fFrame = 0.0;
+			double m_fMax = 0.0;
+			double m_fSubmit = 0.0;
+			double m_fGPU = 0.0;
+			UINT64 m_qwUpload = 0;
+			UINT64 m_qwCreate = 0;
+			UINT64 m_qwTransient = 0;
+			UINT64 m_qwUpdate = 0;
+			double m_vVIEWGPU[256] = {};
+			UINT64 m_vVIEWDRAW[256] = {};
+			char m_vLINE[5][200] = {};
+		} m_vPERFSHOW;
 	};
 }
 

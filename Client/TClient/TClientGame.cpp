@@ -1398,6 +1398,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 	CalcTournament(dwTickCount);
 	CalcFirecracker(dwTickCount);
 	CalcWaitingRevivalItem(dwTickCount);
+	TPERF_LAP("game ticks");
 
 	DWORD dwPCCount = DWORD(m_mapPLAYER.size());
 	DWORD dwTotal = dwTickCount;
@@ -1434,6 +1435,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 		m_pDevice,
 		m_pCamera,
 		dwTickCount);
+	TPERF_LAP("map visible");
 
 	while(dwTotal)
 	{
@@ -1442,6 +1444,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 		CalcSCENE(dwTick);
 		dwTotal -= dwTick;
 	}
+	TPERF_LAP("calc scene");
 
 	if(!m_vTPOINTER.IsDead())
 	{
@@ -1453,10 +1456,12 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 	CTachyonSFX::CalcBUF(
 		m_pDevice->m_pDevice,
 		dwTickCount);
-	
+	TPERF_LAP("sfx calc");
 
 	fWaterHeight = CalcCamera(dwTickCount);
+	TPERF_LAP("camera");
 	ResetVisibleOBJ(dwTickCount);
+	TPERF_LAP("obj visible");
 
 	CalcDynamicHelp(dwTickCount);
 	CalcTQuestTick(dwTickCount);
@@ -1484,6 +1489,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 
 	if(CheckGHOSTScene())
 		BeginGHOSTScene();
+	TPERF_LAP("ui ticks");
 
 	m_pDevice->m_pDevice->SetRenderState( D3DRS_AMBIENT, 0xFFFFFFFF);
 	DisableLIGHT();
@@ -1500,6 +1506,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 		SetMaterial(NULL);
 	}
 	CTachyonMesh::EndGlobalDraw(m_pDevice->m_pDevice);
+	TPERF_LAP("sky");
 
 	ResetTFOG(fWaterHeight > m_pCamera->m_vPosition.y ? TRUE : FALSE);
 	m_pDevice->m_pDevice->SetRenderState( D3DRS_AMBIENT, 0xFF000000);
@@ -1514,6 +1521,8 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 	CTDetailInfoManager::UpdateTick(dwTickCount);
 	UpdateNameDetailTick(dwTickCount);
 
+	TPERF_LAP("fog+target+info");
+
 	bIsEXTVisible = m_vMAP.IsEXTVisible(m_pCamera);
 	if( GetFarIMAGEOption() && bIsEXTVisible )
 	{
@@ -1522,6 +1531,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 		RenderTSILHOUETTE();
 		m_pDevice->m_pDevice->SetRenderState( D3DRS_AMBIENT, 0xFF000000);
 	}
+	TPERF_LAP("silhouettes");
 
 
 
@@ -1530,9 +1540,11 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 
 	RenderBSP();
 	DisableLIGHT();
+	TPERF_LAP("bsp");
 
 	if( bIsEXTVisible)
 		m_vMAP.Render(m_pDevice);
+	TPERF_LAP("terrain");
 
 	CTDynamicBillboard::ClearBUF();
 	SetAmbient(0,0,0);
@@ -1550,12 +1562,13 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 			RenderTOBJ( &m_vMAP.m_vDRAWBSP[i]->m_vTDRAW, dwTickCount, FALSE);
 			CTachyonMesh::m_bSoftwareVP = FALSE;
 		}
-
+	TPERF_LAP("bsp objects");
 
 	DisableLIGHT();
 	EnableLIGHT();
 
 	RenderTOBJ( &m_vMAP.m_vTDRAW, dwTickCount, m_bDrawGROUND);
+	TPERF_LAP("objects");
 	CTDynamicBillboard::UpdateBUF(
 		m_pDevice,
 		m_pCamera);
@@ -1585,16 +1598,19 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 
 	RenderTSLASH();
 	CTachyonMesh::EndGlobalDraw(m_pDevice->m_pDevice);
+	TPERF_LAP("water+slash");
 
 	CTachyonSFX::RenderBUF(
 		m_pDevice,
 		m_pCamera,
 		CTClientObjBase::GetCullDIST() / 2.0f);
+	TPERF_LAP("sfx render");
 
 	m_pDevice->m_pDevice->SetRenderState( D3DRS_FOGENABLE, FALSE);
 
 	if(!m_vTSCENE_PLAYER.IsRunning())
 		RenderTTEXT(bIsEXTVisible);
+	TPERF_LAP("names");
 	DisableLIGHT();
 	RenderTNUMBER();
 
@@ -1610,6 +1626,8 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 	RenderTCMDDIR();
 
 	m_vTSCENE_PLAYER.Render(this);
+	TPERF_LAP("numbers+misc");
+
 	if(m_bShowUI)
 	{
 		if( CTNationOption::JAPAN_IME || CTNationOption::TAIWAN_IME )
@@ -1626,6 +1644,7 @@ HRESULT CTClientGame::Render( DWORD dwTickCount)
 
 	if( SUCCEEDED(hr) && m_vDRAG.m_pIMAGE )
 		hr = m_vDRAG.m_pIMAGE->Render(dwTickCount);
+	TPERF_LAP("ui render");
 
 	CTClientGuildMark::MReset();
 	return hr;

@@ -8,7 +8,13 @@
 #include <bgfx_shader.sh>
 
 // World matrices of the blend palette, 3 rows each (the last column is 0 0 0 1).
+// Only blended vertices read past world matrix 0: the others keep a small constant
+// buffer, which D3D11 uploads whole at each draw.
+#if POS_B4
 #define MAX_WORLD 256
+#else
+#define MAX_WORLD 1
+#endif
 uniform vec4 u_tWorld[MAX_WORLD * 3];
 uniform vec4 u_tViewProj[4];
 uniform vec4 u_tView[4];

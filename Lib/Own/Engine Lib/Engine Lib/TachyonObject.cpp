@@ -1674,6 +1674,8 @@ void CTachyonObject::RenderSILHOUETTE( CD3DDevice *pDevice, CD3DCamera *pCamera,
 
 void CTachyonObject::Render(CD3DDevice *pDevice, CD3DCamera *pCamera, BYTE bNoBlend)
 {
+	TPERF_COUNT( "renders", 1);
+
 	static DWORD vCOLOROP[PS_COUNT] = {
 		D3DTOP_DISABLE,						// PS_STAGE1
 		D3DTOP_MODULATE,					// PS_MODULATE
