@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef _WIN32
+
 
 class CTNICEventSink : public IWbemObjectSink
 {
@@ -35,3 +37,31 @@ public:
 	CTNICEventSink();
 	~CTNICEventSink();
 };
+
+#else
+
+// The network card events come from WMI: on the other systems the sink never fires.
+struct IWbemClassObject;
+
+class CTNICEventSink
+{
+protected:
+	virtual void OnMediaDisconnect( IWbemClassObject *pObj) {}
+
+public:
+	void ReleaseTEVENT() {}
+
+	BYTE InitTEVENT(
+		CString& strIP,
+		int nTimer) { return FALSE; }
+
+	BYTE GetMACAddress(
+		LPBYTE pMACAddress,
+		CString& strIP) { return FALSE; }
+
+public:
+	CTNICEventSink() {}
+	virtual ~CTNICEventSink() {}
+};
+
+#endif

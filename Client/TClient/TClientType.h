@@ -23,7 +23,9 @@
 #define MODIFY_TT
 
 #define MODIFY_GUILD
+#ifdef _WIN32
 #define KEYHOOK_CTRLALTDEL		// Ctrl + Alt + Del 키 후킹처리.
+#endif
 //#define ADD_SKYGARDEN
 //#define SKYGARDEN
 

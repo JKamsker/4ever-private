@@ -163,11 +163,17 @@ CGuildSkillsDlg::CGuildSkillsDlg(TComponent *pParent, FRAMEDESC_SHAREDPTR pDesc)
 		m_Level[i]->m_strText = "0/10";
 	}
 
+	// The kids to remove are listed first: removing one invalidates the list's iterator.
+	std::vector<TComponent *> vREMOVE;
+
 	for (auto Component : m_kids)
 	{
 		if (Component->m_pDESC.lock()->m_vCOMP.m_vImageID[0] == 926 || Component->m_pDESC.lock()->m_vCOMP.m_vImageID[0] == 11699 || Component->m_pDESC.lock()->m_vCOMP.m_vImageID[0] == 382 || (Component->m_pDESC.lock()->m_vCOMP.m_bType == 6 && !Component->m_pDESC.lock()->m_vCOMP.m_strText.IsEmpty()))
-			RemoveKid(Component);
+			vREMOVE.push_back(Component);
 	}
+
+	for (auto Component : vREMOVE)
+		RemoveKid(Component);
 
 	m_MyPointBar = (TGauge*)FindKid(28297);
 	m_GuildPointBar = (TGauge*)FindKid(28295);

@@ -1,6 +1,7 @@
 #pragma once
 
 
+#ifdef _WIN32
 //!
 class CTClientNICEventSink : public CTNICEventSink
 {
@@ -42,3 +43,16 @@ public :
 	CTClientNICEventSink();
 	virtual ~CTClientNICEventSink();
 };
+
+#else
+
+// The network card events come from WMI: on the other systems the sink never fires.
+class CTClientNICEventSink : public CTNICEventSink
+{
+public :
+
+	BOOL			InitTEVENT( CTClientWnd* pWnd, CString& strIP, int nTimer ) { return FALSE; }
+	void			ReleaseTEVENT() {}
+	BOOL			UpdateService() { return FALSE; }
+};
+#endif

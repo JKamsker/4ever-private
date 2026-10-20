@@ -1,6 +1,7 @@
-# Settings shared by every client target. They mirror the Release|Win32 configuration of the
-# .vcxproj files (MBCS, /MT, CP949 execution charset), so the CMake build produces
-# the same code as the MSBuild one.
+# Settings shared by every client target. On Windows they mirror the Release|Win32 configuration
+# of the .vcxproj files (MBCS, /MT, CP949 execution charset), so the CMake build produces the same
+# code as the MSBuild one. On Linux the client builds with clang and libc++, bgfx only, and takes
+# the Windows declarations it still uses from the engine's compat headers (Engine Lib/Linux).
 
 set(TCLIENT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../..")
 cmake_path(NORMAL_PATH TCLIENT_ROOT)
@@ -18,61 +19,15 @@ endif()
 
 # No MFC: TAfx.h (Engine Lib) gives its core classes, on top of ATL's CString/CRect/CTime.
 
-# /MT everywhere (RuntimeLibrary=MultiThreaded).
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
-# With Ninja, CMake scans .rc dependencies by running the C compiler with the RC flags, and
-# clang-cl rejects rc-only options such as /l0x0412. Let rc.exe alone see them.
-set(CMAKE_NINJA_CMCLDEPS_RC OFF)
-
-# PDBs for every configuration (DebugInformationFormat=ProgramDatabase).
-set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase")
-
-# Replace the CMake defaults: no implicit WIN32/_WINDOWS/NDEBUG, every target states its own
-# defines like the .vcxproj does.
-set(CMAKE_CXX_FLAGS "/EHsc")
-set(CMAKE_C_FLAGS "")
-set(CMAKE_CXX_FLAGS_RELEASE "/O2")
-set(CMAKE_C_FLAGS_RELEASE "/O2")
-set(CMAKE_CXX_FLAGS_DEBUG "/Od /RTC1")
-set(CMAKE_C_FLAGS_DEBUG "/Od /RTC1")
-
 add_library(tclient_options INTERFACE)
 target_compile_definitions(tclient_options INTERFACE _MBCS TCLIENT_NO_MFC)
-target_compile_options(tclient_options INTERFACE
-    /source-charset:utf-8
-    /W3
-    /GF
-    /Oy-
-    /Zc:inline
-    /Zc:wchar_t
-    /Zc:forScope
-    /fp:precise
-)
-# Narrow string literals are CP949 for MSVC. clang-cl only supports UTF-8, so the few non-ASCII
-# literals that reach the game are written as CP949 \x escapes (same bytes with both compilers);
-# only TRACE/ASSERT texts and comments are left as UTF-8.
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(tclient_options INTERFACE /execution-charset:.949)
-else()
-    # -ferror-limit=0: report every error of a file, not only the first 20.
-    target_compile_options(tclient_options INTERFACE /execution-charset:utf-8 -ferror-limit=0)
-
-    # A 64-bit audit build: warns on every implicit 64 to 32-bit narrowing (very verbose).
-    option(TCLIENT_WARN_SHORTEN "Warn on implicit 64 to 32-bit conversions (clang)" OFF)
-    if(TCLIENT_WARN_SHORTEN)
-        target_compile_options(tclient_options INTERFACE -Wshorten-64-to-32)
-    endif()
-endif()
-
-# Ninja runs one compiler per file; MSBuild needs /MP to compile files in parallel.
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    target_compile_options(tclient_options INTERFACE /MP)
-endif()
 
 # bgfx only, without Direct3D 9 and the DirectX SDK: the engine takes the D3D9 types from its own
-# TD3D9Types.h, as the Linux build does.
+# TD3D9Types.h. Always so on Linux.
 option(TCLIENT_NO_D3D9 "Build without Direct3D 9 and the DirectX SDK (bgfx renderer only)" OFF)
+if(NOT WIN32)
+    set(TCLIENT_NO_D3D9 ON CACHE BOOL "" FORCE)
+endif()
 if(TCLIENT_NO_D3D9)
     target_compile_definitions(tclient_options INTERFACE TCLIENT_NO_D3D9)
     set(_tclient_dxsdk_include "")
@@ -80,18 +35,98 @@ else()
     set(_tclient_dxsdk_include "${TCLIENT_DXSDK}/Include")
 endif()
 
-# Old DirectX SDK headers (d3dx9, dsound, ...). They must come AFTER the Windows SDK headers,
-# whose newer dxgi/d3d headers they would otherwise shadow (MSBuild: IncludePath=$(IncludePath);DX).
 add_library(tclient_dxsdk INTERFACE)
-if(NOT TCLIENT_NO_D3D9)
-    target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/${TCLIENT_ARCH}")
-endif()
-if(CMAKE_GENERATOR MATCHES "Visual Studio")
-    set(CMAKE_VS_SDK_INCLUDE_DIRECTORIES "$(VC_IncludePath);$(WindowsSDK_IncludePath);${_tclient_dxsdk_include}")
+
+if(WIN32)
+    # The Windows defines the .vcxproj files state, and their /GS-.
+    set(TCLIENT_WIN32_DEFS WIN32 _WINDOWS)
+    set(TCLIENT_NO_GS /GS-)
+
+    # /MT everywhere (RuntimeLibrary=MultiThreaded).
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+    # With Ninja, CMake scans .rc dependencies by running the C compiler with the RC flags, and
+    # clang-cl rejects rc-only options such as /l0x0412. Let rc.exe alone see them.
+    set(CMAKE_NINJA_CMCLDEPS_RC OFF)
+
+    # PDBs for every configuration (DebugInformationFormat=ProgramDatabase).
+    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase")
+
+    # Replace the CMake defaults: no implicit WIN32/_WINDOWS/NDEBUG, every target states its own
+    # defines like the .vcxproj does.
+    set(CMAKE_CXX_FLAGS "/EHsc")
+    set(CMAKE_C_FLAGS "")
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2")
+    set(CMAKE_C_FLAGS_RELEASE "/O2")
+    set(CMAKE_CXX_FLAGS_DEBUG "/Od /RTC1")
+    set(CMAKE_C_FLAGS_DEBUG "/Od /RTC1")
+
+    target_compile_options(tclient_options INTERFACE
+        /source-charset:utf-8
+        /W3
+        /GF
+        /Oy-
+        /Zc:inline
+        /Zc:wchar_t
+        /Zc:forScope
+        /fp:precise
+    )
+    # Narrow string literals are CP949 for MSVC. clang-cl only supports UTF-8, so the few
+    # non-ASCII literals that reach the game are written as CP949 \x escapes (same bytes with both
+    # compilers); only TRACE/ASSERT texts and comments are left as UTF-8.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        target_compile_options(tclient_options INTERFACE /execution-charset:.949)
+    else()
+        # -ferror-limit=0: report every error of a file, not only the first 20.
+        target_compile_options(tclient_options INTERFACE /execution-charset:utf-8 -ferror-limit=0)
+
+        # A 64-bit audit build: warns on every implicit 64 to 32-bit narrowing (very verbose).
+        option(TCLIENT_WARN_SHORTEN "Warn on implicit 64 to 32-bit conversions (clang)" OFF)
+        if(TCLIENT_WARN_SHORTEN)
+            target_compile_options(tclient_options INTERFACE -Wshorten-64-to-32)
+        endif()
+    endif()
+
+    # Ninja runs one compiler per file; MSBuild needs /MP to compile files in parallel.
+    if(CMAKE_GENERATOR MATCHES "Visual Studio")
+        target_compile_options(tclient_options INTERFACE /MP)
+    endif()
+
+    # Old DirectX SDK headers (d3dx9, dsound, ...). They must come AFTER the Windows SDK headers,
+    # whose newer dxgi/d3d headers they would otherwise shadow (MSBuild: IncludePath=$(IncludePath);DX).
+    if(NOT TCLIENT_NO_D3D9)
+        target_link_directories(tclient_dxsdk INTERFACE "${TCLIENT_DXSDK}/Lib/${TCLIENT_ARCH}")
+    endif()
+    if(CMAKE_GENERATOR MATCHES "Visual Studio")
+        set(CMAKE_VS_SDK_INCLUDE_DIRECTORIES "$(VC_IncludePath);$(WindowsSDK_IncludePath);${_tclient_dxsdk_include}")
+    else()
+        # Command-line /I paths are searched before the INCLUDE variable of the developer shell,
+        # so repeat the shell's directories first, then the DirectX SDK.
+        set(_tclient_env_include "$ENV{INCLUDE}")
+        list(FILTER _tclient_env_include EXCLUDE REGEX "^$")
+        target_include_directories(tclient_dxsdk SYSTEM INTERFACE ${_tclient_env_include} ${_tclient_dxsdk_include})
+    endif()
 else()
-    # Command-line /I paths are searched before the INCLUDE variable of the developer shell, so
-    # repeat the shell's directories first, then the DirectX SDK.
-    set(_tclient_env_include "$ENV{INCLUDE}")
-    list(FILTER _tclient_env_include EXCLUDE REGEX "^$")
-    target_include_directories(tclient_dxsdk SYSTEM INTERFACE ${_tclient_env_include} ${_tclient_dxsdk_include})
+    set(TCLIENT_WIN32_DEFS "")
+    set(TCLIENT_NO_GS "")
+
+    # The compat headers stand in for windows.h and the other Windows headers the sources include.
+    target_include_directories(tclient_options BEFORE INTERFACE "${TCLIENT_LIB_OWN}/Engine Lib/Engine Lib/Linux")
+    target_compile_options(tclient_options INTERFACE
+        # In every file, as windows.h is in every file of the Windows build (some take the CRT's
+        # functions from it without including it, like the generated TCML parser).
+        "SHELL:-include TWinCompat.h"
+        # The game's sources are UTF-8; their narrow strings are CP949 \x escapes, as for clang-cl.
+        -finput-charset=UTF-8
+        -fexec-charset=UTF-8
+        -fms-extensions
+        -fno-strict-aliasing
+        -ferror-limit=0
+        -Wno-everything
+    )
+    find_package(Threads REQUIRED)
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(tclient_options INTERFACE Threads::Threads ${CMAKE_DL_LIBS})
+    # The sources' #pragma comment(lib) name Windows libraries: the linker ignores them.
+    target_link_options(tclient_options INTERFACE "LINKER:--no-dependent-libraries" "LINKER:--error-limit=0")
 endif()

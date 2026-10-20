@@ -70,7 +70,11 @@ public:
 	void SetWindowText( LPCTSTR lpszText);
 	void GetWindowText( CString& strText) const;
 	int MessageBox( LPCTSTR lpszText, LPCTSTR lpszCaption = NULL, UINT nType = MB_OK) { return ShowMessageBox( lpszText, lpszCaption, nType, m_pSDL); }
+#ifdef _WIN32
 	HICON SetIcon( HICON hIcon, BOOL bBigIcon) { return (HICON) ::SendMessage( m_hWnd, WM_SETICON, bBigIcon ? ICON_BIG : ICON_SMALL, (LPARAM) hIcon); }
+#else
+	HICON SetIcon( HICON hIcon, BOOL bBigIcon) { return NULL; }
+#endif
 
 	// SW_HIDE, SW_SHOW, SW_SHOWNORMAL, SW_RESTORE, SW_MINIMIZE, SW_MAXIMIZE.
 	BOOL ShowWindow( int nCmdShow);
@@ -96,7 +100,11 @@ public:
 	void ScreenToClient( LPPOINT lpPoint) const;
 	void ScreenToClient( LPRECT lpRect) const;
 
+#ifdef _WIN32
 	BOOL ModifyStyle( DWORD dwRemove, DWORD dwAdd) { return ::SetWindowLongPtr( m_hWnd, GWL_STYLE, (::GetWindowLongPtr( m_hWnd, GWL_STYLE) & ~LONG_PTR(dwRemove)) | dwAdd) != 0; }
+#else
+	BOOL ModifyStyle( DWORD dwRemove, DWORD dwAdd) { return TRUE; }
+#endif
 
 	// To this window's WindowProc: now, or through the event queue (WM_QUIT quits).
 	LRESULT SendMessage( UINT message, WPARAM wParam = 0, LPARAM lParam = 0);
@@ -149,15 +157,20 @@ private:
 
 	LRESULT CallWindowProc( UINT message, WPARAM wParam, LPARAM lParam);
 
+#ifdef _WIN32
 	static LRESULT CALLBACK SubclassProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+#endif
 	static CTWindow *FromSDLWindow( SDL_Window *pSDL);
 
 public:
+	// The Win32 window, or on the other systems the SDL one (a handle that is only compared).
 	HWND m_hWnd;
 
 private:
 	SDL_Window *m_pSDL;
+#ifdef _WIN32
 	WNDPROC m_pSDLProc;
+#endif
 	DWORD m_dwButtons;
 	MSG m_vCURRENT;
 };

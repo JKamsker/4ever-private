@@ -44,7 +44,9 @@
 #include <deque>
 
 
+#ifdef _WIN32
 using namespace Gdiplus;
+#endif
 using namespace std;
 
 // Address of a temporary, valid until the end of the full expression: TTEMP(D3DXVECTOR3(...)).

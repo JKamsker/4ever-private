@@ -15,6 +15,11 @@ public:
 	static HWND m_hWND;
 	static SDL_Window *m_pWINDOW;
 
+	// Where the pointer cannot be warped (Wayland), SetCursorPos locks it in relative mode
+	// until the buttons are released, and the engine moves this cursor instead.
+	static BOOL m_bWarpLock;
+	static CPoint m_vWarpPos;
+
 public:
 	// After SDL_Init: the scan code tables.
 	static void InitPlatform();
@@ -33,6 +38,10 @@ public:
 
 	static CPoint GetCursorPos();
 	static void SetCursorPos( CPoint point);
+
+	// The locked cursor (m_bWarpLock): moved by a motion's delta, released with the buttons.
+	static CPoint MoveWarpPos( float fRelX, float fRelY);
+	static void EndWarpLock();
 	static void SetCapture( BOOL bCapture);
 
 	// Like Win32: ShowCursor counts, SetCursor(NULL) hides the image.

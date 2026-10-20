@@ -1,5 +1,8 @@
 #include "StdAfx.h"
 
+// The network card events come from WMI: Windows only (TNICEventSink.h has the other systems' stub).
+#ifdef _WIN32
+
 
 CTNICEventSink::CTNICEventSink()
 {
@@ -267,3 +270,5 @@ BYTE CTNICEventSink::GetMACAddress( LPBYTE pMACAddress,
 
 	return bRESULT;
 }
+
+#endif

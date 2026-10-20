@@ -37,6 +37,7 @@
 #include <fcntl.h>
 
 #include <assert.h>
+#include <vector>
 
 #include "TString.h"
 #include "TTypes.h"
@@ -1199,7 +1200,8 @@ inline ULONGLONG AfxReadStringLength( CArchive& ar, int& nCharSize)
 	ar >> wLength;
 	if( wLength == 0xFFFE )
 	{
-		nCharSize = sizeof(wchar_t);
+		// MFC's wide strings are UTF-16, 2 bytes a character (wchar_t is 4 on Linux).
+		nCharSize = 2;
 
 		ar >> bLength;
 		if( bLength < 0xFF )
@@ -1259,12 +1261,18 @@ inline CArchive& operator >> ( CArchive& ar, CString& str)
 	if( nLength > 0x7FFFFFFF / sizeof(wchar_t) )
 		AfxThrowArchiveException( CArchiveException::genericException);
 
-	if( nCharSize == sizeof(wchar_t) )
+	if( nCharSize == 2 )
 	{
+		std::vector<WORD> vUTF16( size_t(nLength) + 1, 0);
 		CStringW strW;
 
-		ar.EnsureRead( strW.GetBufferSetLength(int(nLength)), UINT(nLength * sizeof(wchar_t)));
-		strW.ReleaseBuffer(int(nLength));
+		if(nLength)
+			ar.EnsureRead( &vUTF16[0], UINT(nLength * 2));
+
+		// UTF-16 units to wide characters (the same where wchar_t is 2 bytes).
+		for( ULONGLONG i=0; i<nLength; i++)
+			strW.AppendChar(wchar_t(vUTF16[size_t(i)]));
+
 		str = strW;
 	}
 	else

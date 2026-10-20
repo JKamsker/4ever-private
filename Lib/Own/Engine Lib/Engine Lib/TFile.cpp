@@ -213,6 +213,22 @@ void CTPath::ClearCache()
 }
 
 
+#ifndef _WIN32
+// The Win32 file functions of the compat header (Linux/TWinCompat.h) open their paths through
+// this. A few results per thread stay valid, for the calls that take two paths.
+const char *TWinCompatPath( const char *pszPath)
+{
+	static thread_local CString vRING[4];
+	static thread_local int nNext = 0;
+
+	CString& strPath = vRING[nNext++ & 3];
+	strPath = CTPath::Resolve(pszPath);
+
+	return strPath;
+}
+#endif
+
+
 //////////////////////////////////////////////////////////////////////
 // Files
 

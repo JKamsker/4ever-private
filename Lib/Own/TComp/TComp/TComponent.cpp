@@ -803,6 +803,13 @@ TComponent * TComponent::GetNextKid(TCOMP_LIST::const_iterator & it) const
 	return pKid;
 }
 
+// The same with the iterator of a non-const list (MSVC's STL converted it).
+TComponent * TComponent::GetNextKid(TCOMP_LIST::iterator & it) const
+{
+	TComponent *pKid = *it++;
+	return pKid;
+}
+
 bool TComponent::EndOfKids(TCOMP_LIST::const_iterator it) const
 {
 	return (it == m_kids.end());

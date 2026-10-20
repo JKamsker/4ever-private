@@ -188,7 +188,7 @@ int CTClientGame::OnCS_ADDCONNECT_ACK( CTachyonSession *pSession, CPacket *pPack
 		ZeroMemory( &vTarget, sizeof(SOCKADDR_IN) );
 
 		(*pPacket)
-			>> vTarget.sin_addr.S_un.S_addr
+			>> vTarget.sin_addr.s_addr
 			>> vTarget.sin_port
 			>> bSvrID;
 

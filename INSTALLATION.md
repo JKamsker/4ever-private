@@ -4,7 +4,7 @@ Get 4Dev running on one Windows PC in **4 steps**: install the tools, get the fi
 servers, build and launch the game.
 
 - The **servers** all run in **Docker**, so you don't build them yourself.
-- The **game client** is built on your machine with Visual Studio.
+- The **game client** is built on your machine: with Visual Studio on Windows, or with clang on Linux.
 
 ---
 
@@ -12,7 +12,7 @@ servers, build and launch the game.
 
 | Tool | Why you need it |
 |---|---|
-| **Windows 10/11 (x64)** | The game client is a Windows app. |
+| **Windows 10/11 (x64)** | Runs the servers (Docker) and the game client. The client also runs on Linux: see Step 4. |
 | **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** | Runs the database and every game server. |
 | **[Git](https://git-scm.com/) + [Git LFS](https://git-lfs.com/)** | Downloads the project, including the big game files. |
 | **Visual Studio 2022 or newer** (Community or Build Tools) with **Desktop development with C++** | Builds the game client. CMake and Ninja come with it. |
@@ -93,6 +93,10 @@ a few bytes:
 
 ## Step 4 — Build and launch the game
 
+The game client runs on **Windows** and on **Linux**. Pick your section.
+
+### Windows
+
 1. **Build the client** (from the project root):
 
    ```powershell
@@ -113,6 +117,60 @@ a few bytes:
 3. **Log in** with the test account: **`test`** / **`test123`** 🎉
 
 > The window size is set in `Game\config.ini` (`ScreenX` / `ScreenY`, 1600×1200 by default).
+
+### Linux
+
+Tested on Ubuntu 24.04 (and in WSL). Debian 13 works the same way; on Debian 12, add the
+[apt.llvm.org](https://apt.llvm.org/) repository first, since its own clang is too old.
+
+1. **Install the build tools** (clang 18, CMake, Ninja and the SDL3 headers). This uses `sudo`:
+
+   ```bash
+   ./Client/build-linux.sh --deps
+   ```
+
+2. **Build the client:**
+
+   ```bash
+   ./Client/build-linux.sh
+   ```
+
+   The game is built in `~/build/tclient-linux/bin/TClient`. To use another clang version, prefix
+   both commands with it, e.g. `LLVM=19 ./Client/build-linux.sh`.
+
+3. **Launch it** from the `Game` folder, with a `config.ini` next to the binary:
+
+   ```bash
+   cp Game/config.ini ~/build/tclient-linux/bin/
+   cd Game
+   ~/build/tclient-linux/bin/TClient 127.0.0.1 4816
+   ```
+
+   Use the IP of the PC running the servers if it's another machine.
+
+4. **Log in** with **`test`** / **`test123`** 🐧
+
+> In WSL the game runs on your GPU through Windows, and picks the right settings by itself. It is
+> slower than native Linux, and turning the camera with the mouse is limited.
+
+### Choosing the renderer (`BGFXRenderer`)
+
+The game draws through **bgfx**, which can talk to your graphics card in several ways. You choose
+in `config.ini`, in the `[Settings]` section:
+
+```ini
+BGFXRenderer=Auto
+```
+
+| Value | What it uses |
+|---|---|
+| `Auto` (default) | The best one for your system. Keep this unless something looks wrong. |
+| `D3D11` / `D3D12` | Direct3D (Windows only). |
+| `Vulkan` | Vulkan (Windows and Linux). |
+| `OpenGL` | OpenGL 4.3 or newer (Windows and Linux; used in WSL). |
+
+If the value isn't available on your PC, the game falls back to `Auto`. For a quick test without
+touching the file, set the `TCLIENT_RENDERER` environment variable to one of these values.
 
 ---
 

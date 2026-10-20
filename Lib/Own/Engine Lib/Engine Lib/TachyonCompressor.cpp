@@ -27,7 +27,9 @@ void CTachyonCompressor::Compress()
 	m_dwCompressedSize = nSize + nSize/10 + 12;
 	m_pCompressedData = new BYTE[m_dwCompressedSize];
 
-	compress2(m_pCompressedData,&m_dwCompressedSize, &m_vData[0],nSize, 9);
+	uLongf nCompressed = m_dwCompressedSize;
+	compress2( m_pCompressedData, &nCompressed, &m_vData[0], nSize, 9);
+	m_dwCompressedSize = DWORD(nCompressed);
 }
 // --------------------------------------------------------------
 void CTachyonCompressor::Release()
@@ -80,7 +82,9 @@ void CTachyonUncompressor::Uncompress(LPCVOID pCompressedData, DWORD dwCompresse
 
 	m_dwSize = dwOriginalSize;
 	m_pData = new BYTE[dwOriginalSize];
-	uncompress(m_pData, &m_dwSize, (const Bytef*)pCompressedData,dwCompressedSize);
+	uLongf nSize = m_dwSize;
+	uncompress( m_pData, &nSize, (const Bytef*)pCompressedData, dwCompressedSize);
+	m_dwSize = DWORD(nSize);
 }
 // --------------------------------------------------------------
 void CTachyonUncompressor::Release()

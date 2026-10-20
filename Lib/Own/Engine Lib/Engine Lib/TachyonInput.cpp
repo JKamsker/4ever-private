@@ -179,6 +179,15 @@ UINT CTachyonInput::GetVirtualKey( int nScancode, int nKeycode, int nMod)
 
 HWND CTachyonInput::m_hWND = NULL;
 SDL_Window *CTachyonInput::m_pWINDOW = NULL;
+BOOL CTachyonInput::m_bWarpLock = FALSE;
+CPoint CTachyonInput::m_vWarpPos( 0, 0);
+
+// Wayland lets no client move the pointer, nor tells it where its window is.
+static BOOL IsWaylandVideo()
+{
+	const char *pDRIVER = SDL_GetCurrentVideoDriver();
+	return pDRIVER && !strcmp( pDRIVER, "wayland") ? TRUE : FALSE;
+}
 
 HTCURSOR CTachyonInput::m_hCURSOR = NULL;
 int CTachyonInput::m_nShowCursor = 0;
@@ -270,6 +279,15 @@ CPoint CTachyonInput::GetCursorPos()
 	int nX = 0;
 	int nY = 0;
 
+	if(m_bWarpLock)
+		return m_vWarpPos;
+
+	if(IsWaylandVideo())
+	{
+		SDL_GetMouseState( &fX, &fY);
+		return CPoint( int(fX), int(fY));
+	}
+
 	// Outside the window too, like the Win32 call.
 	SDL_GetGlobalMouseState( &fX, &fY);
 	if(m_pWINDOW)
@@ -280,8 +298,49 @@ CPoint CTachyonInput::GetCursorPos()
 
 void CTachyonInput::SetCursorPos( CPoint point)
 {
-	if(m_pWINDOW)
+	if(!m_pWINDOW)
+		return;
+
+	if(!IsWaylandVideo())
+	{
 		SDL_WarpMouseInWindow( m_pWINDOW, float(point.x), float(point.y));
+		return;
+	}
+
+	// The camera and the drags warp the cursor back while a button is held.
+	if( !m_bWarpLock && SDL_GetMouseState( NULL, NULL) && SDL_SetWindowRelativeMouseMode( m_pWINDOW, true) )
+		m_bWarpLock = TRUE;
+
+	if(m_bWarpLock)
+		m_vWarpPos = point;
+}
+
+CPoint CTachyonInput::MoveWarpPos( float fRelX, float fRelY)
+{
+	static float s_fRestX = 0.0f;
+	static float s_fRestY = 0.0f;
+
+	s_fRestX += fRelX;
+	s_fRestY += fRelY;
+
+	int nX = int(s_fRestX);
+	int nY = int(s_fRestY);
+
+	s_fRestX -= float(nX);
+	s_fRestY -= float(nY);
+	m_vWarpPos.Offset( nX, nY);
+
+	return m_vWarpPos;
+}
+
+void CTachyonInput::EndWarpLock()
+{
+	if(!m_bWarpLock)
+		return;
+
+	m_bWarpLock = FALSE;
+	if(m_pWINDOW)
+		SDL_SetWindowRelativeMouseMode( m_pWINDOW, false);
 }
 
 void CTachyonInput::SetCapture( BOOL bCapture)
@@ -666,6 +725,9 @@ BOOL CTachyonInput::IsImeNativeMode()
 {
 	BOOL bResult = FALSE;
 
+#ifndef _WIN32
+	return FALSE;
+#else
 	if(!m_hWND)
 		return FALSE;
 
@@ -678,10 +740,12 @@ BOOL CTachyonInput::IsImeNativeMode()
 	::ImmReleaseContext( m_hWND, hIMC);
 
 	return bResult;
+#endif
 }
 
 void CTachyonInput::SetImeNativeMode( BOOL bNative)
 {
+#ifdef _WIN32
 	if(!m_hWND)
 		return;
 
@@ -698,4 +762,5 @@ void CTachyonInput::SetImeNativeMode( BOOL bNative)
 		::ImmSetConversionStatus( hIMC, dwConv, dwSent);
 	}
 	::ImmReleaseContext( m_hWND, hIMC);
+#endif
 }

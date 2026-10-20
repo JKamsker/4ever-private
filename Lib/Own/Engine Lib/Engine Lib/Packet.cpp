@@ -327,6 +327,7 @@ BOOL CPacket::ReadBytes( DWORD dwReadBytes)
 	return TRUE;
 }
 
+#ifdef _WIN32
 BOOL CPacket::Receive( HANDLE sock, LPOVERLAPPED lpovRecv)
 {
 	DWORD dwRecvBytes;
@@ -342,6 +343,7 @@ BOOL CPacket::Receive( HANDLE sock, LPOVERLAPPED lpovRecv)
 		&dwRecvBytes,
 		lpovRecv);
 }
+#endif
 
 CPacket& CPacket::operator << ( DWORD param)
 {
@@ -371,9 +373,12 @@ CPacket& CPacket::operator << ( short param)
 	return *this;
 }
 
+// A long is 32 bits on the wire, as on Windows (it is 64 bits on Linux).
 CPacket& CPacket::operator << ( long param)
 {
-	Write( (LPVOID) &param, sizeof(long));
+	INT32 nValue = INT32(param);
+
+	Write( (LPVOID) &nValue, sizeof(INT32));
 	return *this;
 }
 
@@ -452,7 +457,11 @@ CPacket& CPacket::operator >> ( short& param)
 
 CPacket& CPacket::operator >> ( long& param)
 {
-	Read( (LPVOID) &param, sizeof(long));
+	INT32 nValue = 0;
+
+	Read( (LPVOID) &nValue, sizeof(INT32));
+	param = nValue;
+
 	return *this;
 }
 

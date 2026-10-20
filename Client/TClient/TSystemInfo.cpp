@@ -1,4 +1,7 @@
 #include "Stdafx.h"
+
+// The system information comes from WMI: Windows only.
+#ifdef _WIN32
 #include "TSystemInfo.h"
 
 // =====================================================================
@@ -206,3 +209,5 @@ void CTSystemInfo::InitDisplayInfo(IDxDiagContainer* pDxDiagRoot)
         pDxDiagDevicesInfo->Release();
     }
 }
+
+#endif

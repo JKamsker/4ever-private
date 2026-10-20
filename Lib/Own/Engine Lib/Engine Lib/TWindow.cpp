@@ -41,6 +41,7 @@ static UINT GetMouseFlags( DWORD dwButtons)
 	return nFlags;
 }
 
+#ifdef _WIN32
 // The engine's own posted messages go through SDL's queue, in order with the other events.
 static bool SDLCALL WindowsMessageHook( void *pUserData, MSG *pMSG)
 {
@@ -97,13 +98,16 @@ static BOOL IsWindowMessage( UINT message)
 
 	return message >= WM_USER && message < 0x8000;
 }
+#endif
 
 
 CTWindow::CTWindow()
 {
 	m_hWnd = NULL;
 	m_pSDL = NULL;
+#ifdef _WIN32
 	m_pSDLProc = NULL;
+#endif
 	m_dwButtons = 0;
 
 	ZeroMemory( &m_vCURRENT, sizeof(MSG));
@@ -128,14 +132,18 @@ BOOL CTWindow::InitPlatform()
 
 	CTachyonInput::InitPlatform();
 	s_dwMSGEVENT = SDL_RegisterEvents(1);
+#ifdef _WIN32
 	SDL_SetWindowsMessageHook( WindowsMessageHook, NULL);
+#endif
 
 	return TRUE;
 }
 
 void CTWindow::QuitPlatform()
 {
+#ifdef _WIN32
 	SDL_SetWindowsMessageHook( NULL, NULL);
+#endif
 	SDL_Quit();
 }
 
@@ -301,10 +309,14 @@ BOOL CTWindow::Create( LPCTSTR lpszTitle, int nWidth, int nHeight, BOOL bCaption
 		return FALSE;
 
 	SDL_SetPointerProperty( SDL_GetWindowProperties(m_pSDL), TWINDOW_PROP, this);
+#ifdef _WIN32
 	m_hWnd = (HWND) SDL_GetPointerProperty( SDL_GetWindowProperties(m_pSDL), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
 
 	::SetPropW( m_hWnd, TWINDOW_PROPW, this);
 	m_pSDLProc = (WNDPROC) ::SetWindowLongPtrW( m_hWnd, GWLP_WNDPROC, (LONG_PTR) SubclassProc);
+#else
+	m_hWnd = (HWND) m_pSDL;
+#endif
 
 	// SDL keeps the IME off until text input starts.
 	SDL_StartTextInput(m_pSDL);
@@ -511,13 +523,15 @@ BOOL CTWindow::DestroyWindow()
 	ZeroMemory( &m_vCURRENT, sizeof(MSG));
 	OnDestroy();
 
+#ifdef _WIN32
 	::SetWindowLongPtrW( m_hWnd, GWLP_WNDPROC, (LONG_PTR) m_pSDLProc);
 	::RemovePropW( m_hWnd, TWINDOW_PROPW);
+	m_pSDLProc = NULL;
+#endif
 
 	SDL_StopTextInput(m_pSDL);
 	SDL_DestroyWindow(m_pSDL);
 
-	m_pSDLProc = NULL;
 	m_pSDL = NULL;
 	OnNcDestroy();
 
@@ -527,6 +541,7 @@ BOOL CTWindow::DestroyWindow()
 	return TRUE;
 }
 
+#ifdef _WIN32
 LRESULT CALLBACK CTWindow::SubclassProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	CTWindow *pWnd = (CTWindow *) ::GetPropW( hWnd, TWINDOW_PROPW);
@@ -539,6 +554,7 @@ LRESULT CALLBACK CTWindow::SubclassProc( HWND hWnd, UINT message, WPARAM wParam,
 
 	return ::CallWindowProcW( pWnd->m_pSDLProc, hWnd, message, wParam, lParam);
 }
+#endif
 
 LRESULT CTWindow::CallWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -563,6 +579,10 @@ LRESULT CTWindow::Default()
 
 LRESULT CTWindow::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 {
+#ifndef _WIN32
+	// No Win32 window behind: nothing more to do with the message.
+	return 0;
+#else
 	switch(message)
 	{
 	case WM_IME_NOTIFY				:
@@ -571,6 +591,7 @@ LRESULT CTWindow::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 	}
 
 	return ::DefWindowProcW( m_hWnd, message, wParam, lParam);
+#endif
 }
 
 LRESULT CTWindow::WindowProc( UINT message, WPARAM wParam, LPARAM lParam)
@@ -748,8 +769,13 @@ void CTWindow::DispatchMouse( const SDL_Event& event)
 	// Like WM_SETCURSOR, before each mouse message: the handler picks the cursor image.
 	if( event.type == SDL_EVENT_MOUSE_MOTION )
 	{
+		CPoint point( int(event.motion.x), int(event.motion.y));
+
+		if(CTachyonInput::m_bWarpLock)
+			point = CTachyonInput::MoveWarpPos( event.motion.xrel, event.motion.yrel);
+
 		OnSetCursor( m_hWnd, HTCLIENT, WM_MOUSEMOVE);
-		OnMouseMove( GetMouseFlags(m_dwButtons), CPoint( int(event.motion.x), int(event.motion.y)));
+		OnMouseMove( GetMouseFlags(m_dwButtons), point);
 
 		return;
 	}
@@ -757,6 +783,9 @@ void CTWindow::DispatchMouse( const SDL_Event& event)
 	BOOL bDown = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
 	BOOL bDouble = bDown && event.button.clicks >= 2 && !(event.button.clicks & 1);
 	CPoint point( int(event.button.x), int(event.button.y));
+
+	if(CTachyonInput::m_bWarpLock)
+		point = CTachyonInput::m_vWarpPos;
 
 	if(bDown)
 		OnSetCursor( m_hWnd, HTCLIENT, event.button.button == SDL_BUTTON_LEFT ? WM_LBUTTONDOWN : event.button.button == SDL_BUTTON_RIGHT ? WM_RBUTTONDOWN : WM_MBUTTONDOWN);
@@ -800,4 +829,8 @@ void CTWindow::DispatchMouse( const SDL_Event& event)
 
 		break;
 	}
+
+	// The locked cursor (Wayland) ends with the last button.
+	if( !m_dwButtons )
+		CTachyonInput::EndWarpLock();
 }

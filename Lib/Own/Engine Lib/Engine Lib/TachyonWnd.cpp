@@ -37,6 +37,7 @@ CTachyonWnd::~CTachyonWnd()
 	FinishTachyonComponent();
 }
 
+#ifdef _WIN32
 BOOL CALLBACK CTachyonWnd::__Present( HWND hWnd, LPARAM lParam)
 {
 	CTachyonWnd *pMAIN = (CTachyonWnd *) lParam;
@@ -54,6 +55,7 @@ BOOL CALLBACK CTachyonWnd::__Present( HWND hWnd, LPARAM lParam)
 
 	return TRUE;
 }
+#endif
 
 BOOL CTachyonWnd::Create()
 {
@@ -180,9 +182,11 @@ BOOL CTachyonWnd::Present()
 	if(FAILED(m_Device.m_pDevice->Present( NULL, NULL, NULL, NULL)))
 		return FALSE;
 
+#ifdef _WIN32
 	if( m_Device.m_option.m_bWindowedMode && ::GetWindow( m_hWnd, GW_CHILD) &&
 		!EnumChildWindows( GetSafeHwnd(), __Present, (LPARAM) this))
 		return FALSE;
+#endif
 
 	return TRUE;
 }

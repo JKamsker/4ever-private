@@ -177,7 +177,9 @@ LPTEXTURESET CTClientCustomCloak::GetMantleTexture(
 				strURL.Format("http://90.180.197.162:81/cloaks/%d.png", wID);
 				CString strPath;
 				strPath.Format(".\\Data\\Cache\\%d", wID);
+#ifdef _WIN32
 				URLDownloadToFile(nullptr, strURL, strPath, 0, nullptr);
+#endif
 
 				if (pMainWnd->AddTCUSTOMCLOAKTEX(wID))
 				{

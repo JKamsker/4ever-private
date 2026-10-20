@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "HwidManager.h"
 #include <__Sha256.h>
+#ifdef _WIN32
 #include <__CpuInfo.h>
 #include <__MotherboardInfo.h>
 #include <__WindowsInfo.h>
+#endif
 
 std::string HwidManager::m_WinUserQueryResult;
 std::string HwidManager::m_WinDeviceQueryResult;
@@ -12,6 +14,41 @@ std::string HwidManager::m_CpuQueryResult;
 std::string HwidManager::m_MbQueryResult;
 
 
+#ifndef _WIN32
+// The first line of a file, empty when it can not be read.
+static std::string ReadFirstLine( const char *pszPath)
+{
+	char szLINE[512] = { 0 };
+	FILE *pFILE = fopen( pszPath, "r");
+
+	if(pFILE)
+	{
+		if(!fgets( szLINE, sizeof(szLINE), pFILE))
+			szLINE[0] = 0;
+
+		fclose(pFILE);
+	}
+
+	std::string strLINE(szLINE);
+	while( !strLINE.empty() && (strLINE.back() == '\n' || strLINE.back() == '\r') )
+		strLINE.pop_back();
+
+	return strLINE;
+}
+
+// The machine's identity on the other systems: its machine ID, its processors and its board.
+void HwidManager::Initialize()
+{
+	char szNAME[256] = { 0 };
+
+	m_CpuQueryResult = std::to_string(sysconf(_SC_NPROCESSORS_ONLN));
+	m_MbQueryResult = ReadFirstLine("/sys/class/dmi/id/board_name") + ReadFirstLine("/sys/class/dmi/id/board_vendor");
+	m_WinSerialQueryResult = ReadFirstLine("/etc/machine-id");
+
+	if(!gethostname( szNAME, sizeof(szNAME) - 1))
+		m_WinDeviceQueryResult = szNAME;
+}
+#else
 void HwidManager::Initialize()
 {
 #pragma region Query CPU Informations
@@ -57,6 +94,7 @@ void HwidManager::Initialize()
 	}
 #pragma endregion
 }
+#endif
 
 void HwidManager::GetHwid(HwidDataObject& hwidObject)
 {

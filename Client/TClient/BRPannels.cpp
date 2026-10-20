@@ -290,19 +290,19 @@ HRESULT CBRPannels::Render(DWORD dwTickCount)
 		else if (HPPercent < 0.30f)
 		{
 			m_pDanger[i]->m_strText = "!!!";
-			m_pDanger[i]->SetTextClr(Color::MakeARGB(255, bRed + 127, 0, 0));
+			m_pDanger[i]->SetTextClr(D3DCOLOR_ARGB(255, bRed + 127, 0, 0));
 			m_pDangerPH[i]->m_bEnable = TRUE;
 		}
 		else if (HPPercent < 0.50f)
 		{
 			m_pDanger[i]->m_strText = "!!";
-			m_pDanger[i]->SetTextClr(Color::MakeARGB(255, bRed + 127, 0, 0));
+			m_pDanger[i]->SetTextClr(D3DCOLOR_ARGB(255, bRed + 127, 0, 0));
 			m_pDangerPH[i]->m_bEnable = TRUE;
 		}
 		else if(HPPercent < 0.70f)
 		{
 			m_pDanger[i]->m_strText = "!";
-			m_pDanger[i]->SetTextClr(Color::MakeARGB(255, bRed + 127, 0, 0));
+			m_pDanger[i]->SetTextClr(D3DCOLOR_ARGB(255, bRed + 127, 0, 0));
 		}
 
 		if (!m_pGauge[i]->GetCurValue())

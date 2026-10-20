@@ -2,7 +2,10 @@
 # (TClient, Engine Lib, TChart, TCML, TComp, HwidLib). See BUILD-CMAKE.md.
 
 cmake_minimum_required(VERSION 3.25)
-project(TClient LANGUAGES C CXX RC)
+project(TClient LANGUAGES C CXX)
+if(WIN32)
+    enable_language(RC)
+endif()
 
 include(cmake/TClientCommon.cmake)
 
@@ -47,7 +50,10 @@ add_subdirectory("${TCLIENT_LIB_OWN}/TCML/TCML" TCML)
 add_subdirectory("${TCLIENT_LIB_OWN}/Engine Lib/Engine Lib" EngineLib)
 add_subdirectory("${TCLIENT_LIB_OWN}/TComp/TComp" TComp)
 add_subdirectory("${TCLIENT_LIB_OWN}/TChart/TChart" TChart)
-add_subdirectory("${TCLIENT_LIB_OWN}/HwidLib/HwidLib" HwidLib)
+# The hardware ID reads Windows' WMI: Windows only.
+if(WIN32)
+    add_subdirectory("${TCLIENT_LIB_OWN}/HwidLib/HwidLib" HwidLib)
+endif()
 add_subdirectory(TClient)
 
 # Copy TClient.exe into Game/ after each build, like the MSBuild project (OutDir=..\..\Game\).

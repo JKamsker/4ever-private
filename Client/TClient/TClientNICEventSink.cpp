@@ -1,4 +1,7 @@
 ﻿#include "stdafx.h"
+
+// The network card events and the WMI service: Windows only (TClientNICEventSink.h has the other systems' stub).
+#ifdef _WIN32
 #include "TClientNICEventSink.h"
 #include "TClientWnd.h"
 
@@ -164,3 +167,5 @@ BOOL CTClientNICEventSink::SC_Change_to_AutoStart()
 
 	return TRUE;
 }
+
+#endif

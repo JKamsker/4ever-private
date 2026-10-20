@@ -1,6 +1,9 @@
 #include "Stdafx.h"
 #include "tconsole.h"
 
+// The console window: Windows only (TConsole.h has the other systems' version).
+#ifdef _WIN32
+
 #define ERR(bSuccess)	{ if(!bSuccess) return; }
 #define CHECK(hHandle)	{ if(hHandle == NULL) return; };
 
@@ -202,22 +205,4 @@ void TRACE(LPCSTR szOutput, ...)
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

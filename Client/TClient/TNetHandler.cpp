@@ -18,7 +18,7 @@ int CTClientWnd::OnCS_LOGIN_ACK( CTachyonSession *pSession, CPacket *pPacket)
 		>> m_dwUserID
 		>> m_dwKickID
 		>> m_dwKEY
-		>> vADDR.sin_addr.S_un.S_addr
+		>> vADDR.sin_addr.s_addr
 		>> vADDR.sin_port
 		>> m_bCreateCardCnt
 		>> m_bInPCROOM
@@ -31,15 +31,16 @@ int CTClientWnd::OnCS_LOGIN_ACK( CTachyonSession *pSession, CPacket *pPacket)
 
 	// Get IP.
 	SOCKADDR_IN _name;
-	int _namelen = sizeof( SOCKADDR_IN );
+	TSOCKLEN _namelen = sizeof( SOCKADDR_IN );
 	getsockname( pSession->m_sock, (SOCKADDR*)&_name, &_namelen );
 
+	const BYTE *pIP = (const BYTE *) &_name.sin_addr;
 	CString strIP;
 	strIP.Format( _T("%d.%d.%d.%d"),
-		_name.sin_addr.S_un.S_un_b.s_b1,
-		_name.sin_addr.S_un.S_un_b.s_b2,
-		_name.sin_addr.S_un.S_un_b.s_b3,
-		_name.sin_addr.S_un.S_un_b.s_b4 );
+		pIP[0],
+		pIP[1],
+		pIP[2],
+		pIP[3] );
 
 	// Init EventSink.
 	CTClientApp::m_dwAppTick = GetTickCount();
@@ -641,7 +642,7 @@ int CTClientWnd::OnCS_START_ACK( CTachyonSession *pSession, CPacket *pPacket)
 
 	(*pPacket)
 		>> bResult
-		>> vADDR.sin_addr.S_un.S_addr
+		>> vADDR.sin_addr.s_addr
 		>> vADDR.sin_port
 		>> bServerID;
 

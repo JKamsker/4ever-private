@@ -1,4 +1,7 @@
 ﻿#include "stdafx.h"
+
+// The crash dump (dbghelp): Windows only (TMiniDump.h has the other systems' stub).
+#ifdef _WIN32
 #include "Resource.h"
 #include "TMiniDump.h"
 #include "TMailSender.h"
@@ -708,4 +711,4 @@ BSUMDRET __declspec ( naked ) OnMemoryDump()
 }
 #endif
 
-
+#endif

@@ -210,13 +210,15 @@ typedef struct _tagIdDefinition
 	struct _tagIdDefinition *	next;
 }IDEF, *LPIDEF;
 
+// The UI file's font: a LOGFONT (32-bit fields, as on Windows: long is 64 bits on Linux), its id
+// and color. 68 bytes in the file, then the 4 bytes the next pointer took in 32-bit builds.
 typedef struct _tagTcmlLogFont
 {
-	long tlfHeight;
-	long tlfWidth;
-	long tlfEscapement;
-	long tlfOrientation; 
-	long tlfWeight; 
+	int tlfHeight;
+	int tlfWidth;
+	int tlfEscapement;
+	int tlfOrientation; 
+	int tlfWeight; 
 	char tlfItalic; 
 	char tlfUnderline; 
 	char tlfStrikeOut; 
@@ -227,11 +229,9 @@ typedef struct _tagTcmlLogFont
 	char tlfPitchAndFamily; 
 	char tlfFaceName[32];
 
-	unsigned long tlfId;
-	unsigned long tlfColor;
-#ifdef _WIN64
-	long unused; // Padding for data alignment
-#endif
+	unsigned int tlfId;
+	unsigned int tlfColor;
+	int unused; // Padding for data alignment
 	struct _tagTcmlLogFont *next;
 }TCML_LOGFONT,* LP_TCML_LOGFONT;
 

@@ -685,7 +685,9 @@ namespace bgfx { namespace spirv
 						un.num = uint8_t(program->getUniformArraySize(ii) );
 						const uint32_t offset = program->getUniformBufferOffset(ii);
 						un.regIndex = uint16_t(offset);
-						un.regCount = un.num;
+						// 4Story: num is a byte; the renderer uploads regCount registers, so take
+						// the array size from the source (arrays of more than 255 elements).
+						un.regCount = uint16_t(program->getUniformArraySize(ii) );
 
 						switch (program->getUniformType(ii) )
 						{

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef _WIN32
+
 
 class CTModuleProtector
 {
@@ -97,3 +99,27 @@ public:
 	CTModuleProtector();
 	virtual ~CTModuleProtector();
 };
+#else
+
+// The module checks read Windows executables: on the other systems nothing is checked.
+class CTModuleProtector
+{
+public:
+	BYTE InitProtector( CString& strFILE) { return TRUE; }
+	BYTE InitProtector(
+		LPCSTR szResourceID,
+		LPCSTR szType) { return TRUE; }
+
+	BYTE CheckImageBase( LPCSTR szFILE) { return TRUE; }
+	BYTE HackDetected() { return FALSE; }
+	BYTE CheckValid() { return TRUE; }
+
+	BYTE BeginWatch() { return TRUE; }
+	void EndWatch() {}
+	void ClearModule() {}
+
+public:
+	CTModuleProtector() {}
+	virtual ~CTModuleProtector() {}
+};
+#endif

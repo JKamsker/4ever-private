@@ -130,6 +130,11 @@ void CTachyonApp::LoadStdProfileSettings()
 		_T("Renderer"),
 		_T("BGFX")).CompareNoCase(_T("BGFX")) == 0;
 
+	SetRenderDeviceBGFXType(GetProfileString(
+		_T("Settings"),
+		_T("BGFXRenderer"),
+		_T("Auto")));
+
 	dwValue = GetProfileInt(
 		_T("Settings"),
 		_T("SwapEffect"), 0);

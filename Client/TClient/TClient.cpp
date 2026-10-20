@@ -202,10 +202,38 @@ CTClientApp::CTClientApp()
 CTClientApp theApp;
 
 // The entry point (MFC's own WinMain is not used any more).
+#ifdef _WIN32
 int APIENTRY _tWinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
 	return CTachyonApp::Main( hInstance, lpCmdLine, nCmdShow);
 }
+#else
+// The command line as WinMain gets it: the arguments after the program, separated by spaces.
+int main( int argc, char **argv)
+{
+	static CString strCmdLine;
+
+	// On WSL, Mesa draws on the GPU through D3D12 (/dev/dxg) only when asked to, and
+	// presents it on Wayland only (EGL on WSLg's X11 shows nothing).
+	if(!access( "/dev/dxg", F_OK))
+	{
+		setenv( "GALLIUM_DRIVER", "d3d12", 0);
+
+		if(getenv("WAYLAND_DISPLAY"))
+			setenv( "SDL_VIDEO_DRIVER", "wayland", 0);
+	}
+
+	for( int i=1; i<argc; i++)
+	{
+		if( i > 1 )
+			strCmdLine += _T(' ');
+
+		strCmdLine += argv[i];
+	}
+
+	return CTachyonApp::Main( NULL, strCmdLine.GetBuffer(), SW_SHOWNORMAL);
+}
+#endif
 
 BOOL CTClientApp::InitInstance()
 {
@@ -280,7 +308,9 @@ BOOL CTClientApp::InitInstance()
 		1,		// PC_ARG
 		0};		// PC_TFACTOR
 
+#ifdef _WIN32
 	GdiplusStartupInput vGDIInput;
+#endif
 	SYSTEM_INFO vINFO;
 
 #ifdef KEYHOOK_CTRLALTDEL
@@ -405,10 +435,12 @@ BOOL CTClientApp::InitInstance()
 */
 #endif
 
+#ifdef _WIN32
 	CoInitialize(NULL);
 
 	if( GdiplusStartup( &m_pGDI, &vGDIInput, NULL) != Ok )
 		return FALSE;
+#endif
 
 	if(!TSocketStartup())
 		return FALSE;
@@ -454,7 +486,7 @@ BOOL CTClientApp::InitInstance()
 		CTNationOption::UNITEDKINGDOM || CTNationOption::GREECE || CTNationOption::ROMANIA ||
 		CTNationOption::UNITEDSTATE || CTNationOption::HUNGARY || CTNationOption::TURKEY ||
 		CTNationOption::PORTUGAL )
-		CD3DFont::m_nRenderingHint = TextRenderingHintAntiAlias;
+		CD3DFont::m_nRenderingHint = TTEXTHINT_ANTIALIAS;
 
 	CTachyonSession::InitTachyonSession();
 	CTDynamicBillboard::ClearTACTIVE();
@@ -464,9 +496,11 @@ BOOL CTClientApp::InitInstance()
 	// Settings live in config.ini in the game folder, not the Windows registry.
 	g_Config.Init();
 
+#ifdef _WIN32
 	m_hAccel = LoadAccelerators(
 		m_hInstance,
 		MAKEINTRESOURCE(IDR_MAINFRAME));
+#endif
 
 	m_pTachyonWnd = new CTClientWnd();
 	m_pMainWnd = m_pTachyonWnd;
@@ -486,6 +520,7 @@ BOOL CTClientApp::InitInstance()
 #endif
 
 	m_pTachyonWnd->SetWindowText( CTNationOption::m_strAppTitle );
+#ifdef _WIN32
 	// Both sizes, on the window and its class: the taskbar and Alt+Tab read either.
 	HICON hIconBig = (HICON) LoadImage( m_hInstance, MAKEINTRESOURCE(IDR_MAINFRAME), IMAGE_ICON,
 		GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
@@ -496,6 +531,7 @@ BOOL CTClientApp::InitInstance()
 	m_pTachyonWnd->SetIcon( hIconSmall, FALSE);
 	SetClassLongPtr( m_pTachyonWnd->GetSafeHwnd(), GCLP_HICON, (LONG_PTR) hIconBig);
 	SetClassLongPtr( m_pTachyonWnd->GetSafeHwnd(), GCLP_HICONSM, (LONG_PTR) hIconSmall);
+#endif
 
 	memcpy( m_pTachyonWnd->m_Device.m_vConstantVS, vConstantVS, VC_COUNT * sizeof(WORD));
 	memcpy( m_pTachyonWnd->m_Device.m_dwVertexShader, vVS, VS_COUNT * sizeof(DWORD));
@@ -695,8 +731,10 @@ int CTClientApp::ExitInstance()
 		CTachyonSession::ReleaseTachyonSession();
 
 
+#ifdef _WIN32
 	GdiplusShutdown(m_pGDI);
 	CoUninitialize();
+#endif
 
 	CString strURL;
 	if( m_bNeedWorldUnify )
@@ -730,6 +768,7 @@ int CTClientApp::ExitInstance()
 			strCmd.TrimRight();
 			strCmd.TrimLeft();
 
+#ifdef _WIN32
 			if(!strCmd.IsEmpty())
 			{
 				PROCESS_INFORMATION vPROCESS;
@@ -753,6 +792,7 @@ int CTClientApp::ExitInstance()
 					&vSTART,
 					&vPROCESS);
 			}
+#endif
 		}
 	}
 	CATCH_ALL(e)

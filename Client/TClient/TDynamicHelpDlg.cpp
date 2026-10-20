@@ -307,7 +307,7 @@ HRESULT CTDynamicHelpDlg::Render( DWORD dwTickCount)
 		BYTE bGreen = (BYTE) (sin(fFreq * (FLOAT)fCount + 2) * 127) + 128;
 		BYTE bBlue = (BYTE) (sin(fFreq * (FLOAT)fCount + 4) * 127) + 128;
 
-		CTachyonRes::m_pDEVICE->m_pDevice->SetRenderState( D3DRS_TEXTUREFACTOR, Color(bRed, bGreen, bBlue).GetValue());
+		CTachyonRes::m_pDEVICE->m_pDevice->SetRenderState( D3DRS_TEXTUREFACTOR, D3DCOLOR_ARGB( 0xFF, bRed, bGreen, bBlue));
 	}
 	else
 		CTachyonRes::m_pDEVICE->m_pDevice->SetRenderState( D3DRS_TEXTUREFACTOR, m_TextColor);

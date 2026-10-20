@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef _WIN32
+
 
 class CTMiniDump
 {
@@ -26,3 +28,22 @@ private:
 };
 
 extern CTMiniDump theTMiniDump;
+
+#else
+
+// The crash dump is a Windows one: elsewhere the client only keeps the calls.
+class CTMiniDump
+{
+public:
+	static void SetOption( int nDumpType) {}
+	static void SetUserInfo( const char *pszTemp) {}
+	static void SetLogID( const char *pszID) {}
+	static void SetCharID( const char *pszID) {}
+	static void SetSocket( SOCKET sock) {}
+
+	static void SetHWND( HWND hWnd) {}
+	static void SnapMemoryDump() {}
+};
+
+#define MiniDumpNormal				0
+#endif

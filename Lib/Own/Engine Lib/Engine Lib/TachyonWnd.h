@@ -37,9 +37,11 @@ public:
 	static DWORD m_dwPing;
 
 protected:
+#ifdef _WIN32
 	static BOOL CALLBACK __Present(
 		HWND hWnd,
 		LPARAM lParam);
+#endif
 
 // Operations
 public:

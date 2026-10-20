@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+// WMI: Windows only (HwidManager.cpp reads the other systems' identity).
+#ifdef _WIN32
 #include "__CpuInfo.h"
 
 
@@ -183,3 +186,5 @@ std::vector<__CpuInfo> __CpuInfoDelegate::cpuInfoVector() const
 {
 	return this->_cpuInfoVector;
 }
+
+#endif

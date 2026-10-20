@@ -956,7 +956,9 @@ void CTClientGame::CalcSCENE( DWORD dwTick)
 	if( m_dwRemainTickVerifyMaintain == 0 )
 	{
 		if( !m_pMainChar->VerifySkillFunc() && GetSession() )
+#ifdef KEYHOOK_CTRLALTDEL
 			GetSession()->SendCS_ACDCLOSE_REQ( 2 );
+#endif
 		m_dwRemainTickVerifyMaintain = 5000;//TINTERVAL_VERIFY_MAINTAIN;
 	}
 
@@ -14495,7 +14497,9 @@ BOOL CTClientGame::Defend( CTClientObjBase *pTATTACK,
 						(pTDEFEND->m_bType == OT_MON && ((CTClientMonster*)pTDEFEND)->m_bHostMainChar) ||
 						(pTDEFEND->m_bType == OT_RECALL && ((CTClientRecall*)pTDEFEND)->m_dwHostID == m_pMainChar->m_dwID) )
 					{
+#ifdef KEYHOOK_CTRLALTDEL
 						m_pSESSION->SendCS_ACDCLOSE_REQ( 1 );
+#endif
 						return FALSE;
 					}
 				}
@@ -24645,7 +24649,9 @@ BYTE CTClientGame::CanDefend( CTClientObjBase *pTATTACK,
 	if( pTDEFEND == m_pMainChar &&
 		m_pMainChar->m_bCanDefend == FALSE)
 	{
+#ifdef KEYHOOK_CTRLALTDEL
 		m_pSESSION->SendCS_ACDCLOSE_REQ( 4 );
+#endif
 	}
 
 	if( pTDEFEND &&
@@ -28095,7 +28101,10 @@ void CTClientGame::SortTASSITANT()
 }
 
 CString CTClientGame::GetWMIValue(char* type,wchar_t *value)
-{ 
+{
+#ifndef _WIN32
+	return CString(_T("(null)"));
+#else 
     CString ReturnValue = "(null)"; 
     
 
@@ -28196,7 +28205,8 @@ CString CTClientGame::GetWMIValue(char* type,wchar_t *value)
   
 
     // Wenn alles geklappt hat Wert zur�ck geben! 
-    return ReturnValue; 
+    return ReturnValue;
+#endif 
 }
 
 void CTClientGame::ResetPopupMenu()
@@ -28245,11 +28255,46 @@ CString CTClientGame::GetMACAddress()
 	unsigned char szMACData[6];
 
 	CString strMacAddress;
+
+#ifdef _WIN32
 	UUID uuid;
 	UuidCreateSequential(&uuid);
 
 	for(int i = 2; i<8; i++)
 		szMACData[i - 2] = uuid.Data4[i];
+#else
+	// The first network interface's address that is not the loopback's.
+	memset( szMACData, 0, sizeof(szMACData));
+
+	if( DIR *pDIR = opendir("/sys/class/net") )
+	{
+		while( dirent *pENTRY = readdir(pDIR) )
+		{
+			if( pENTRY->d_name[0] == '.' || !strcmp( pENTRY->d_name, "lo") )
+				continue;
+
+			CString strPath;
+			strPath.Format( "/sys/class/net/%s/address", pENTRY->d_name);
+
+			unsigned int vMAC[6];
+			FILE *pFILE = fopen( strPath, "r");
+
+			if( pFILE && fscanf( pFILE, "%x:%x:%x:%x:%x:%x", &vMAC[0], &vMAC[1], &vMAC[2], &vMAC[3], &vMAC[4], &vMAC[5]) == 6 )
+			{
+				for( int i=0; i<6; i++)
+					szMACData[i] = (unsigned char) vMAC[i];
+
+				fclose(pFILE);
+				break;
+			}
+
+			if(pFILE)
+				fclose(pFILE);
+		}
+
+		closedir(pDIR);
+	}
+#endif
 
 	strMacAddress.Format("%x-%x-%x-%x-%x-%x", szMACData[0], szMACData[1], szMACData[2], szMACData[3], szMACData[4], szMACData[5]);
 

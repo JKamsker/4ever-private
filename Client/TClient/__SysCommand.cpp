@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+// Runs WMI queries: Windows only.
+#ifdef _WIN32
 #include "__SysCommand.h"
 
 const int __SysCommand::_DEFAULT_MAX_OUTPUT = 2147483647;
@@ -262,3 +265,5 @@ void __SysCommand::SysCommandLaunch(bool withPipe)
 	}
 	this->_hasError = (this->_returnValue != 0);
 }
+
+#endif

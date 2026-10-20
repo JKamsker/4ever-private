@@ -39,7 +39,10 @@ LPTTEXTURE CT3DTexture::GetTEX()
 	if(pBUF->m_dwSIZE)
 	{
 		pDATA = new BYTE[pBUF->m_dwSIZE];
-		uncompress( pDATA, &pBUF->m_dwSIZE, pBUF->m_pDATA, pBUF->m_dwDATA);
+		uLongf nSize = pBUF->m_dwSIZE;
+
+		uncompress( pDATA, &nSize, pBUF->m_pDATA, pBUF->m_dwDATA);
+		pBUF->m_dwSIZE = DWORD(nSize);
 	}
 
 	LPTTEXTURE pTEX = NULL;

@@ -352,7 +352,7 @@ void CTClientWnd::OnConnect( CTachyonSession *pSession, int nErrorCode)
 				m_dwUserID,
 				m_vTCHARINFO[m_bSlotID]->m_dwID,
 				m_dwKEY,
-				pSESSION->m_target.sin_addr.S_un.S_addr,
+				pSESSION->m_target.sin_addr.s_addr,
 				htons(pSESSION->m_target.sin_port));
 		}
 
@@ -5374,6 +5374,10 @@ TFrame* CTClientWnd::GetCurrentFrame()
 
 BOOL CTClientWnd::SetGamma(float fGamma, int nOverBright, float fContrast)
 {
+#ifndef _WIN32
+	// The display's gamma ramp is Windows' (SDL 3 has none).
+	return FALSE;
+#else
     WORD wRamp[3*256];
     float f;
 	   
@@ -5401,6 +5405,7 @@ BOOL CTClientWnd::SetGamma(float fGamma, int nOverBright, float fContrast)
 	::ReleaseDC( m_hWnd, hDC);
 
 	return bResult;
+#endif
 }
 
 void CTClientWnd::OnSysKeyDown( UINT nChar, UINT nRepCnt, UINT nFlags)
@@ -6988,9 +6993,14 @@ BYTE CTClientWnd::CheckModuleFile(BYTE bAll, INT64 dlCP)
 	HANDLE hFile = INVALID_HANDLE_VALUE;
 	TCHAR szFN[MAX_PATH];
 	GetModuleFileName(NULL, szFN, MAX_PATH);
+	// The exe's name: after the last '\\' on Windows, '/' elsewhere (where it has no .exe).
 	char * pSlash = ::strrchr(szFN, '\\');
+	char * pAltSlash = ::strrchr(szFN, '/');
+	if( pAltSlash > pSlash )
+		pSlash = pAltSlash;
+	LPCTSTR pName = pSlash ? pSlash + 1 : szFN;
 
-	if(!lstrcmp(pSlash+1, _T("TClient.exe")))
+	if( !lstrcmp(pName, _T("TClient.exe")) || !lstrcmp(pName, _T("TClient")) )
 	{
 		hFile = CreateFile(
 			szFN,
@@ -7002,7 +7012,7 @@ BYTE CTClientWnd::CheckModuleFile(BYTE bAll, INT64 dlCP)
 			FILE_FLAG_RANDOM_ACCESS,
 			NULL);
 	}
-	else if(!lstrcmp(pSlash+1, _T("TLoader.exe")))
+	else if(!lstrcmp(pName, _T("TLoader.exe")))
 	{
 		hFile = CreateFile(
 			_T(".\\TClient.exe"),
@@ -7095,7 +7105,9 @@ LRESULT CTClientWnd::DefWindowProc( UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_INPUTLANGCHANGE			:
 		if(!OnInputLangChangeRequest( GetSafeHwnd(), wParam, lParam))
 		{
+#ifdef _WIN32
 			ActivateKeyboardLayout( TEdit::m_hKL, 0);
+#endif
 			return 0;
 		}
 

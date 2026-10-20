@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+// Mails the crash dumps: Windows only.
+#ifdef _WIN32
 #include "TMailSender.h"
 
 
@@ -428,28 +431,4 @@ UINT CTMailSender::CharsNeededToEncode(UINT cb)
 };
 // ====================================================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

@@ -1,5 +1,8 @@
 #include "StdAfx.h"
 
+// The module checks read Windows executables: Windows only (TModuleProtector.h has the other systems' stub).
+#ifdef _WIN32
+
 typedef LONG (__stdcall *FN_UNMAPSECTION)( IN HANDLE, IN PVOID);
 
 #define TMP_CHECK_TICK			(900000)
@@ -807,3 +810,5 @@ void CTModuleProtector::ReadDATA( LPBYTE *pFILE,
 		pBUF++;
 	}
 }
+
+#endif

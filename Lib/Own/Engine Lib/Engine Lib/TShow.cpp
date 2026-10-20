@@ -4,12 +4,15 @@
 
 #include "stdafx.h"
 
+BYTE CTShow::m_bMasterVolume = VOLUME_MAX;
+BYTE CTShow::m_bON = TRUE;
+
+// DirectShow plays the videos: Windows only (TShow.h has the other systems' stub).
+#ifdef _WIN32
+
 // IBasicAudio volume range, in hundredths of a decibel.
 #define TSHOW_VOLUME_MIN							(-10000)
 #define TSHOW_VOLUME_MAX							(0)
-
-BYTE CTShow::m_bMasterVolume = VOLUME_MAX;
-BYTE CTShow::m_bON = TRUE;
 
 
 CTShow::CTShow()
@@ -330,3 +333,5 @@ BYTE CTShow::IsPlay()
 	m_pMC->GetState( INFINITE, &state);
 	return state == State_Running && GetPos() < GetLength() ? TRUE : FALSE;
 }
+
+#endif

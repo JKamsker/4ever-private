@@ -157,6 +157,8 @@ typedef CTRenderDevice *LPTRENDERDEVICE;
 LPTRENDERDEVICE CreateRenderDeviceD3D9( LPDIRECT3DDEVICE9 pD3D9);
 #endif
 LPTRENDERDEVICE CreateRenderDeviceBGFX( HWND hWnd, const D3DPRESENT_PARAMETERS *pPresent, const D3DCAPS9 *pCaps);
+// bgfx's renderer: Auto (default), D3D11, D3D12, Vulkan or OpenGL (Settings/BGFXRenderer).
+void SetRenderDeviceBGFXType( LPCSTR lpszRenderer);
 
 
 // The D3DX helpers used by the engine, on the layer types, so their call sites do not change.

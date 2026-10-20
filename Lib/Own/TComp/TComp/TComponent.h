@@ -329,6 +329,7 @@ public:
 	TCOMP_LIST::const_iterator GetFirstKidsFinder() const;
 
 	TComponent* GetNextKid( TCOMP_LIST::const_iterator &it ) const;
+	TComponent* GetNextKid( TCOMP_LIST::iterator &it ) const;
 	TComponent* AddKid(FRAMEDESC_SHAREDPTR pDesc);
 	TComponent* AddKid( TComponent *pKid );
 	TComponent* AddAsNewChild(TComponent *pChild);

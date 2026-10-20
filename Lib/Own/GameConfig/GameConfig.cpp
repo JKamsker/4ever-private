@@ -313,6 +313,7 @@ static const TConfigDefaultStr s_DefaultStrs[] =
 	{ _T("Settings"), _T("WindowedMode"),  _T("FALSE") },
 	{ _T("Settings"), _T("UseShader"),     _T("TRUE")  },
 	{ _T("Settings"), _T("Renderer"),      _T("BGFX")  },  // BGFX or D3D9
+	{ _T("Settings"), _T("BGFXRenderer"),  _T("Auto")  },  // Auto, D3D11, D3D12, Vulkan or OpenGL
 	{ _T("Settings"), _T("OBJRange"),      _T("1.0")   },
 	{ _T("Settings"), _T("GroupMonNamesNear"),  _T("20.0") },
 	{ _T("Settings"), _T("GroupMonNamesRatio"), _T("0.5")  },
@@ -368,7 +369,11 @@ void CGameConfig::Init()
 	TCHAR szPath[MAX_PATH] = { 0 };
 	::GetModuleFileName(NULL, szPath, MAX_PATH);
 
+	// The exe's folder: '\\' on Windows, '/' elsewhere.
 	LPTSTR pSlash = _tcsrchr(szPath, _T('\\'));
+	LPTSTR pAltSlash = _tcsrchr(szPath, _T('/'));
+	if (pAltSlash > pSlash)
+		pSlash = pAltSlash;
 	if (pSlash)
 		*(pSlash + 1) = _T('\0');
 

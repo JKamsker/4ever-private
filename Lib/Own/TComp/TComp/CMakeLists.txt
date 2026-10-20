@@ -19,8 +19,8 @@ add_library(TComp STATIC
     TTabCtrl.cpp
     TToolTip.cpp
 )
-target_compile_definitions(TComp PRIVATE _HAS_AUTO_PTR_ETC=1 WIN32 NDEBUG _WINDOWS)
-target_compile_options(TComp PRIVATE /GS-)
+target_compile_definitions(TComp PRIVATE _HAS_AUTO_PTR_ETC=1 ${TCLIENT_WIN32_DEFS} NDEBUG)
+target_compile_options(TComp PRIVATE ${TCLIENT_NO_GS})
 target_include_directories(TComp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(TComp
     PUBLIC

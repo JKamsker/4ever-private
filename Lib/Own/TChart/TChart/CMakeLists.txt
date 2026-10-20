@@ -4,7 +4,7 @@ add_library(TChart STATIC
     stdafx.cpp
     TChart.cpp
 )
-target_compile_definitions(TChart PRIVATE WIN32 NDEBUG)
+target_compile_definitions(TChart PRIVATE $<$<PLATFORM_ID:Windows>:WIN32> NDEBUG)
 target_include_directories(TChart
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}"

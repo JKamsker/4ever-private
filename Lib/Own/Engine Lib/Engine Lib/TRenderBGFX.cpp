@@ -21,13 +21,24 @@
 #include "TString.h"
 #include "TFile.h"
 
+#ifndef _WIN32
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+#endif
+
 #include <bgfx/bgfx.h>
+#ifndef _WIN32
+#include <SDL3/SDL.h>
+#include <dlfcn.h>
+#endif
 #include <bimg/decode.h>
 #include <bx/allocator.h>
 
 #include <algorithm>
 #include <deque>
 #include <map>
+#include <string>
 #include <mutex>
 #include <vector>
 
@@ -48,6 +59,9 @@ namespace
 
 	// Bumped by every bgfx init, so handles of an earlier device are never destroyed.
 	DWORD g_dwGeneration = 0;
+
+	// Settings/BGFXRenderer (SetRenderDeviceBGFXType).
+	std::string g_strRENDERER;
 
 	inline UINT TMax( UINT a, UINT b) { return a > b ? a : b; }
 	inline FLOAT TMaxF( FLOAT a, FLOAT b) { return a > b ? a : b; }
@@ -883,6 +897,104 @@ namespace
 		CTEvent m_vREADY;
 	};
 
+	// bgfx's OpenGL context. Without bgfx's render thread, GL draws in the thread that calls
+	// bgfx::frame, and the engine presents from its loading thread too (the loading screen):
+	// the context is current only around frame and shutdown, in whichever thread calls them.
+	// Direct3D and Vulkan have no such tie to a thread.
+	class CTGLContextBGFX
+	{
+	public:
+		CTGLContextBGFX() : m_bCAPTURED(FALSE), m_pMakeCurrent(NULL)
+		{
+		}
+
+		// After bgfx::init, in its thread (bgfx has loaded the GL library): keep the
+		// context and let it go.
+		void Capture()
+		{
+#ifdef _WIN32
+			HMODULE hGL = GetModuleHandleA("opengl32.dll");
+			PFNGETCURRENTDC pGetCurrentDC = hGL ? (PFNGETCURRENTDC) GetProcAddress( hGL, "wglGetCurrentDC") : NULL;
+			PFNGETCURRENTCONTEXT pGetCurrentContext = hGL ? (PFNGETCURRENTCONTEXT) GetProcAddress( hGL, "wglGetCurrentContext") : NULL;
+
+			m_pMakeCurrent = hGL ? (PFNMAKECURRENT) GetProcAddress( hGL, "wglMakeCurrent") : NULL;
+			if( !m_pMakeCurrent || !pGetCurrentDC || !pGetCurrentContext )
+				return;
+
+			m_hDC = pGetCurrentDC();
+			m_hContext = pGetCurrentContext();
+			m_bCAPTURED = m_hContext != NULL;
+#else
+			void *pEGL = dlopen( "libEGL.so.1", RTLD_NOW | RTLD_NOLOAD);
+			PFNGETCURRENTDISPLAY pGetCurrentDisplay = pEGL ? (PFNGETCURRENTDISPLAY) dlsym( pEGL, "eglGetCurrentDisplay") : NULL;
+			PFNGETCURRENTSURFACE pGetCurrentSurface = pEGL ? (PFNGETCURRENTSURFACE) dlsym( pEGL, "eglGetCurrentSurface") : NULL;
+			PFNGETCURRENTCONTEXT pGetCurrentContext = pEGL ? (PFNGETCURRENTCONTEXT) dlsym( pEGL, "eglGetCurrentContext") : NULL;
+
+			m_pMakeCurrent = pEGL ? (PFNMAKECURRENT) dlsym( pEGL, "eglMakeCurrent") : NULL;
+			if( !m_pMakeCurrent || !pGetCurrentDisplay || !pGetCurrentSurface || !pGetCurrentContext )
+				return;
+
+			m_pDisplay = pGetCurrentDisplay();
+			m_pDraw = pGetCurrentSurface(EGL_DRAW);
+			m_pRead = pGetCurrentSurface(EGL_READ);
+			m_pContext = pGetCurrentContext();
+			m_bCAPTURED = m_pContext != NULL;
+#endif
+			Release();
+		}
+
+		void Acquire()
+		{
+			if(!m_bCAPTURED)
+				return;
+
+#ifdef _WIN32
+			m_pMakeCurrent( m_hDC, m_hContext);
+#else
+			m_pMakeCurrent( m_pDisplay, m_pDraw, m_pRead, m_pContext);
+#endif
+		}
+
+		void Release()
+		{
+			if(!m_bCAPTURED)
+				return;
+
+#ifdef _WIN32
+			m_pMakeCurrent( NULL, NULL);
+#else
+			m_pMakeCurrent( m_pDisplay, NULL, NULL, NULL);
+#endif
+		}
+
+	private:
+#ifdef _WIN32
+		typedef BOOL (WINAPI *PFNMAKECURRENT)( HDC, HGLRC);
+		typedef HDC (WINAPI *PFNGETCURRENTDC)();
+		typedef HGLRC (WINAPI *PFNGETCURRENTCONTEXT)();
+#else
+		enum { EGL_DRAW = 0x3059, EGL_READ = 0x305A };
+
+		typedef unsigned int (*PFNMAKECURRENT)( void *, void *, void *, void *);
+		typedef void *(*PFNGETCURRENTDISPLAY)();
+		typedef void *(*PFNGETCURRENTSURFACE)( int);
+		typedef void *(*PFNGETCURRENTCONTEXT)();
+#endif
+
+		BOOL m_bCAPTURED;
+		PFNMAKECURRENT m_pMakeCurrent;
+
+#ifdef _WIN32
+		HDC m_hDC;
+		HGLRC m_hContext;
+#else
+		void *m_pDisplay;
+		void *m_pDraw;
+		void *m_pRead;
+		void *m_pContext;
+#endif
+	};
+
 	// bgfx's callbacks: errors, and the screenshots that read the back buffer back.
 	class CTCallbackBGFX : public bgfx::CallbackI
 	{
@@ -891,6 +1003,8 @@ namespace
 		{
 			OutputDebugStringA(pText);
 			OutputDebugStringA("\n");
+			Log(pText);
+			Log("\n");
 
 			if( nCode != bgfx::Fatal::DebugCheck )
 				abort();
@@ -902,6 +1016,29 @@ namespace
 
 			vsnprintf_s( vTEXT, sizeof(vTEXT), _TRUNCATE, pFormat, vArgs);
 			OutputDebugStringA(vTEXT);
+			Log(vTEXT);
+		}
+
+		// With TCLIENT_BGFX_LOG=<file>, bgfx's messages also go to that file.
+		static void Log( const char *pText)
+		{
+			static FILE *pFILE = NULL;
+			static BOOL bOPEN = FALSE;
+
+			if(!bOPEN)
+			{
+				const char *pPATH = getenv("TCLIENT_BGFX_LOG");
+
+				bOPEN = TRUE;
+				if(pPATH)
+					pFILE = fopen( pPATH, "w");
+			}
+
+			if(pFILE)
+			{
+				fputs( pText, pFILE);
+				fflush(pFILE);
+			}
 		}
 
 		void profilerBegin( const char *pName, uint32_t dwColor, const char *pFilePath, uint16_t nLine) override {}
@@ -966,6 +1103,33 @@ namespace
 		return *pCALLBACK;
 	}
 
+#ifndef _WIN32
+	// Saves B G R A pixels with stb_image_write (bmp, jpg, png).
+	HRESULT SaveBGRA( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT nFormat, const BYTE *pBGRA, UINT nWidth, UINT nHeight)
+	{
+		std::vector<BYTE> vRGB( size_t(nWidth) * nHeight * 3);
+
+		for( size_t i=0; i<size_t(nWidth) * nHeight; i++)
+		{
+			vRGB[i * 3] = pBGRA[i * 4 + 2];
+			vRGB[i * 3 + 1] = pBGRA[i * 4 + 1];
+			vRGB[i * 3 + 2] = pBGRA[i * 4];
+		}
+
+		CString strFILE = CTPath::Resolve(pDestFile);
+		int nResult = 0;
+
+		switch(nFormat)
+		{
+		case D3DXIFF_BMP	: nResult = stbi_write_bmp( strFILE, int(nWidth), int(nHeight), 3, &vRGB[0]); break;
+		case D3DXIFF_JPG	: nResult = stbi_write_jpg( strFILE, int(nWidth), int(nHeight), 3, &vRGB[0], 90); break;
+		case D3DXIFF_PNG	: nResult = stbi_write_png( strFILE, int(nWidth), int(nHeight), 3, &vRGB[0], int(nWidth * 3)); break;
+		default				: return D3DERR_NOTAVAILABLE;
+		}
+
+		return nResult ? D3D_OK : E_FAIL;
+	}
+#else
 	// Saves B G R A pixels with GDI+ (bmp, jpg, png).
 	HRESULT SaveBGRA( LPCSTR pDestFile, D3DXIMAGE_FILEFORMAT nFormat, const BYTE *pBGRA, UINT nWidth, UINT nHeight)
 	{
@@ -1017,6 +1181,7 @@ namespace
 		Gdiplus::GdiplusShutdown(dwToken);
 		return hr;
 	}
+#endif
 
 	bgfx::FrameBufferHandle CTTextureBGFX::GetFrameBuffer( CTSurfaceBGFX *pDepth)
 	{
@@ -1634,6 +1799,27 @@ namespace
 			bgfx::Init vINIT;
 			vINIT.type = bgfx::RendererType::Count;
 			vINIT.swapChain.nwh = hWnd;
+
+			vINIT.type = ChooseRenderer();
+
+#ifndef _WIN32
+			// Elsewhere the window is SDL's (hWnd): bgfx draws in its Wayland surface or X11
+			// window. bgfx picks the renderer (Vulkan, or OpenGL 4.3 and up).
+			SDL_PropertiesID nPROPS = SDL_GetWindowProperties((SDL_Window *) hWnd);
+			void *pSURFACE = SDL_GetPointerProperty( nPROPS, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+
+			if(pSURFACE)
+			{
+				vINIT.swapChain.ndt = SDL_GetPointerProperty( nPROPS, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+				vINIT.swapChain.nwh = pSURFACE;
+				vINIT.platformData.type = bgfx::NativeWindowHandleType::Wayland;
+			}
+			else
+			{
+				vINIT.swapChain.ndt = SDL_GetPointerProperty( nPROPS, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+				vINIT.swapChain.nwh = (void *) (uintptr_t) SDL_GetNumberProperty( nPROPS, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+			}
+#endif
 			vINIT.swapChain.width = vPresent.BackBufferWidth;
 			vINIT.swapChain.height = vPresent.BackBufferHeight;
 			vINIT.reset = GetResetFlags(vPresent);
@@ -1646,7 +1832,45 @@ namespace
 			m_bREADY = bgfx::init(vINIT);
 
 			if(m_bREADY)
+			{
+				if( bgfx::getRendererType() == bgfx::RendererType::OpenGL )
+					m_vGL.Capture();
+
 				InitPipeline();
+			}
+		}
+
+		// Settings/BGFXRenderer (Auto, D3D11, D3D12, Vulkan or OpenGL), or the TCLIENT_RENDERER
+		// environment variable over it. Auto, or a renderer this system lacks, lets bgfx choose.
+		static bgfx::RendererType::Enum ChooseRenderer()
+		{
+			const char *pRENDERER = getenv("TCLIENT_RENDERER");
+
+			if(!pRENDERER)
+				pRENDERER = g_strRENDERER.c_str();
+
+#ifndef _WIN32
+			// WSL's GPU is reached through Mesa's D3D12 OpenGL driver; its Vulkan is the CPU's.
+			if( (!*pRENDERER || !_stricmp( pRENDERER, "auto")) && !access( "/dev/dxg", F_OK) )
+				pRENDERER = "opengl";
+#endif
+
+			static const struct { const char *m_pName; bgfx::RendererType::Enum m_nType; } vNAME[] = {
+				{ "d3d11", bgfx::RendererType::Direct3D11 },
+				{ "d3d12", bgfx::RendererType::Direct3D12 },
+				{ "vulkan", bgfx::RendererType::Vulkan },
+				{ "opengl", bgfx::RendererType::OpenGL }};
+
+			bgfx::RendererType::Enum vTYPE[bgfx::RendererType::Count];
+			uint8_t nCount = bgfx::getSupportedRenderers( bgfx::RendererType::Count, vTYPE);
+
+			for( size_t i=0; i<sizeof(vNAME) / sizeof(vNAME[0]); i++)
+				if(!_stricmp( pRENDERER, vNAME[i].m_pName))
+					for( uint8_t j=0; j<nCount; j++)
+						if( vTYPE[j] == vNAME[i].m_nType )
+							return vTYPE[j];
+
+			return bgfx::RendererType::Count;
 		}
 
 		~CTRenderDeviceBGFX()
@@ -1685,6 +1909,7 @@ namespace
 				for( size_t i=0; i<m_vUNIFORM.size(); i++)
 					bgfx::destroy(m_vUNIFORM[i]);
 
+				m_vGL.Acquire();
 				bgfx::shutdown();
 			}
 
@@ -1728,7 +1953,9 @@ namespace
 			// View 0 is the first one of the frame: make sure the back buffer is cleared even
 			// when the engine draws nothing.
 			bgfx::touch(0);
+			m_vGL.Acquire();
 			bgfx::frame();
+			m_vGL.Release();
 
 			FlushDestroy();
 			m_nView = 0;
@@ -3701,11 +3928,17 @@ namespace
 		BOOL m_bViewOpen;
 		BOOL m_bViewDirty;
 		BOOL m_bFlipY;
+		CTGLContextBGFX m_vGL;
 		BOOL m_bHighlight;
 		int m_nHighlight;
 		UINT m_nDraws;
 		UINT m_nSkipped;
 	};
+}
+
+void SetRenderDeviceBGFXType( LPCSTR lpszRenderer)
+{
+	g_strRENDERER = lpszRenderer ? lpszRenderer : "";
 }
 
 LPTRENDERDEVICE CreateRenderDeviceBGFX( HWND hWnd, const D3DPRESENT_PARAMETERS *pPresent, const D3DCAPS9 *pCaps)

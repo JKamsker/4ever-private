@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+// WMI: Windows only (HwidManager.cpp reads the other systems' identity).
+#ifdef _WIN32
 #include "__WindowsInfo.h"
 
 const std::string __WindowsInfo::ARCHITECTURE_IDENTIFIER_STRING = "OSArchitecture=";
@@ -247,3 +250,5 @@ std::vector<__WindowsInfo> __WindowsInfoDelegate::winInfoVector() const
 {
 	return this->_winInfoVector;
 }
+
+#endif

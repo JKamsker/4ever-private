@@ -39,7 +39,11 @@ public:
 	BOOL    WriteProfileInt(LPCTSTR lpszSection, LPCTSTR lpszEntry, int nValue);
 	BOOL    WriteProfileString(LPCTSTR lpszSection, LPCTSTR lpszEntry, LPCTSTR lpszValue);
 
+#ifdef _WIN32
 	HICON LoadIcon( UINT nIDResource) const { return ::LoadIcon( m_hInstance, MAKEINTRESOURCE(nIDResource)); }
+#else
+	HICON LoadIcon( UINT nIDResource) const { return NULL; }
+#endif
 
 public:
 	HINSTANCE m_hInstance;

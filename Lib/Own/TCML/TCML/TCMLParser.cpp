@@ -94,11 +94,8 @@ void TCMLParser::Load( char* fname, TCMLParserProgress* pProgress)
     for(int i=0; i<nCount; i++)
     {
         LP_TCML_LOGFONT pFONT = new TCML_LOGFONT();
-		size_t nReadSize = sizeof(TCML_LOGFONT) - sizeof(TCML_LOGFONT*);
-
-#ifdef _WIN64
-		nReadSize -= sizeof(TCML_LOGFONT::unused);
-#endif
+		// The fields up to the padding (68 bytes), whatever the size of a pointer.
+		size_t nReadSize = offsetof(TCML_LOGFONT, unused);
         fread( pFONT, nReadSize, 1, pFILE);
 		fseek(pFILE, 4, SEEK_CUR); // Read 4 Bytes which were marked as pointer to the next structure which doenst make any sense and just problems with x64.
 		pFONT->next = nullptr;

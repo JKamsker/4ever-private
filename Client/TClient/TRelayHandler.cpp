@@ -21,7 +21,7 @@ int CTClientGame::OnCS_RELAYCONNECT_ACK( CTachyonSession *pSession, CPacket *pPa
 	SOCKADDR_IN vADDR;
 
 	(*pPacket)
-		>> vADDR.sin_addr.S_un.S_addr
+		>> vADDR.sin_addr.s_addr
 		>> vADDR.sin_port;
 
 	for( BYTE i=1; i<MAX_CON; i++)

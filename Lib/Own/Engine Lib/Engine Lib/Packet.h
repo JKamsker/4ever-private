@@ -84,7 +84,9 @@ public:
 	CPacket& SetID( WORD wID);
 	LPBYTE GetBuffer();
 
+#ifdef _WIN32
 	BOOL Receive( HANDLE sock, LPOVERLAPPED lpovRecv);
+#endif
 	BOOL ReadBytes( DWORD dwReadBytes);
 	BOOL CanWrite( DWORD length);
 	BOOL CanRead( DWORD length);

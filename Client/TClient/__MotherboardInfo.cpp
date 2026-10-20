@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+// WMI: Windows only (HwidManager.cpp reads the other systems' identity).
+#ifdef _WIN32
 #include "__MotherboardInfo.h"
 
 
@@ -156,3 +159,5 @@ int __MotherboardInfoDelegate::numberOfMotherboardInfoItems() const
 {
 	return this->_numberOfMotherboardInfoItems;
 }
+
+#endif

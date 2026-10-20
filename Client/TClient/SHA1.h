@@ -33,7 +33,7 @@ public:
     static std::string from_file(const std::string &filename);
 
 private:
-    typedef unsigned long int uint32;   /* just needs to be at least 32bit */
+    typedef unsigned int uint32;   /* exactly 32 bits: long is 64 bits on Linux */
     typedef unsigned long long uint64;  /* just needs to be at least 64bit */
 
     static const unsigned int DIGEST_INTS = 5;  /* number of 32bit integers per SHA1 digest */
