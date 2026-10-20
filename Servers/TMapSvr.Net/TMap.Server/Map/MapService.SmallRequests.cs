@@ -183,6 +183,7 @@ public sealed partial class MapService
     private void OnCS_COMMENT_REQ(ClientSession s, PacketReader r)
     {
         if (s.Char is not { } ch) return;
+        if (ChatBanned(s, ch)) return;                                                          // C++ CSHandler.cpp:14940 (MapService.Gm.cs)
         ch.Comment = r.ReadString();
         if (!s.IsMain) return;
         var w = new PacketWriter(Msg.CS_COMMENT_ACK, capacity: 64);

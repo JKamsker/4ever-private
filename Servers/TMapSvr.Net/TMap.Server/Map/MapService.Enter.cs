@@ -231,6 +231,7 @@ public sealed partial class MapService
         SendCS_PROTECTEDLIST_ACK(s, ch);   // C++ after the companion list (SSHandler.cpp:2174)
         RestoreSavedRecalls(s, ch);  // C++ OnDM_LOADCHAR_ACK: the summons saved at logout, before…
         SummonTamedAtLogin(s, ch);   // C++ InitCharInfo ends with the sorcerer's tamed monster
+        SendHelpOnEnter(s, ch);      // C++ OnMW_CHARINFO_REQ ends with the help message (MapService.Gm.cs)
     }
 
     private void OnMW_ROUTE_REQ(PacketReader r)
@@ -284,7 +285,8 @@ public sealed partial class MapService
         ch.AidCountry = r.ReadByte();
         ch.Mode = r.ReadByte();
         ch.Riding = r.ReadUInt32();       // m_dwRiding (SSHandler.cpp:1490)
-        // remaining fields (chat-ban, soulmate, class, recall-mons, comment) are not read
+        ch.ChatBanTime = r.ReadInt64();   // m_nChatBanTime (SSHandler.cpp:1491; MapService.Gm.cs)
+        // remaining fields (soulmate, class, recall-mons, comment) are not read
 
         var w = new PacketWriter(Msg.MW_ENTERCHAR_ACK);
         w.WriteUInt32(charId);

@@ -144,16 +144,16 @@ public sealed partial class MapService
         {
             if (level < row.LevelMin || level > row.LevelMax) continue;
             foreach (var t in items)
-                if (t.InitState != 0 && (country == TcontryPeace || country == TcontryB || t.ItemCountry == country || t.ItemCountry == TcontryN)
+                if (ItemInitState(t) != 0 && (country == TcontryPeace || country == TcontryB || t.ItemCountry == country || t.ItemCountry == TcontryN)
                     && t.ItemId >= row.ItemIdMin && t.ItemId <= row.ItemIdMax)
                 {
                     pick.Add(t);
-                    total += t.Weight;
+                    total += ItemWeight(t);
                 }
         }
         if (pick.Count == 0 || total == 0) return null;
         int choice = LootRng.Next(total), cur = 0;
-        foreach (var t in pick) { cur += t.Weight; if (choice < cur) return t; }
+        foreach (var t in pick) { cur += ItemWeight(t); if (choice < cur) return t; }
         return pick[^1];
     }
 

@@ -18,6 +18,24 @@ internal static class WorldTool
     public static int Port { get; set; } = 3816;
 
     public const ushort CT_CASTLEGUILDCHG_REQ = 0x9301 + 0x005B;
+    public const ushort CT_CHARMSG_ACK = 0x9301 + 0x003D, CT_HELPMESSAGE_REQ = 0x9301 + 0x0073;
+
+    /// <summary>C++ <c>CT_CHARMSG_ACK</c> (the operator's tool): a line for one player, from the operator.</summary>
+    public static void CharMsg(string name, string msg)
+    {
+        var w = new PacketWriter(CT_CHARMSG_ACK);
+        w.WriteString(name); w.WriteString(msg);
+        Send(w);
+    }
+
+    /// <summary>C++ <c>CT_HELPMESSAGE_REQ</c> (the operator's tool): a help message from <paramref name="start"/> to <paramref name="end"/>
+    /// (unix seconds); the world saves it and tells every map.</summary>
+    public static void HelpMessage(byte id, long start, long end, string msg)
+    {
+        var w = new PacketWriter(CT_HELPMESSAGE_REQ);
+        w.WriteByte(id); w.WriteInt64(start); w.WriteInt64(end); w.WriteString(msg);
+        Send(w);
+    }
 
     /// <summary>C++ <c>CT_CASTLEGUILDCHG_REQ</c> (the operator's tool): a castle's defending and attacking guilds and its next war
     /// (unix seconds) — the world tells every map.</summary>

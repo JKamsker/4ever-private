@@ -1771,6 +1771,9 @@ The phase write-ups above stop at Phase 46; what followed is recorded in the com
 - **S7a** — fall damage, act items, medal items, the rewards window, stop-the-clock, waste refine.
 - **S7b** — the cash shop: the list, buying, presents, the cabinet (take out, put in, more time), cash bonus items, the
   world's stop and sales; migration 022 fixes the baseline cash procs (buying gave nothing, cabinet time could not be bought).
+- **S7c** — the GM tools: an operator's move, move to a player, gifts and chat bans; the world's gifts, chat bans, positions,
+  lines, item states and help messages; chat bans held on chat and comments; the map level kick-out; the control server's link
+  (`ControlIp`: announcements, kicks, the monster spawn finder and actions, castle info, the monitor).
 
 ## 🚧 Not yet ported — the roadmap
 
@@ -1779,7 +1782,6 @@ Found by diffing the C++ `ON_RECEIVE` table (621 handlers enabled outside the Bo
 
 | Batch | What | C++ handlers |
 |---|---|---|
-| S7c | **GM tools** — move, move to a player, gifts, chat ban, kick out of a map, user position, char message, item state, help message; the control server's monster find/action, announcement, kick, castle info | `CS_CMMOVE*`, `CS_CMGIFT`, `CS_CHATBAN`, `CS_KICKOUTMAP`, `MW_CMGIFT*`, `MW_CHATBAN`, `MW_USERPOSITION`, `MW_CHARMSG`, `MW_ITEMSTATE`, `MW_HELPMESSAGE`, `CT_*` |
 | S7d | **Security code** (PIN) — create, change, enable, disable, unlock, check | `CS_SC_*` |
 | S7e | **Cloaks** — custom cloak list/change, guild cloak | `CS_CUSTOMCLOAK_*`, `CS_REGGUILDCLOAK` |
 | S7f | **Meeting rooms** | `CS_/MW_/SM_MEETINGROOM` |

@@ -631,6 +631,34 @@ public static class Msg
     public const ushort CS_CREATESADDLE_REQ = CS_MAP + 0x0321;
     public const ushort CS_DELETESADDLE_REQ = CS_MAP + 0x0323;
     public const ushort CS_UPDATEMEDALS_REQ = CS_MAP + 0x0350;      // S→C: dwMedals
+    // ---- the GM tools (MapService.Gm.cs) ----
+    public const ushort CS_CHATBAN_REQ = CS_MAP + 0x0223;           // strName · wMinute
+    public const ushort CS_CHATBAN_ACK = CS_MAP + 0x0224;           // bResult (CHATBAN_RESULT)
+    public const ushort CS_HELPMESSAGE_ACK = CS_MAP + 0x0244;       // bID · strMessage
+    public const ushort CS_CMMOVE_REQ = CS_MAP + 0x0253;            // bChannel · wMapID · fX · fY · fZ
+    public const ushort CS_CMMOVETOUSER_REQ = CS_MAP + 0x0255;      // strTarget
+    public const ushort CS_CMGIFT_REQ = CS_MAP + 0x0258;            // strTarget · wGiftID
+    public const ushort CS_CMGIFT_ACK = CS_MAP + 0x0259;            // bResult (CMGIFT_RESULT)
+    public const ushort MW_USERPOSITION_REQ = MW_BASE + 0x00C6;     // dwCharID · dwKey · strGM
+    public const ushort MW_CHATBAN_REQ = MW_BASE + 0x0115;          // strName · nUntil (INT64) · bResult · dwGMID · dwGMKey
+    public const ushort MW_CHATBAN_ACK = MW_BASE + 0x0116;          // strName · wMinute · dwGMID · dwGMKey
+    public const ushort MW_ITEMSTATE_REQ = MW_BASE + 0x011F;        // dwID · wCount {wItemID · bInitState}
+    public const ushort MW_HELPMESSAGE_REQ = MW_BASE + 0x0164;      // bID · dlStart · dlEnd · strMessage
+    public const ushort MW_CMGIFT_REQ = MW_BASE + 0x0175;           // dwTarget · bType · dwValue · bCount · strTitle · strMsg · dwGMID · bTool · wGiftID · wErrID · bRet
+    public const ushort MW_CMGIFT_ACK = MW_BASE + 0x0176;           // strTarget · wGiftID · dwGMID
+    public const ushort MW_CMGIFTRESULT_REQ = MW_BASE + 0x0177;     // bRet · dwGMID (world -> map)
+    public const ushort MW_CMGIFTRESULT_ACK = MW_BASE + 0x0177;     // bRet · bTool · dwGMID (map -> world; the same id)
+    public const ushort CT_SERVICEMONITOR_REQ = CT_CONTROL + 0x001D; // dwTick · dwSession · dwUser · dwActiveUser
+    public const ushort CT_SERVICEMONITOR_ACK = CT_CONTROL + 0x001E; // dwTick
+    public const ushort CT_ANNOUNCEMENT_ACK = CT_CONTROL + 0x002A;   // strAnnounce
+    public const ushort CT_USERKICKOUT_ACK = CT_CONTROL + 0x002C;    // strUser
+    public const ushort CT_MONSPAWNFIND_ACK = CT_CONTROL + 0x0037;   // in: dwManager · bChannel · wMapID · wSpawnID / out: dwManager · wMapID · wSpawnID · bCount {…}
+    public const ushort CT_MONACTION_ACK = CT_CONTROL + 0x0039;      // bChannel · wMapID · dwMonID · bAction · dwTrigger · dwHost · dwRH · bRHType · wSpawnID
+    public const ushort CT_USERPOSITION_ACK = CT_CONTROL + 0x0044;   // strTarget · strGM (map -> world)
+    public const ushort CT_SERVICEDATACLEAR_ACK = CT_CONTROL + 0x004F;
+    public const ushort CT_CTRLSVR_REQ = CT_CONTROL + 0x0058;
+    public const ushort CT_CASTLEINFO_REQ = CT_CONTROL + 0x0059;     // dwManager
+    public const ushort CT_CASTLEINFO_ACK = CT_CONTROL + 0x005A;     // dwManager · wCount {wLocal · strName · bStatus · dwDef · strDef · bCountry · dwAtk · strAtk · tNext}
     // ---- the cash shop (MapService.CashShop.cs) ----
     public const ushort CS_CASHITEMCABINET_REQ = CS_MAP + 0x0192;
     public const ushort CS_CASHITEMCABINET_ACK = CS_MAP + 0x0193;   // dUseTime (INT64) · dwCash · dwBonus · wCount {dwID · item (no slot)}

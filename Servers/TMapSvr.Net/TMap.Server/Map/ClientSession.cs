@@ -43,6 +43,9 @@ public sealed class ClientSession
     /// <summary>True once this map is the char's "main" server for the CHECKMAIN handshake.</summary>
     public bool IsMain { get; set; }
 
+    /// <summary>The control server's link (C++ <c>SESSION_SERVER</c> from <c>m_addrCtrl</c>; MapService.Gm.cs).</summary>
+    public bool IsControl { get; set; }
+
     /// <summary>The loaded character (null until char data is resolved during the handshake).</summary>
     public Character? Char { get; set; }
 

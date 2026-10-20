@@ -173,6 +173,10 @@ public sealed class TemplateStore
     /// <summary>C++ <c>m_mapTOPERATOR</c> (<c>TOPERATORTABLE</c>): the operators' character ids.</summary>
     public HashSet<uint> Operators { get; } = new();
 
+    /// <summary>C++ <c>CTBLHelpMessage</c> (<c>THELPMESSAGETABLE</c>): the help messages still current at start (no end, or an end
+    /// ahead).</summary>
+    public List<(byte Id, long Start, long End, string Message)> HelpMessages { get; } = new();
+
     /// <summary>C++ <c>m_mapTCashItem</c>: the cash shop's items, by shop item id.</summary>
     public Dictionary<ushort, CashItem> CashItems { get; } = new();
 

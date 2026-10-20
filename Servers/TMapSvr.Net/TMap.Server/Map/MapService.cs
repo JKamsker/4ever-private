@@ -45,6 +45,7 @@ public sealed partial class MapService
         ProtectedStore = gameDb;
         AuctionStore = gameDb;
         HeroStore = gameDb;
+        GmStore = gameDb;
         CashStore = gameDb;
         _templates = templates;
         _log = log;
@@ -66,12 +67,15 @@ public sealed partial class MapService
         // Only sets connection-scoped state (accept thread). The single reference write is ordered before
         // any packet from this connection by the FIFO batch channel, and the registry (ByChar) is populated
         // later on the batch thread in OnCS_CONNECT_REQ — so no lock is needed.
-        conn.State = new ClientSession(conn);
+        var session = new ClientSession(conn);
+        conn.State = session;
+        TakeControlSession(conn, session);                                                     // MapService.Gm.cs
         return ValueTask.CompletedTask;
     }
 
     public void OnClientDisconnect(ClientSession session)
     {
+        if (session.IsControl) { if (_control == session) _control = null; return; }        // the control server's link (MapService.Gm.cs)
         // Broadcast the leave to neighbours before de-registering.
         var watching = new List<Monster>();
         if (session.State == EnterState.InGame && session.Char is not null)
@@ -108,6 +112,7 @@ public sealed partial class MapService
         var r = new PacketReader(packet);
         try
         {
+            if (session.IsControl) { DispatchControl(session, r); return; }                     // the admin tool's link (MapService.Gm.cs)
             if (TournamentRefuses(session, r.Id)) return;                                       // MapService.TournamentMatch.cs
             switch (r.Id)
             {
@@ -264,6 +269,11 @@ public sealed partial class MapService
                 case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
                 case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
                 case Msg.CS_DROPDAMAGE_REQ: OnCS_DROPDAMAGE_REQ(session, r); break;                // MapService.ItemLeftovers.cs
+                case Msg.CS_CMMOVE_REQ: OnCS_CMMOVE_REQ(session, r); break;                        // MapService.Gm.cs
+                case Msg.CS_CMMOVETOUSER_REQ: OnCS_CMMOVETOUSER_REQ(session, r); break;
+                case Msg.CS_CMGIFT_REQ: OnCS_CMGIFT_REQ(session, r); break;
+                case Msg.CS_CHATBAN_REQ: OnCS_CHATBAN_REQ(session, r); break;
+                case Msg.CS_KICKOUTMAP_REQ: OnCS_KICKOUTMAP_REQ(session); break;
                 case Msg.CS_CASHSHOPITEMLIST_REQ: await OnCS_CASHSHOPITEMLIST_REQ(session, r); break;    // MapService.CashShop.cs
                 case Msg.CS_CASHITEMBUY_REQ: await OnCS_CASHITEMBUY_REQ(session, r); break;
                 case Msg.CS_CASHITEMPRESENT_REQ: await OnCS_CASHITEMPRESENT_REQ(session, r); break;
@@ -504,6 +514,13 @@ public sealed partial class MapService
                 case Msg.MW_GAINPVPPOINT_REQ: OnMW_GAINPVPPOINT_REQ(r); break;
                 case Msg.MW_BATTLEMODESTATUS_ACK: OnMW_BATTLEMODESTATUS_ACK(r); break;
                 case Msg.MW_CASHSHOPSTOP_REQ: OnMW_CASHSHOPSTOP_REQ(r); break;                    // MapService.CashShop.cs
+                case Msg.MW_CMGIFT_REQ: await OnMW_CMGIFT_REQ(r); break;                         // MapService.Gm.cs
+                case Msg.MW_CMGIFTRESULT_REQ: OnMW_CMGIFTRESULT_REQ(r); break;
+                case Msg.MW_CHATBAN_REQ: OnMW_CHATBAN_REQ(r); break;
+                case Msg.MW_USERPOSITION_REQ: OnMW_USERPOSITION_REQ(r); break;
+                case Msg.MW_ITEMSTATE_REQ: OnMW_ITEMSTATE_REQ(r); break;
+                case Msg.MW_HELPMESSAGE_REQ: OnMW_HELPMESSAGE_REQ(r); break;
+                case Msg.MW_CHARMSG_REQ: OnMW_CHARMSG_REQ(r); break;
                 case Msg.MW_CASHITEMSALE_REQ: OnMW_CASHITEMSALE_REQ(r); break;
                 case Msg.MW_BOWTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BOWTIMEUPDATE_ACK, r, 7); break;   // MapService.BattleQueue.cs
                 case Msg.MW_BRTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BRTIMEUPDATE_ACK, r, 6); break;
@@ -608,6 +625,7 @@ public sealed partial class MapService
         await RunAuctionEnds();                // auctions whose time is up (MapService.Auction.cs)
         ArenaTick();                           // the arenas' ready and battle clocks (MapService.Arena.cs)
         TournamentTick();                      // the tournament's countdowns and drawn matches (MapService.TournamentMatch.cs)
+        HelpMessageTick();                     // the event help message on and off (MapService.Gm.cs)
         RunDuels();                            // duel standby → start → timeout → clear (the SM_DUEL* timer)
         // Still deferred here: war timers — see PORT_STATUS.md.
     }

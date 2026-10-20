@@ -48,6 +48,43 @@ public class ControlTests
         host.State.CharactersByName[name] = ch;
     }
 
+    /// <summary>An operator's in-game chat ban (C++ OnMW_CHATBAN_ACK): applied on the target's map, answered to the operator's map;
+    /// an unknown target is CHATBAN_INVALIDCHAR.</summary>
+    [Fact]
+    public async Task InGameChatBan_IsAppliedAndAnswered()
+    {
+        await using var host = new WorldTestHost();
+        using var map = await host.ConnectAsync();
+        Connect(map);
+        EnterChar(map, 300, 0x300);
+        EnterChar(map, 301, 0x301);
+        NameChar(host, 300, "Gina");
+        NameChar(host, 301, "Bob");
+
+        var ban = new PacketWriter(Msg.MW_CHATBAN_ACK);
+        ban.WriteString("Bob"); ban.WriteUInt16(5); ban.WriteUInt32(300); ban.WriteUInt32(0x300);
+        map.Send(ban);
+        var apply = map.Receive(TimeSpan.FromSeconds(5));
+        Assert.Equal(Msg.MW_CHATBAN_REQ, apply.Id);
+        Assert.Equal("Bob", apply.ReadString());
+        long until = apply.ReadInt64();
+        Assert.InRange(until - DateTimeOffset.UtcNow.ToUnixTimeSeconds(), 290, 300);
+        Assert.Equal((byte)0, apply.ReadByte());
+        Assert.Equal(0u, apply.ReadUInt32());                                   // to the target's map: no GM
+        var answer = map.Receive(TimeSpan.FromSeconds(5));
+        Assert.Equal(Msg.MW_CHATBAN_REQ, answer.Id);
+        answer.ReadString(); answer.ReadInt64(); answer.ReadByte();
+        Assert.Equal(300u, answer.ReadUInt32());                                // to the GM
+        Assert.Equal(until, host.State.Characters[301].ChatBanTime);
+
+        var unknown = new PacketWriter(Msg.MW_CHATBAN_ACK);
+        unknown.WriteString("Nobody"); unknown.WriteUInt16(5); unknown.WriteUInt32(300); unknown.WriteUInt32(0x300);
+        map.Send(unknown);
+        var refused = map.Receive(TimeSpan.FromSeconds(5));
+        refused.ReadString(); refused.ReadInt64();
+        Assert.Equal((byte)2, refused.ReadByte());                              // CHATBAN_INVALIDCHAR
+    }
+
     [Fact]
     public async Task ServiceMonitor_RepliesWithLiveCounts()
     {

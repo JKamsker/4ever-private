@@ -37,6 +37,10 @@ public sealed class MapServerOptions
 
     /// <summary>UDP log-sink endpoint. C++ <c>LogIP</c>/<c>LogPort</c> (default 127.0.0.1:7000).</summary>
     public string LogIp { get; set; } = "127.0.0.1";
+
+    /// <summary>C++ <c>m_addrCtrl</c>: the control server's address. The first connection from it is the admin tool's link (in
+    /// plaintext, one at a time; MapService.Gm.cs). Empty: no control link.</summary>
+    public string ControlIp { get; set; } = "";
     public int LogPort { get; set; } = 7000;
 
     /// <summary>

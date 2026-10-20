@@ -24,6 +24,7 @@ public sealed partial class WorldService
             case Msg.CT_USERMOVE_ACK: OnCT_USERMOVE_ACK(r); return true;
             case Msg.CT_USERPOSITION_ACK: OnCT_USERPOSITION_ACK(r); return true;
             case Msg.CT_CHATBAN_REQ: OnCT_CHATBAN_REQ(session, r); return true;
+            case Msg.MW_CHATBAN_ACK: OnMW_CHATBAN_ACK(session, r); return true;
             case Msg.CT_CHARMSG_ACK: OnCT_CHARMSG_ACK(r); return true;
             case Msg.CT_SERVICEDATACLEAR_ACK: OnCT_SERVICEDATACLEAR_ACK(); return true;
             case Msg.CT_CASTLEGUILDCHG_REQ: OnCT_CASTLEGUILDCHG_REQ(session, r); return true;
@@ -106,6 +107,31 @@ public sealed partial class WorldService
         }
         _state.ChatBans[name] = banUntil;
         session.Send(BuildChatBanAck(true, banSeq, managerId));
+    }
+
+    /// <summary>An operator's in-game chat ban (C++ OnMW_CHATBAN_ACK, SSHandler.cpp:13098): minutes added to a running ban (0 lifts it),
+    /// applied on the char's map, recorded, and the answer sent back to the operator's map. A char not online is CHATBAN_INVALIDCHAR.</summary>
+    private void OnMW_CHATBAN_ACK(ServerSession session, PacketReader r)
+    {
+        string name = r.ReadString();
+        ushort minutes = r.ReadUInt16();
+        uint gmId = r.ReadUInt32(), gmKey = r.ReadUInt32();
+        static byte[] Req(string name, long until, byte result, uint gmId, uint gmKey)
+        {
+            var w = new PacketWriter(Msg.MW_CHATBAN_REQ);
+            w.WriteString(name); w.WriteInt64(until); w.WriteByte(result); w.WriteUInt32(gmId); w.WriteUInt32(gmKey);
+            return w.ToArray();
+        }
+        if (!_state.CharactersByName.TryGetValue(name, out var target))
+        {
+            session.Send(Req(name, 0, 2 /* CHATBAN_INVALIDCHAR */, gmId, gmKey));
+            return;
+        }
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        target.ChatBanTime = minutes == 0 ? 0 : (now < target.ChatBanTime ? target.ChatBanTime : now) + minutes * 60L;
+        _state.FindMapSvr(target.MainId)?.Send(Req(name, target.ChatBanTime, 0, 0, 0));
+        _state.ChatBans[name] = target.ChatBanTime;
+        if (gmId != 0 && gmKey != 0) session.Send(Req(name, target.ChatBanTime, 0, gmId, gmKey));
     }
 
     /// <summary>Send a system message to a named char (relayed to the char's map). C++ OnCT_CHARMSG_ACK.</summary>

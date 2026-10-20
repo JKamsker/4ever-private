@@ -489,6 +489,20 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
         }
         catch (SqlException) { }
 
+        // C++ CTBLHelpMessage (DBAccess.h:4506): the help messages, those ended already left out (TMapSvr.cpp:1759).
+        try
+        {
+            await using var cmd = new SqlCommand("SELECT bID, dStart, dEnd, szMessage FROM THELPMESSAGETABLE", c);
+            await using var r = await cmd.ExecuteReaderAsync(ct);
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            while (await r.ReadAsync(ct))
+            {
+                long end = ToTime64(r, 2);
+                if (end == 0 || end > now) store.HelpMessages.Add((r.GetByteSafe(0), ToTime64(r, 1), end, r.GetStringSafe(3)));
+            }
+        }
+        catch (SqlException) { }
+
         // C++ CTBLOperatorChart (DBAccess.h:3137): the operators.
         try
         {

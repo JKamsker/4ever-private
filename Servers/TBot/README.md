@@ -193,6 +193,14 @@ cabinet), takes it out into a backpack slot and puts it back in, buys cabinet ti
 letter) and is refused with no cash left. Needs migration 022. Afterwards the balances, A's cabinet time, the new cabinet rows, the
 item and B's letters are put back; it refuses to run if a bot account already has a cash row. 8 checks.
 
+## Scenario: gm (the GM tools)
+
+`--Bot:Scenario=gm` (A and B) makes A's character an operator (`TOPERATORTABLE`) and restarts the map to load it. B is refused a
+chat ban (not an operator); A bans B's chat (B's chat is held back with the time left) and lifts it; A gives B the letter-only
+gift 3 (B gets the letter, A the result); A moves next to B (through the world) and to a spot; the admin tool's line
+(`CT_CHARMSG_ACK`) and event help message (`CT_HELPMESSAGE_REQ`) reach B. Afterwards the operator row, help message 3, B's letters
+and the gift log are put back and the map restarted again — so don't run it while someone is playing. 8 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

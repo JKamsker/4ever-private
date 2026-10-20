@@ -26,6 +26,7 @@ public sealed partial class MapService
 
         if (group is ChatGroup.World or ChatGroup.Operator) return; // clients may not originate these
         if (talk.Length > MaxChatLen) talk = talk[..MaxChatLen];
+        if (ChatBanned(s, ch)) return;                                                          // MapService.Gm.cs
 
         // Anti-spoof: the sender name must match the char (the C++ chat-bans a mismatch). Phase-1 just drops.
         if (!string.Equals(sender, ch.Name, StringComparison.Ordinal))

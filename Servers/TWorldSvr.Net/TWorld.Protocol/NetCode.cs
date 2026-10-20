@@ -484,6 +484,7 @@ public static class Msg
     // --- MW relay targets used by the CT handlers (world -> map) ---
     public const ushort MW_USERPOSITION_REQ = MW_BASE + 0x00C6;      // world -> char's map: report position to a GM
     public const ushort MW_CHATBAN_REQ = MW_BASE + 0x0115;           // world -> char's map: apply a chat ban
+    public const ushort MW_CHATBAN_ACK = MW_BASE + 0x0116;           // map -> world: an operator's in-game chat ban (strName wMinute dwGMID dwGMKey)
     public const ushort MW_CHARMSG_REQ = MW_BASE + 0x011E;           // world -> char's map: deliver a system message
     public const ushort MW_CASTLEGUILDCHG_REQ = MW_BASE + 0x012D;    // world -> all maps: castle def/atk guilds changed
     public const ushort MW_EVENTMSG_REQ = MW_BASE + 0x0131;          // world -> all maps: event message
