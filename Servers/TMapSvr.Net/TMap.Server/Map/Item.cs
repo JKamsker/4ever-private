@@ -74,8 +74,9 @@ public sealed class Item
     /// refine, glevel, __time64_t expiry, grade, the ELD/WRAP/COLOR/CUSTOMTEX ext values, the
     /// guild-registration flag, then the magic-option list. <paramref name="addItemId"/> is the C++
     /// <c>bAddItemID</c>: when false (the cabinet item-list block) the leading slot byte is <b>omitted</b>.
+    /// <paramref name="cashUseTime"/> is the C++ <c>bCashItem</c> form (the cash shop's list): the item's days instead of its expiry.
     /// </summary>
-    public void WrapPacketClient(PacketWriter w, uint ownerCharId, bool addItemId = true)
+    public void WrapPacketClient(PacketWriter w, uint ownerCharId, bool addItemId = true, ushort? cashUseTime = null)
     {
         byte regGuild = Ext[IevGuild] != 0 && Ext[IevGuild] == ownerCharId ? (byte)1 : (byte)0;
 
@@ -91,7 +92,8 @@ public sealed class Item
         w.WriteByte(Template?.RefineMax ?? RefineMax); // C++ m_pTITEM->m_bRefineMax; raw fallback when DB-free
         w.WriteByte(RefineCur);
         w.WriteByte(GLevel);
-        w.WriteInt64(EndTime);
+        if (cashUseTime is { } useTime) w.WriteUInt16(useTime);  // C++ if(bCashItem) << wUseTime
+        else w.WriteInt64(EndTime);
         w.WriteByte(GradeEffect);
         w.WriteByte((byte)Ext[IevEld]);
         w.WriteByte((byte)Ext[IevWrap]);

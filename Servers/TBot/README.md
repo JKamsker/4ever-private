@@ -185,6 +185,14 @@ which comes back to A; inviting someone who isn't online is answered "not found"
 up), turns the stone into its item, and opens the box's rewards window. The items are put in A's backpack before and removed after,
 with A's HP and medals put back. Stop-the-clock spends cash, so it is left to the unit tests. 6 checks.
 
+## Scenario: cashshop (the cash shop)
+
+`--Bot:Scenario=cashshop` (A and B) gives A's account 1000 cash in the test balance (`TGLOBAL_GSP.TCASHTESTTABLE`) and picks the
+cheapest shop item that may go to a cabinet. A sees the balance in the shop, buys the item (the cash goes down, the item is in A's
+cabinet), takes it out into a backpack slot and puts it back in, buys cabinet time, sends B a present (B's cabinet has it, B gets a
+letter) and is refused with no cash left. Needs migration 022. Afterwards the balances, A's cabinet time, the new cabinet rows, the
+item and B's letters are put back; it refuses to run if a bot account already has a cash row. 8 checks.
+
 ## Scenario: stress (hundreds of bots)
 
 `--Bot:Scenario=stress` runs `StressCount` bots in one process, each on its own thread and account

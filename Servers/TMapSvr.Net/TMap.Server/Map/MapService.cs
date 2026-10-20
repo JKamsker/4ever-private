@@ -264,6 +264,13 @@ public sealed partial class MapService
                 case Msg.CS_ARENAINFO_REQ: OnCS_ARENAINFO_REQ(session, r); break;
                 case Msg.CS_ARENARANKING_REQ: OnCS_ARENARANKING_REQ(session, r); break;
                 case Msg.CS_DROPDAMAGE_REQ: OnCS_DROPDAMAGE_REQ(session, r); break;                // MapService.ItemLeftovers.cs
+                case Msg.CS_CASHSHOPITEMLIST_REQ: await OnCS_CASHSHOPITEMLIST_REQ(session, r); break;    // MapService.CashShop.cs
+                case Msg.CS_CASHITEMBUY_REQ: await OnCS_CASHITEMBUY_REQ(session, r); break;
+                case Msg.CS_CASHITEMPRESENT_REQ: await OnCS_CASHITEMPRESENT_REQ(session, r); break;
+                case Msg.CS_CASHITEMCABINET_REQ: await OnCS_CASHITEMCABINET_REQ(session); break;
+                case Msg.CS_CASHITEMGET_REQ: await OnCS_CASHITEMGET_REQ(session, r); break;
+                case Msg.CS_CASHITEMPUTIN_REQ: await OnCS_CASHITEMPUTIN_REQ(session, r); break;
+                case Msg.CS_CASHCABINETBUY_REQ: await OnCS_CASHCABINETBUY_REQ(session, r); break;
                 case Msg.CS_ACTITEMSUSE_REQ: OnCS_ACTITEMSUSE_REQ(session, r); break;
                 case Msg.CS_USEMEDALITEM_REQ: OnCS_USEMEDALITEM_REQ(session, r); break;
                 case Msg.CS_GETREWARDS_REQ: OnCS_GETREWARDS_REQ(session, r); break;
@@ -496,6 +503,8 @@ public sealed partial class MapService
                 case Msg.MW_LOCALOCCUPY_REQ: OnMW_LOCALOCCUPY_REQ(r); break;
                 case Msg.MW_GAINPVPPOINT_REQ: OnMW_GAINPVPPOINT_REQ(r); break;
                 case Msg.MW_BATTLEMODESTATUS_ACK: OnMW_BATTLEMODESTATUS_ACK(r); break;
+                case Msg.MW_CASHSHOPSTOP_REQ: OnMW_CASHSHOPSTOP_REQ(r); break;                    // MapService.CashShop.cs
+                case Msg.MW_CASHITEMSALE_REQ: OnMW_CASHITEMSALE_REQ(r); break;
                 case Msg.MW_BOWTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BOWTIMEUPDATE_ACK, r, 7); break;   // MapService.BattleQueue.cs
                 case Msg.MW_BRTIMEUPDATE_ACK: OnMW_BattleClock(Msg.CS_BRTIMEUPDATE_ACK, r, 6); break;
                 case Msg.MW_ADDTOBOWQUEUE_ACK: OnMW_QueueResult(Msg.CS_REGISTERBOW_ACK, r); break;

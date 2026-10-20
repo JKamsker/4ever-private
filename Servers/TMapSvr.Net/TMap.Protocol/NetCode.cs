@@ -631,6 +631,24 @@ public static class Msg
     public const ushort CS_CREATESADDLE_REQ = CS_MAP + 0x0321;
     public const ushort CS_DELETESADDLE_REQ = CS_MAP + 0x0323;
     public const ushort CS_UPDATEMEDALS_REQ = CS_MAP + 0x0350;      // S→C: dwMedals
+    // ---- the cash shop (MapService.CashShop.cs) ----
+    public const ushort CS_CASHITEMCABINET_REQ = CS_MAP + 0x0192;
+    public const ushort CS_CASHITEMCABINET_ACK = CS_MAP + 0x0193;   // dUseTime (INT64) · dwCash · dwBonus · wCount {dwID · item (no slot)}
+    public const ushort CS_CASHITEMGET_REQ = CS_MAP + 0x0194;       // dwID · bInven · bSlot
+    public const ushort CS_CASHITEMGET_ACK = CS_MAP + 0x0195;       // bResult · dwID
+    public const ushort CS_CASHSHOPITEMLIST_REQ = CS_MAP + 0x0196;  // wItemID (0: all)
+    public const ushort CS_CASHSHOPITEMLIST_ACK = CS_MAP + 0x0197;  // dwCash · dwBonus · bCount {strName · wCount {wID · wInfoID · dwMoney · bKind · item (cash form)}}
+    public const ushort CS_CASHITEMBUY_REQ = CS_MAP + 0x0198;       // wCashItemID
+    public const ushort CS_CASHITEMBUY_ACK = CS_MAP + 0x0199;       // bResult · dwCash · dwBonus
+    public const ushort CS_CASHITEMPRESENT_REQ = CS_MAP + 0x01B7;   // strTarget · wCashItemID
+    public const ushort CS_CASHCABINETBUY_REQ = CS_MAP + 0x01C4;    // wShopItemID
+    public const ushort CS_CASHCABINETBUY_ACK = CS_MAP + 0x01C5;    // bResult · dTime (INT64) · dwCash · dwBonus
+    public const ushort CS_CASHITEMPUTIN_REQ = CS_MAP + 0x01C6;     // bInven · bItem
+    public const ushort CS_CASHITEMPUTIN_ACK = CS_MAP + 0x01C7;     // bResult · dwNewID [· item (no slot) on success]
+    public const ushort CS_CASHSHOPSTOP_ACK = CS_MAP + 0x01FC;      // bStop
+    public const ushort MW_CASHSHOPSTOP_REQ = MW_BASE + 0x0132;     // bStop · bSendPlayer (world -> every map)
+    public const ushort MW_CASHITEMSALE_REQ = MW_BASE + 0x0133;     // dwIndex · wValue · wCount {wID · bSaleValue}
+    public const ushort MW_CASHITEMSALE_ACK = MW_BASE + 0x0134;     // dwIndex · wValue · bRet
     // ---- the item and combat leftovers (MapService.ItemLeftovers.cs) ----
     public const ushort CS_DROPDAMAGE_REQ = CS_MAP + 0x0108;        // dwTargetID · bTargetType · dwDamage · bChannel · wMapID
     public const ushort CS_DROPDAMAGE_ACK = CS_MAP + 0x0109;        // dwID · bType · dwDamage

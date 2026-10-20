@@ -512,10 +512,11 @@ public sealed partial class MapService
         else if (kind == IkGainExp) { GainExp(s, ch, item.Template?.SpeedInc ?? 0); used = true; }
         else if (kind == IkMoney && item.Template is { } mt) { OpenMoneyPouch(s, ch, mt); used = true; }
         else if (kind == IkSpecialBox && item.Template is { } bt) used = OpenSpecialBox(s, ch, bt);
-        else if (kind == IkAp || (item.Template?.Type == ItUse && kind != IkCash)) used = true;   // C++ default: just used up
+        else if (kind == IkCash && item.Template is { } ct) { _ = GainCashBonus(s, ch, ct); used = true; }   // MapService.CashShop.cs
+        else if (kind == IkAp || item.Template?.Type == ItUse) used = true;   // C++ default: just used up
         else
         {
-            // IK_CASH (a cash DB this setup has no link to) and DB-free items of no known kind.
+            // DB-free items of no known kind.
             SendCS_ITEMUSE_ACK(s, ItemUseResult.NotFound, delayGroup, kind, delay);
             return;
         }

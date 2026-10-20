@@ -161,7 +161,7 @@ public sealed partial class MapService
         byte invenId = r.ReadByte(), slot = r.ReadByte();
         ushort shopItemId = r.ReadUInt16();
         if (s.State != EnterState.InGame || !s.IsMain || s.Char is not { } ch || IsTutorial(ch)) return;
-        if (!_templates.CashItemUseTime.TryGetValue(shopItemId, out ushort days)) return;
+        if (!_templates.CashItems.TryGetValue(shopItemId, out var cashItem)) return;
         if (ch.FindInven(invenId) is not { } bag) return;
         if (slot == InvalidSlot ? bag.EndTime == 0 : bag.FindItem(slot) is not { EndTime: not 0 }) return;
 
@@ -174,13 +174,13 @@ public sealed partial class MapService
             if (ch.FindInven(invenId) is not { } b) return;
             if (slot == InvalidSlot)
             {
-                b.EndTime += days * (long)DayOne;
+                b.EndTime += cashItem.UseTime * (long)DayOne;
                 endTime = b.EndTime;
                 SaveCharData(s);                                                                // the bag's time is saved with the char
             }
             else if (b.FindItem(slot) is { } item)
             {
-                item.EndTime += days * (long)DayOne;
+                item.EndTime += cashItem.UseTime * (long)DayOne;
                 endTime = item.EndTime;
                 EnqueueItemSave(s, invenId, item);
             }

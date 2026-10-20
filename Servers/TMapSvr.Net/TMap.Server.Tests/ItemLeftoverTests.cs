@@ -9,7 +9,26 @@ internal sealed class FakeCashStore : ICashStore
 {
     public int? Ret = 0;
     public List<(uint CharId, ushort ShopItemId)> Calls { get; } = new();
+    public uint Cash = 1000, Bonus = 50;
+    public CashCabinet Cabinet = new(0, 0, 0, new());
+    public (int Ret, FullItemRow Item)? Get;
+    public CashBuyResult? Buy = new(0, 900, 50, 0, 0, "");
+    public (int Ret, long Time, uint Cash, uint Bonus)? CabinetBuy = (0, 2_000_000_000, 800, 50);
+    public (int Ret, uint NewId)? Putin = (0, 77);
+    public int? Gain = 0;
+    public List<string> Log { get; } = new();
+
     public Task<int?> StopTheClockAsync(uint charId, ushort shopItemId) { Calls.Add((charId, shopItemId)); return Task.FromResult(Ret); }
+    public Task<(uint Cash, uint Bonus)> GetCashAsync(uint userId) { Log.Add($"get {userId}"); return Task.FromResult((Cash, Bonus)); }
+    public Task<CashCabinet> CabinetAsync(uint charId, uint userId) { Log.Add($"cabinet {charId} {userId}"); return Task.FromResult(Cabinet); }
+    public Task<(int Ret, FullItemRow Item)?> CashItemGetAsync(uint userId, uint charId, uint cashItemId, byte inven, byte slot)
+    { Log.Add($"take {cashItemId} {inven} {slot}"); return Task.FromResult(Get); }
+    public Task<CashBuyResult?> CashItemBuyAsync(uint userId, uint charId, ushort cashItemId, byte buyType, string target)
+    { Log.Add($"buy {cashItemId} {buyType} {target}"); return Task.FromResult(Buy); }
+    public Task<(int Ret, long Time, uint Cash, uint Bonus)?> CashCabinetBuyAsync(uint charId, ushort shopItemId)
+    { Log.Add($"cabinetbuy {shopItemId}"); return Task.FromResult(CabinetBuy); }
+    public Task<(int Ret, uint NewId)?> CashItemPutinAsync(uint charId, byte inven, byte slot) { Log.Add($"putin {inven} {slot}"); return Task.FromResult(Putin); }
+    public Task<int?> GainCashBonusAsync(uint charId, byte inven, byte slot, uint bonus) { Log.Add($"bonus {inven} {slot} {bonus}"); return Task.FromResult(Gain); }
 }
 
 /// <summary>Batch S7a: fall damage, act items, medal items, the rewards window, stop the clock and waste refine.</summary>
@@ -33,7 +52,7 @@ public class ItemLeftoverTests
         t.Items[Stone] = new ItemTemplate(Stone, 0, new[] { 1f, 0f, 0f, 0f }, Type: 14, Kind: 0, UseValue: Ore);
         t.Items[Ore] = new ItemTemplate(Ore, 0, new[] { 1f, 0f, 0f, 0f }, Type: 7, Kind: 0);
         t.Items[Sword] = new ItemTemplate(Sword, 0, new[] { 1f, 0f, 0f, 0f }, Type: 1, Kind: 1);
-        t.CashItemUseTime[ShopItem] = 30;
+        t.CashItems[ShopItem] = new CashItem { Id = ShopItem, UseTime = 30 };
         var row = new FullItemRow(0, 0, 0, Sword, 0, 1, 0, 100, 100, 0, 0, 0, new byte[6], new ushort[6], new uint[6], 0, 0, 0);
         t.SpecialBoxes[9] = new() { new SpecialBoxRow(9, 0, 2, row), new SpecialBoxRow(9, 0, 3, row), new SpecialBoxRow(9, 0, 6, row) };
         var h = new MapTestHarness(t);

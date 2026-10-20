@@ -454,12 +454,38 @@ SELECT wID, wMapID, fPosX, fPosY, fPosZ FROM TGODTOWERCHART ORDER BY wID";
         }
         catch (SqlException) { }
 
-        // C++ CTBLCashShopItem (DBAccess.h:3366), the part the map uses so far: each cash item's use time (stop-the-clock).
+        // C++ CTBLCashCategory + CTBLCashShopItem (DBAccess.h:3345, 3366): the cash shop's tabs and items, in their order. An item
+        // whose wItemID is not in the item chart is skipped (C++ CreateItem). The original price is dwOriMoney (the C++ took the
+        // view's dwMoney, already on sale, so a sale event cut a cut price again).
         try
         {
-            await using var cmd = new SqlCommand("SELECT wID, wUseTime FROM TVIEW_CASHSHOPITEMCHART", c);
-            await using var r = await cmd.ExecuteReaderAsync(ct);
-            while (await r.ReadAsync(ct)) store.CashItemUseTime[r.GetUShortSafe(0)] = r.GetUShortSafe(1);
+            await using (var cmd = new SqlCommand("SELECT bID, szName FROM TVIEW_CASHCATEGORYCHART ORDER BY wOrder", c))
+            await using (var r = await cmd.ExecuteReaderAsync(ct))
+                while (await r.ReadAsync(ct)) store.CashCategories.Add(new CashCategory(r.GetByteSafe(0), r.GetStringSafe(1), new()));
+            await using (var cmd = new SqlCommand(@"SELECT wID, wInfoID, dwMoney, bCategory, bKind, wItemID, bLevel, bCount, bGLevel, dwDuraMax,
+                     dwDuraCur, bRefineCur, wUseTime, bGradeEffect, bMagic1, bMagic2, bMagic3, bMagic4, bMagic5, bMagic6, wValue1, wValue2,
+                     wValue3, wValue4, wValue5, wValue6, dwTime1, dwTime2, dwTime3, dwTime4, dwTime5, dwTime6, bCanSell, bSaleValue,
+                     dwOriMoney FROM TVIEW_CASHSHOPITEMCHART ORDER BY bCategory, wOrder", c))
+            await using (var r = await cmd.ExecuteReaderAsync(ct))
+                while (await r.ReadAsync(ct))
+                {
+                    ushort itemId = r.GetUShortSafe(5);
+                    if (itemId != 0 && !store.Items.ContainsKey(itemId)) continue;
+                    var magic = new byte[6]; var value = new ushort[6]; var ext = new uint[6];
+                    for (int i = 0; i < 6; i++) magic[i] = r.GetByteSafe(14 + i);
+                    for (int i = 0; i < 6; i++) value[i] = r.GetUShortSafe(20 + i);
+                    for (int i = 0; i < 6; i++) ext[i] = r.GetUIntSafe(26 + i);
+                    var item = new CashItem
+                    {
+                        Id = r.GetUShortSafe(0), InfoId = r.GetUShortSafe(1), Money = r.GetUIntSafe(2), Category = r.GetByteSafe(3),
+                        Kind = r.GetByteSafe(4), UseTime = r.GetUShortSafe(12), CanSell = r.GetByteSafe(32), SaleValue = r.GetByteSafe(33),
+                        OriMoney = r.GetUIntSafe(34),
+                        Item = new FullItemRow(0, 0, 0, itemId, r.GetByteSafe(6), r.GetByteSafe(7), r.GetByteSafe(8), r.GetUIntSafe(9),
+                            r.GetUIntSafe(10), r.GetByteSafe(11), 0, r.GetByteSafe(13), magic, value, ext, 0, 0, 0),
+                    };
+                    store.CashItems[item.Id] = item;
+                    store.CashCategories.FirstOrDefault(k => k.Id == item.Category)?.Items.Add(item);
+                }
         }
         catch (SqlException) { }
 

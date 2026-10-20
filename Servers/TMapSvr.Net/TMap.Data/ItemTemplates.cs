@@ -173,8 +173,11 @@ public sealed class TemplateStore
     /// <summary>C++ <c>m_mapTOPERATOR</c> (<c>TOPERATORTABLE</c>): the operators' character ids.</summary>
     public HashSet<uint> Operators { get; } = new();
 
-    /// <summary>C++ <c>m_mapTCashItem</c>, its <c>m_wUseTime</c>: a cash item's days, by shop item id.</summary>
-    public Dictionary<ushort, ushort> CashItemUseTime { get; } = new();
+    /// <summary>C++ <c>m_mapTCashItem</c>: the cash shop's items, by shop item id.</summary>
+    public Dictionary<ushort, CashItem> CashItems { get; } = new();
+
+    /// <summary>C++ <c>m_vCashCategory</c>: the shop's tabs in order, each with its items in order.</summary>
+    public List<CashCategory> CashCategories { get; } = new();
 
     /// <summary>C++ <c>CTBLArena</c>: the arenas.</summary>
     public List<ArenaRow> Arenas { get; } = new();
@@ -366,3 +369,22 @@ public sealed class TemplateStore
     /// <summary>The grade byte for an item level (C++ <c>m_itemgrade[level].m_bGrade</c>), clamped to the table.</summary>
     public byte GradeForLevel(byte level) => level < ItemGrades.Length ? ItemGrades[level] : ItemGrades[0];
 }
+
+/// <summary>C++ <c>TCASHITEM</c>: a cash shop item. <see cref="Money"/> and <see cref="SaleValue"/> change with a sale event
+/// (<c>MW_CASHITEMSALE_REQ</c>).</summary>
+public sealed class CashItem
+{
+    public ushort Id { get; init; }
+    public ushort InfoId { get; init; }
+    public uint Money { get; set; }
+    public uint OriMoney { get; init; }
+    public byte Category { get; init; }
+    public byte Kind { get; init; }
+    public byte CanSell { get; init; }
+    public byte SaleValue { get; set; }
+    public ushort UseTime { get; init; }
+    public FullItemRow Item { get; init; }
+}
+
+/// <summary>C++ <c>TCASHCATEGORY</c>: a cash shop tab.</summary>
+public sealed record CashCategory(byte Id, string Name, List<CashItem> Items);
