@@ -139,8 +139,8 @@
     <ClCompile>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:.949 %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;..\..\GameConfig;..\..\TComp\TComp;..\..\TCML\TCML;..\..\..\3rdParty\zlib\include;..\..\..\3rdParty\miniaudio;..\..\..\3rdParty\VLD\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_VLD;WIN32;_DEBUG;_WINDOWS;TEST_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\;..\..\GameConfig;..\..\TComp\TComp;..\..\TCML\TCML;..\..\..\3rdParty\zlib\include;..\..\..\3rdParty\miniaudio</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;TEST_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader />
@@ -171,8 +171,8 @@
     <ClCompile>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:.949 %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>.\;..\..\GameConfig;..\..\TComp\TComp;..\..\TCML\TCML;..\..\..\3rdParty\zlib\include;..\..\..\3rdParty\miniaudio;..\..\..\3rdParty\VLD\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_VLD;_DEBUG;_WINDOWS;TEST_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.\;..\..\GameConfig;..\..\TComp\TComp;..\..\TCML\TCML;..\..\..\3rdParty\zlib\include;..\..\..\3rdParty\miniaudio</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;TEST_MODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>

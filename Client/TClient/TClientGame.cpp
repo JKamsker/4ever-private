@@ -27352,15 +27352,6 @@ void CTClientGame::ReleaseMoveType()
 	}
 }
 
-#ifdef USE_APEX
-void CTClientGame::StartApexClient( CTachyonSession *pSession )
-{
-	long re = CHCStart( static_cast<CTClientSession*>(pSession)->SnedCS_APEXDATA_REQ, m_pApexfRec );
-
-	static_cast<CTClientSession*>(pSession)->SendCS_APEXSTART_REQ( re );
-}
-#endif
-
 void CTClientGame::ResetKICKOUTMAP()
 {
 	m_wKICKOUTMAP = 0;

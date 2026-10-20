@@ -2395,12 +2395,6 @@ void CTClientWnd::InitResource( CString strGroupID,
 		}
 	}
 
-#ifdef USE_GG
-	// 게임가드.
-	if( theApp.m_pNpgl )
-		theApp.m_pNpgl->SetHwnd( GetSafeHwnd() );
-#endif
-
 	m_MainGame.m_pMacroProtection = new MacroProtection(&m_MainGame);
 
 	CTGuildMainNew* pDlg = static_cast<CTGuildMainNew*>(m_MainGame.m_vTFRAME[TFRAME_GUILD_BASE_NEW]);

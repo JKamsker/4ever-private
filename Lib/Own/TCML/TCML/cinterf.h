@@ -8,12 +8,6 @@
 #define _WIN32_WINNT 0x0601
 #endif
 
-#ifdef _DEBUG
-#ifdef USE_VLD
-#include <vld.h>
-#endif
-#endif
-
 #define MAX_TCML_FACE_NAME						32
 #define MAX_TCML_SYMBOL							1024
 #define MAX_STACK_COMPDESC_DEPTH				1024

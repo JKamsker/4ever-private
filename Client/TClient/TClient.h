@@ -47,11 +47,6 @@ public:
 	CTModuleProtector m_vModuleGuard;
 #endif
 
-#ifdef USE_GG
-	CNPGameLib*		m_pNpgl;			// 게임가드.
-	CString			m_strNPMSG;			// 게임가드 에러메세지.
-#endif
-
 
 	CString m_strHackMSG[3];
 

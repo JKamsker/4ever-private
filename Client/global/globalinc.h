@@ -11,8 +11,3 @@ These are the global defines for every project.
 #define _WIN32_WINNT 0x0601
 #endif
 
-#ifdef _DEBUG
-#ifdef USE_VLD
-#include <vld.h>
-#endif
-#endif

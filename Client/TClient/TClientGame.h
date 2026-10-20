@@ -1,9 +1,5 @@
 ﻿#pragma once
 
-#ifdef USE_APEX
-#include <ApexClient.h>
-#endif
-
 #ifdef USE_HS
 #include <HShield.h>
 #include <HSUpChk.h>
@@ -22,11 +18,6 @@ public:
 public:
 	CTClientGame();
 	virtual ~CTClientGame();
-
-#ifdef USE_APEX
-	void StartApexClient( CTachyonSession *pSession );
-	_FUNC_C_REC		m_pApexfRec;
-#endif
 
 	static CTClientGame* m_pINSTANCE;
 	static CTClientGame* GetInstance();
@@ -571,10 +562,6 @@ public:
 	CString m_strCopyName;
 
 	BYTE m_bItemLevelRevision;
-#ifdef USE_GG
-	BYTE			m_bNPServerID;	// 게임가드.
-	GG_AUTH_DATA	m_NPAuthData;	// 게임가드.
-#endif
 	DWORD m_dwRemainTickVerifyMaintain;
 	DWORD m_dwMountTick;
 	WORD m_wPetID;
@@ -2908,9 +2895,6 @@ public:
 	int OnCS_RESETCLOAK_ACK( CTachyonSession *pSession, CPacket *pPacket);
 
 	int OnCS_CASHSHOPSTOP_ACK( CTachyonSession *pSession, CPacket *pPacket);
-#ifdef USE_APEX
-	int OnCS_APEXDATA_ACK( CTachyonSession *pSession, CPacket *pPacket);
-#endif
 #ifdef USE_HS
 	int OnCS_HACKSHIELD_ACK( CTachyonSession *pSession, CPacket * pPacket);
 #endif

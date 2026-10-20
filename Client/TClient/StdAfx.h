@@ -33,10 +33,6 @@
 #include <XTrap4Client.h>
 #endif
 
-#ifdef USE_GG
-#include "NPGameLib.h"
-#endif
-
 #include <T3D.h>
 #include <CSProtocol.h>
 #include <NetCode.h>

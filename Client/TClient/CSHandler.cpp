@@ -881,11 +881,6 @@ if (bInBOWMap)
 
 	m_pChatFrame->ToggleTacticsChatMode( m_pMainChar->m_dwTacticsID );
 
-#ifdef USE_APEX
-	if ( CTNationOption::INSTALL_APEX )
-		StartApexClient( pSession );
-#endif
-
 	(*pPacket)
 		>> m_pMainChar->m_dwPvPMonthPoint;
 
@@ -17072,28 +17067,6 @@ int CTClientGame::OnCS_CASHSHOPSTOP_ACK( CTachyonSession *pSession, CPacket *pPa
 	DisableUI( TFRAME_CASHSHOP_NEW );*/
 	return TERR_NONE;
 }
-
-#ifdef USE_APEX
-int CTClientGame::OnCS_APEXDATA_ACK( CTachyonSession *pSession, CPacket *pPacket)
-{
-	char cBuf[MAX_APEXPACKET];
-
-	int nBufLen;
-
-	(*pPacket)
-		>> nBufLen;
-	//	>> cBuf
-
-	pPacket->DetachBinary( (LPVOID)cBuf );
-
-	if(m_pApexfRec)
-	{
-		m_pApexfRec( cBuf, nBufLen );
-	}
-
-	return TERR_NONE;
-}
-#endif
 
 int CTClientGame::OnCS_KICKOUTMAP_ACK( CTachyonSession *pSession, CPacket *pPacket)
 {

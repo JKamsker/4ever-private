@@ -156,8 +156,8 @@
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:.949 
       </AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\HwidLib\HwidLib;..\..\Lib\Own\TProtocol\Include;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TCML\TCML;..\..\Lib\Own\TChart\TChart;..\..\Lib\Own\TComp\TComp;..\History Files;..\..\Lib\3rdParty\VLD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_HWID_AUTH;USE_VLD;WIN32;_DEBUG;TEST_MODE;KOREA;NEW_IF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\HwidLib\HwidLib;..\..\Lib\Own\TProtocol\Include;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TCML\TCML;..\..\Lib\Own\TChart\TChart;..\..\Lib\Own\TComp\TComp;..\History Files;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_HWID_AUTH;WIN32;_DEBUG;TEST_MODE;KOREA;NEW_IF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -174,7 +174,7 @@
     <Link>
       <AdditionalDependencies>HwidLibd.lib;Engine Libd.lib;TChartd.lib;TCMLd.lib;TCompd.lib;D3d9.lib;D3dx9.lib;winmm.lib;Advapi32.lib;Imm32.lib;dxguid.lib;strmiids.lib;Version.lib;dbghelp.lib;Psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>..\..\Lib\Own\HwidLib\Lib\x86;..\..\Lib\Own\TChart\Lib\x86;..\..\Lib\Own\TComp\Lib\x86;..\..\Lib\Own\TCML\Lib\x86;..\..\Lib\Own\Engine Lib\Lib\x86;..\..\Lib\3rdParty\VLD\lib\Win32</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\Lib\Own\HwidLib\Lib\x86;..\..\Lib\Own\TChart\Lib\x86;..\..\Lib\Own\TComp\Lib\x86;..\..\Lib\Own\TCML\Lib\x86;..\..\Lib\Own\Engine Lib\Lib\x86</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)TClient.pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>
@@ -196,8 +196,8 @@
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:.949 
       </AdditionalOptions>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\HwidLib\HwidLib;..\..\Lib\Own\TProtocol\Include;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TCML\TCML;..\..\Lib\Own\TChart\TChart;..\..\Lib\Own\TComp\TComp;..\History Files;..\..\Lib\3rdParty\VLD\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>USE_HWID_AUTH;USE_VLD;_DEBUG;TEST_MODE;KOREA;NEW_IF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\HwidLib\HwidLib;..\..\Lib\Own\TProtocol\Include;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TCML\TCML;..\..\Lib\Own\TChart\TChart;..\..\Lib\Own\TComp\TComp;..\History Files;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>USE_HWID_AUTH;_DEBUG;TEST_MODE;KOREA;NEW_IF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -214,7 +214,7 @@
     <Link>
       <AdditionalDependencies>HwidLibd.lib;Engine Libd.lib;TChartd.lib;TCMLd.lib;TCompd.lib;D3d9.lib;D3dx9.lib;winmm.lib;Advapi32.lib;Imm32.lib;dxguid.lib;strmiids.lib;Version.lib;dbghelp.lib;Psapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
-      <AdditionalLibraryDirectories>..\..\Lib\Own\HwidLib\Lib\x64;..\..\Lib\Own\TChart\Lib\x64;..\..\Lib\Own\TComp\Lib\x64;..\..\Lib\Own\TCML\Lib\x64;..\..\Lib\Own\Engine Lib\Lib\x64;..\..\Lib\3rdParty\VLD\lib\Win64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\Lib\Own\HwidLib\Lib\x64;..\..\Lib\Own\TChart\Lib\x64;..\..\Lib\Own\TComp\Lib\x64;..\..\Lib\Own\TCML\Lib\x64;..\..\Lib\Own\Engine Lib\Lib\x64</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(IntDir)TClient.pdb</ProgramDatabaseFile>
       <GenerateMapFile>true</GenerateMapFile>

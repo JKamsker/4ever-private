@@ -6,8 +6,6 @@
 #include "Unzip.h"
 #include "4Story.h"
 #include "4StoryDlg.h"
-#include <XTrapArg.h>
-#include <XTrap4Launcher.h>
 #include ".\4storydlg.h"
 
 
@@ -160,7 +158,6 @@ BOOL CStoryDlg::OnInitDialog()
 	//ReadTextFile();
 	InfoFileRead();
 
-	//XTrap_L_Patch((char*)xArg, NULL, 60000);
 	InitWeb();
 
 	//if(!ReadRegistry())

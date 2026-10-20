@@ -14,10 +14,6 @@
 #include "HwidManager.h" 
 #endif
 
-#ifdef USE_APEX
-#include <XTrapArg.h>
-#endif
-
 #ifdef USE_HS
 #include <HShield.h>
 #include <HSUpChk.h>
@@ -43,67 +39,6 @@ typedef enum TMP_HACK_DETECT_TYPE
 	TMP_HACK_FOUND,
 	TMP_HACK_TIMEOUT
 } *LPTMP_HACK_DETECT_TYPE;
-
-#ifdef USE_GG
-// 게임가드.
-BOOL CALLBACK NPGameMonCallback(DWORD dwMsg, DWORD dwArg)
-{
-	theApp.m_strNPMSG.Empty();
-
-	CString strTitle = _T("nProtect GameGuard");
-
-	switch (dwMsg)
-	{
-	case NPGAMEMON_COMM_ERROR:
-	case NPGAMEMON_COMM_CLOSE:
-		return FALSE;
-	case NPGAMEMON_INIT_ERROR:
-		theApp.GetMainWnd()->PostMessage( WM_QUIT );
-		theApp.m_strNPMSG.Format( CTChart::Format( TSTR_NPGAMEMON_INIT_ERROR ), dwArg );
-		MessageBox( NULL, theApp.m_strNPMSG, strTitle, MB_OK );
-		return FALSE;
-	case NPGAMEMON_SPEEDHACK:
-		theApp.GetMainWnd()->PostMessage( WM_QUIT );
-		theApp.m_strNPMSG.Format( CTChart::Format( TSTR_NPGAMEMON_SPEEDHACK ) );
-		MessageBox( NULL, theApp.m_strNPMSG, strTitle, MB_OK );
-		return FALSE;
-	case NPGAMEMON_GAMEHACK_KILLED:
-		theApp.GetMainWnd()->PostMessage( WM_QUIT );
-		theApp.m_strNPMSG.Format( CTChart::Format( TSTR_NPGAMEMON_GAMEHACK ) );
-		MessageBox( NULL, theApp.m_strNPMSG, strTitle, MB_OK );
-		return FALSE;
-	case NPGAMEMON_GAMEHACK_DETECT:
-		theApp.GetMainWnd()->PostMessage( WM_QUIT );
-		theApp.m_strNPMSG.Format( CTChart::Format( TSTR_NPGAMEMON_GAMEHACK ) );
-		MessageBox( NULL, theApp.m_strNPMSG, strTitle, MB_OK );
-		return FALSE;
-	case NPGAMEMON_GAMEHACK_DOUBT:
-		theApp.GetMainWnd()->PostMessage( WM_QUIT );
-		theApp.m_strNPMSG.Format( CTChart::Format( TSTR_NPGAMEMON_GAMEHACK_DOUBT ) );
-		MessageBox( NULL, theApp.m_strNPMSG, strTitle, MB_OK );
-		return FALSE;
-	case NPGAMEMON_CHECK_CSAUTH2:
-		{
-			CTClientGame* pGame = CTClientGame::GetInstance();
-			if( !pGame )
-				return FALSE;
-
-			memcpy( &pGame->m_NPAuthData, (PVOID)dwArg, sizeof(GG_AUTH_DATA) );
-
-			CPacket vMSG;
-			vMSG.SetID(CS_NPROTECT_REQ)
-				<< (BYTE)pGame->m_bNPServerID;
-
-			vMSG.AttachBinary( &pGame->m_NPAuthData, sizeof(GG_AUTH_DATA) );
-
-			pGame->SayToAll(vMSG);
-		}
-		return TRUE;
-	}
-
-	return TRUE;
-}
-#endif
 
 #ifdef KEYHOOK_CTRLALTDEL
 
@@ -355,86 +290,6 @@ BOOL CTClientApp::InitInstance()
 	if(CTCodePage::IsDBCS())
 		TComponent::m_bUseWordBreak = FALSE;
 
-#ifdef USE_GG
-	// 게임가드.
-		m_pNpgl = NULL;
-	/*	m_pNpgl = new CNPGameLib( "4StoryEU" );
-		DWORD dwResult = m_pNpgl->Init();
-
-		if( dwResult != NPGAMEMON_SUCCESS )
-		{
-			CString strMsg;
-
-			switch (dwResult)
-			{
-			case NPGAMEMON_ERROR_EXIST:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_EXIST );
-				break;
-			case NPGAMEMON_ERROR_GAME_EXIST:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_GAME_EXIST );
-				break;
-			case NPGAMEMON_ERROR_INIT:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_INIT );
-				break;
-			case NPGAMEMON_ERROR_AUTH_GAMEGUARD:
-			case NPGAMEMON_ERROR_NFOUND_GG:
-			case NPGAMEMON_ERROR_AUTH_INI:
-			case NPGAMEMON_ERROR_NFOUND_INI:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_NFOUND );
-				break;
-			case NPGAMEMON_ERROR_CRYPTOAPI:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_CRYPTOAPI );
-				break;
-			case NPGAMEMON_ERROR_EXECUTE:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_EXECUTE );
-				break;
-			case NPGAMEMON_ERROR_ILLEGAL_PRG:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_ILLEGAL_PRG );
-				break;
-			case NPGMUP_ERROR_ABORT:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_ABORT );
-				break;
-			case NPGMUP_ERROR_CONNECT:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_CONNECT );
-				break;
-			case NPGAMEMON_ERROR_GAMEGUARD:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_GAMEGUARD );
-				break;
-			case NPGMUP_ERROR_PARAM:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_PARAM );
-				break;
-			case NPGMUP_ERROR_INIT:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_INIT );
-				break;
-			case NPGMUP_ERROR_DOWNCFG:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_DOWNCFG );
-				break;
-			case NPGMUP_ERROR_AUTH:
-				strMsg = CTChart::Format( TSTR_NPGMUP_ERROR_AUTH );
-				break;
-			case NPGAMEMON_ERROR_NPSCAN:
-				strMsg = CTChart::Format( TSTR_NPGAMEMON_ERROR_NPSCAN );
-				break;
-			case NPGG_ERROR_COLLISION:
-				strMsg = CTChart::Format( TSTR_NPGG_ERROR_COLLISION );
-				break;
-			default:
-				// 적절한 종료 메시지 출력
-				strMsg = CTChart::Format( TSTR_NPGG_ERROR );
-					break;
-			}
-
-			CString strCaption;
-			strCaption.Format( CTChart::Format( TSTR_NPGG_ERROR_TITLE ), dwResult );
-			MessageBox(NULL, strMsg, strCaption, MB_OK);
-
-			return FALSE;	
-		}
-
-	SetCallbackToGameMon(&NPGameMonCallback);
-*/
-#endif
-
 #ifdef _WIN32
 	CoInitialize(NULL);
 
@@ -583,11 +438,6 @@ BOOL CTClientApp::InitInstance()
 		m_pTachyonWnd->m_Device.m_option.m_dwScreenY );
 
 	CTMiniDump::SetHWND(m_pMainWnd->GetSafeHwnd());
-
-#ifdef USE_GG
-	if (m_pNpgl)
-		m_pNpgl->SetHwnd(m_pMainWnd->GetSafeHwnd());
-#endif
 
 	if(m_bFirstRun)
 		((CTClientWnd *) m_pTachyonWnd)->ResetTOption();
@@ -810,15 +660,6 @@ int CTClientApp::ExitInstance()
 //		pTAPP->HackShield_UnInit();
 	}
 
-#endif
-
-#ifdef USE_GG
-	// 게임가드.
-	if( m_pNpgl )
-	{
-		delete m_pNpgl;
-		m_pNpgl = NULL;
-	}
 #endif
 
 	TSocketCleanup();

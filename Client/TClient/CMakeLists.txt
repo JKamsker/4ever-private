@@ -287,17 +287,9 @@ target_include_directories(TClient PRIVATE
     "${CMAKE_CURRENT_BINARY_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${TCLIENT_LIB_OWN}/GameConfig"
-    "${TCLIENT_LIB_3RD}/HShield/Include"
     "${TCLIENT_LIB_OWN}/TProtocol/Include"
     "${TCLIENT_ROOT}/Client/History Files"
 )
-# HackShield (USE_HS, not defined) only exists in 32-bit.
-if(TCLIENT_ARCH STREQUAL "x86")
-    target_link_directories(TClient PRIVATE
-        "${TCLIENT_LIB_3RD}/HShield/Lib/Win/x86/Multithreaded/Update"
-        "${TCLIENT_LIB_3RD}/HShield/Lib/Win/x86/Multithreaded/HShield"
-    )
-endif()
 target_link_libraries(TClient PRIVATE
     tclient_options
     EngineLib

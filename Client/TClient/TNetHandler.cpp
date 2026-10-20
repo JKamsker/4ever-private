@@ -70,12 +70,6 @@ int CTClientWnd::OnCS_LOGIN_ACK( CTachyonSession *pSession, CPacket *pPacket)
 		}
 #endif
 
-#ifdef USE_GG
-		// 게임가드.
-	
-			theApp.m_pNpgl->Send( (CHAR*)(LPCSTR)pEditID->m_strText );
-#endif
-
 		CTMiniDump::SetLogID((LPCSTR)pEditID->m_strText);
 
 		if( bResult == LR_NEEDAGREEMENT )

@@ -74,11 +74,6 @@ int CTClientWnd::OnGM_NETCABLE_DISCONNECTED()
 
 	SaveCustomCompPos();
 
-#ifdef USE_APEX
-	if ( CTNationOption::INSTALL_APEX )
-		CHCEnd();
-#endif
-
 	OnGM_CLOSE_MSGBOX();
 
 	m_TNet.EnableComponent(FALSE);
@@ -102,11 +97,6 @@ int CTClientWnd::OnGM_EXIT_GAME()
 
 	SaveCustomCompPos();
 
-#ifdef USE_APEX
-	if ( CTNationOption::INSTALL_APEX )
-		CHCEnd();
-#endif
-
 	OnGM_CLOSE_MSGBOX();
 	LoadingIMG();
 	Render();
@@ -126,10 +116,6 @@ int CTClientWnd::OnGM_EXIT_GAME()
 
 int CTClientWnd::OnGM_EXIT()
 {
-#ifdef USE_APEX
-	if ( CTNationOption::INSTALL_APEX )
-		CHCEnd();	
-#endif
 	SaveCustomCompPos();
 	CTWindow::PostQuit();
 	return TERR_NONE;

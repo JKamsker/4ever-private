@@ -63,7 +63,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\TProtocol\Include;..\..\Lib\3rdParty\zlib\include;..\..\Lib\3rdParty\zlib\include\minizip;..\..\Lib\3rdParty\XTrap\client\Include;..\..\Lib\Own\TachyonControl;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TComp\TComp;..\..\Lib\Own\TCML\TCML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\TProtocol\Include;..\..\Lib\3rdParty\zlib\include;..\..\Lib\3rdParty\zlib\include\minizip;..\..\Lib\Own\TachyonControl;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TComp\TComp;..\..\Lib\Own\TCML\TCML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -74,8 +74,8 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;shlwapi.lib;Ws2_32.lib;zlibstat.lib;XTrap4Launcher_mt.lib;d3d9.lib;d3dx9.lib;Engine Libd.lib;Psapi.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Lib\3rdParty\zlib\lib\zlibstat;..\..\Lib\3rdParty\XTrap\client\Lib\x86;..\..\Lib\Own\Engine Lib\Lib\x86;..\..\Lib\3rdParty\VLD\lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>winmm.lib;shlwapi.lib;Ws2_32.lib;zlibstat.lib;d3d9.lib;d3dx9.lib;Engine Libd.lib;Psapi.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Lib\3rdParty\zlib\lib\zlibstat;..\..\Lib\Own\Engine Lib\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -94,7 +94,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\TProtocol\Include;..\..\Lib\3rdParty\zlib\include;..\..\Lib\3rdParty\zlib\include\minizip;..\..\Lib\3rdParty\XTrap\client\Include;..\..\Lib\Own\TachyonControl;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TComp\TComp;..\..\Lib\Own\TCML\TCML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\Lib\Own\GameConfig;..\..\Lib\Own\TProtocol\Include;..\..\Lib\3rdParty\zlib\include;..\..\Lib\3rdParty\zlib\include\minizip;..\..\Lib\Own\TachyonControl;..\..\Lib\Own\Engine Lib\Engine Lib;..\..\Lib\Own\TComp\TComp;..\..\Lib\Own\TCML\TCML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;ZLIB_WINAPI;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -104,8 +104,8 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>winmm.lib;shlwapi.lib;Ws2_32.lib;zlibstat.lib;XTrap4Launcher_mt.lib;d3d9.lib;d3dx9.lib;Engine Lib.lib;Psapi.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\..\Lib\3rdParty\zlib\lib\zlibstat;..\..\Lib\3rdParty\XTrap\client\Lib\x86;..\..\Lib\Own\Engine Lib\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>winmm.lib;shlwapi.lib;Ws2_32.lib;zlibstat.lib;d3d9.lib;d3dx9.lib;Engine Lib.lib;Psapi.lib;Version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\..\Lib\3rdParty\zlib\lib\zlibstat;..\..\Lib\Own\Engine Lib\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <!-- Ship the final launcher exe next to the client (TClient.exe) in the game folder so
            both read the same config.ini. Intermediates/PDB stay in $(OutDir) (Release\). -->
       <OutputFile>..\..\Game\$(TargetName)$(TargetExt)</OutputFile>
